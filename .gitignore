@@ -5,28 +5,3 @@ node_modules/
 dist/
 .venv/
 .pytest_cache/
-
-# Banco e dados locais
-*.db
-*.sqlite
-*.sqlite3
-
-# Ambientes virtuais
-.venv/
-venv/
-
-# Python
-__pycache__/
-*.pyc
-
-# Node
-node_modules/
-dist/
-
-# Dados gerados e documentos
-storage/
-backups/
-backup_backend_*/
-
-# Logs
-*.log

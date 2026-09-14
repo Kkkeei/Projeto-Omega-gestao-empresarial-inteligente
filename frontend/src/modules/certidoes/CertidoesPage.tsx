@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {FileCheck2,RefreshCw,History,ExternalLink,Play,AlertTriangle} from 'lucide-react';
-import {listarCertidoes,listarTiposCertidao,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarTodasCertidoesEstaduais,pdfUrl} from '../../services/api/certidoes';
+import {listarCertidoes,listarTiposCertidao,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,pdfUrl} from '../../services/api/certidoes';
 import type {Certidao,TipoCertidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {ErrorState} from '../../components/ui/ErrorState';
@@ -16,7 +16,7 @@ function classeSituacao(value:string){
 
 export function CertidoesPage(){
   const [emp,setEmp]=useState<Empresa[]>([]),[tipos,setTipos]=useState<TipoCertidao[]>([]),[empresaId,setEmpresaId]=useState('');
-  const [items,setItems]=useState<Certidao[]>([]),[hist,setHist]=useState<any[]>([]),[loading,setLoading]=useState(true),[consultando,setConsultando]=useState(false),[err,setErr]=useState('');
+  const [items,setItems]=useState<Certidao[]>([]),[hist,setHist]=useState<any[]>([]),[loading,setLoading]=useState(true),[consultando,setConsultando]=useState(false),[consultandoFederal,setConsultandoFederal]=useState(false),[consultandoNarrativa,setConsultandoNarrativa]=useState(false),[err,setErr]=useState('');
   const [resultado,setResultado]=useState<CertidaoConsultaResultado|null>(null);
   const [lote,setLote]=useState<{resumo:Record<string,number>;resultados:CertidaoConsultaResultado[]}|null>(null);
   const [processandoLote,setProcessandoLote]=useState(false);
@@ -53,6 +53,33 @@ export function CertidoesPage(){
     catch(x){setErr(x instanceof Error?x.message:'Erro ao carregar certidões da empresa.')}finally{setLoading(false)}
   }
 
+
+  async function consultarFederal(){
+    if(!empresaId){setErr('Selecione uma empresa antes de consultar a Certidão Federal.');return;}
+    setConsultandoFederal(true);setErr('');setResultado(null);setLote(null);
+    try{
+      const r=await consultarCertidaoFederal(Number(empresaId));
+      setResultado(r);
+      const atual=await listarCertidoes(Number(empresaId));
+      setItems(atual.certidoes);
+      setHist((await historicoCertidoes(Number(empresaId))).historico);
+    }catch(x){setErr(x instanceof Error?x.message:'Não foi possível concluir a Certidão Federal RFB/PGFN.')}
+    finally{setConsultandoFederal(false)}
+  }
+
+  async function consultarNarrativa(){
+    if(!empresaId){setErr('Selecione uma empresa antes de consultar a Certidão Narrativa.');return;}
+    setConsultandoNarrativa(true);setErr('');setResultado(null);setLote(null);
+    try{
+      const r=await consultarCertidaoNarrativa(Number(empresaId));
+      setResultado(r);
+      const atual=await listarCertidoes(Number(empresaId));
+      setItems(atual.certidoes);
+      setHist((await historicoCertidoes(Number(empresaId))).historico);
+    }catch(x){setErr(x instanceof Error?x.message:'Não foi possível concluir a Certidão Narrativa de Débito Fiscal.')}
+    finally{setConsultandoNarrativa(false)}
+  }
+
   async function consultarTodas(){
     setProcessandoLote(true);setErr('');setResultado(null);setLote(null);
     try{
@@ -80,16 +107,18 @@ export function CertidoesPage(){
   const empresaSelecionada=emp.find(e=>e.id===Number(empresaId));
 
   return <div className="page">
-    <div className="page-heading"><div><span className="eyebrow">REGULARIDADE FISCAL</span><h2>Certidão Estadual</h2><p>Consulta integrada ao e-Fisco da SEFAZ Pernambuco, com PDF e histórico preservados.</p></div><div className="heading-actions"><button className="button secondary" onClick={load} disabled={loading||consultando||processandoLote}><RefreshCw size={15}/> Atualizar</button><button className="button secondary" onClick={consultarTodas} disabled={loading||consultando||processandoLote}>{processandoLote?'Processando todas...':'Consultar todas as empresas'}</button></div></div>
+    <div className="page-heading"><div><span className="eyebrow">REGULARIDADE FISCAL</span><h2>Certidão Estadual</h2><p>Consulta integrada ao e-Fisco da SEFAZ Pernambuco, com PDF e histórico preservados.</p></div><div className="heading-actions"><button className="button secondary" onClick={load} disabled={loading||consultando||consultandoFederal||consultandoNarrativa||processandoLote}><RefreshCw size={15}/> Atualizar</button><button className="button secondary" onClick={consultarTodas} disabled={loading||consultando||consultandoFederal||consultandoNarrativa||processandoLote}>{processandoLote?'Processando todas...':'Consultar todas as empresas'}</button></div></div>
 
     {err&&<div className="form-error"><AlertTriangle size={14}/> {err}</div>}
 
     <div className="panel automation-run">
-      <div><span className="eyebrow">SEFAZ-PE / E-FISCO</span><h3>Consultar Certidão Estadual</h3><p>Selecione uma empresa e execute a consulta automática. A situação fiscal nunca é presumida.</p></div>
-      <div className="run-grid"><label>Empresa<select value={empresaId} onChange={e=>selecionar(e.target.value)}><option value="">Selecione uma empresa</option>{emp.filter(e=>e.ativo).map(e=><option key={e.id} value={e.id}>{e.razao_social} — {e.cnpj}</option>)}</select></label><label>Tipo de Certidão<input value="Estadual - SEFAZ" disabled /></label><button className="button primary run-button" onClick={consultar} disabled={!empresaId||consultando}><Play size={15}/>{consultando?'Consultando SEFAZ-PE...':'Consultar Certidão'}</button></div>
+      <div><span className="eyebrow">CENTRAL DE CERTIDÕES</span><h3>Consultar Certidão Estadual</h3><p>Selecione uma empresa e execute a consulta automática. A situação fiscal nunca é presumida.</p></div>
+      <div className="run-grid"><label>Empresa<select value={empresaId} onChange={e=>selecionar(e.target.value)}><option value="">Selecione uma empresa</option>{emp.filter(e=>e.ativo).map(e=><option key={e.id} value={e.id}>{e.razao_social} — {e.cnpj}</option>)}</select></label><label>Tipo de Certidão<input value="Estadual - SEFAZ" disabled /></label><button className="button primary run-button" onClick={consultar} disabled={!empresaId||consultando||consultandoFederal||consultandoNarrativa}><Play size={15}/>{consultando?'Consultando SEFAZ-PE...':'Consultar Estadual'}</button><button className="button secondary run-button" onClick={consultarFederal} disabled={!empresaId||consultando||consultandoFederal||consultandoNarrativa}>{consultandoFederal?'Consultando RFB/PGFN...':'Consultar Federal'}</button><button className="button secondary run-button" onClick={consultarNarrativa} disabled={!empresaId||consultando||consultandoFederal||consultandoNarrativa}>{consultandoNarrativa?'Lendo documento...':'Certidão Narrativa / Débito Fiscal'}</button></div>
     </div>
 
     {consultando&&<Loading text="Acessando o e-Fisco, emitindo e analisando a certidão..."/>}
+    {consultandoFederal&&<Loading text="Acessando a Receita Federal/PGFN, consultando o CNPJ e tentando obter o documento..."/>}
+    {consultandoNarrativa&&<Loading text="Abrindo SEFAZ-PE, autenticando com certificado digital e lendo o documento exibido no Chrome..."/>}
     {processandoLote&&<Loading text="Consultando todas as empresas ativas na SEFAZ-PE. O lote continua mesmo se uma empresa apresentar erro..."/>}
 
     {!processandoLote&&lote&&<div className="panel result-card"><div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Certidões Estaduais</h3><p>{lote.resumo.consultas_registradas||0} de {lote.resumo.total||0} consultas registradas no banco.</p></div></div><div className="details cert-result-details"><div><span>Regular</span><strong>{lote.resumo.regular||0}</strong></div><div><span>Positiva com efeitos</span><strong>{lote.resumo.positiva_com_efeitos_de_negativa||0}</strong></div><div><span>Irregular</span><strong>{lote.resumo.irregular||0}</strong></div><div><span>Aguardando intervenção</span><strong>{lote.resumo.aguardando_intervencao||0}</strong></div><div><span>Erro</span><strong>{lote.resumo.erro||0}</strong></div></div></div>}
@@ -103,6 +132,7 @@ export function CertidoesPage(){
       </div>
       {resultado.pendencia&&<div className="pendency-box"><strong>🔴 Pendência identificada</strong><p>{resultado.pendencia_detalhes||'A certidão indica irregularidade. Consulte o documento para verificar os detalhes.'}</p></div>}
       {resultado.mensagem&&<div className="result-message">{resultado.mensagem}</div>}
+      {resultado.tipo_certidao==='Narrativa de Débito Fiscal - SEFAZ'&&resultado.texto_extraido&&<div className="document-reading-box"><strong>Leitura do documento no navegador</strong><pre>{resultado.texto_extraido}</pre></div>}
       {resultado.pdf_path&&<div className="form-actions result-actions"><button className="button primary" onClick={()=>window.open(pdfUrl(resultado.pdf_path!), '_blank','noopener,noreferrer')}><ExternalLink size={15}/> Visualizar Certidão</button></div>}
     </div>}
 

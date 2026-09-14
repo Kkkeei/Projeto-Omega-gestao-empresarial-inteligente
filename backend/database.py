@@ -332,14 +332,6 @@ def criar_tabelas() -> None:
         )
         cursor.execute(
             "INSERT OR IGNORE INTO automacoes (tipo,nome,descricao,configuracao) VALUES (?,?,?,?)",
-            ("CONSULTA_CERTIDAO_FEDERAL", "Certidão Federal - RFB/PGFN", "Consulta da Certidão Federal de Regularidade Fiscal no portal da Receita Federal/PGFN.", "{\"origem\":\"RFB/PGFN\",\"metodo\":\"PLAYWRIGHT\"}"),
-        )
-        cursor.execute(
-            "INSERT OR IGNORE INTO integracoes (nome,tipo,descricao,url) VALUES (?,?,?,?)",
-            ("Receita Federal / PGFN", "CERTIDAO_FEDERAL", "Consulta da Certidão de Débitos Relativos a Créditos Tributários Federais e à Dívida Ativa da União.", "https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cnpj"),
-        )
-        cursor.execute(
-            "INSERT OR IGNORE INTO automacoes (tipo,nome,descricao,configuracao) VALUES (?,?,?,?)",
             ("CONSULTA_CERTIDAO_NARRATIVA", "Certidão Narrativa de Débito Fiscal - SEFAZ-PE", "Consulta por navegador da Certidão Negativa/Narrativa de Débito Fiscal da SEFAZ Pernambuco, com leitura do documento.", "{\"origem\":\"SEFAZ-PE\",\"metodo\":\"PYAutoGUI\"}"),
         )
         cursor.execute(

@@ -3,3 +3,6 @@
 .readonly-field { background: #f5f7fa; color: #5b6575; cursor: not-allowed; }
 .result-card{margin-bottom:17px}.result-card .panel-header p{margin:4px 0 0;color:#778397;font-size:10px}.cert-result-details{grid-template-columns:repeat(3,1fr)}.pendency-box{margin:0 20px 16px;padding:13px 15px;border:1px solid #ffd0d7;background:#fff7f8;border-radius:8px}.pendency-box strong{display:block;color:#b42318;font-size:11px}.pendency-box p{margin:6px 0 0;color:#667085;font-size:10px;line-height:1.5;white-space:pre-wrap}.result-message{margin:0 20px 12px;color:#667085;font-size:10px}.result-actions{padding-bottom:17px}.automation-run .run-grid input:disabled{background:#f7f9fb;color:#667085}.form-error{display:flex;align-items:center;gap:7px}
 @media(max-width:900px){.cert-result-details{grid-template-columns:1fr 1fr}}@media(max-width:760px){.cert-result-details{grid-template-columns:1fr}}
+
+
+.document-reading-box{margin-top:16px;padding:16px;border:1px solid #d9dee7;border-radius:12px;background:#f8fafc}.document-reading-box strong{display:block;margin-bottom:10px}.document-reading-box pre{max-height:420px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#fff;padding:14px;border-radius:8px;border:1px solid #e5e7eb}

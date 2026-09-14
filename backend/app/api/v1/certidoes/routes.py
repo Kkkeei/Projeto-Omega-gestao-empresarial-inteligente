@@ -1,12 +1,15 @@
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from app.schemas.certidoes import CertidaoCreate
+from app.services.receita_federal_service import consultar_federal
 from app.services.certidoes_service import (
     consultar_estadual,
     consultar_estadual_todas,
+    consultar_narrativa_pyautogui,
     historico,
     listar,
     obter_pdf_path,
@@ -44,6 +47,28 @@ async def consultar_certidao_estadual(empresa_id: int):
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Não foi possível concluir a consulta na SEFAZ-PE.") from exc
+
+
+@router.post("/federal/consultar/{empresa_id}")
+async def consultar_certidao_federal(empresa_id: int):
+    try:
+        return await consultar_federal(empresa_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Não foi possível concluir a consulta da Certidão Federal RFB/PGFN.") from exc
+
+
+@router.post("/narrativa/consultar/{empresa_id}")
+async def consultar_certidao_narrativa(empresa_id: int, certificado_nome: str | None = Query(default=None)):
+    try:
+        # PyAutoGUI é bloqueante e precisa da sessão gráfica do Windows;
+        # executamos em thread para não travar o event loop do FastAPI.
+        return await asyncio.to_thread(consultar_narrativa_pyautogui, empresa_id, certificado_nome)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Não foi possível concluir a Certidão Narrativa de Débito Fiscal na SEFAZ-PE.") from exc
 
 
 @router.post("/estadual/consultar-todas")
