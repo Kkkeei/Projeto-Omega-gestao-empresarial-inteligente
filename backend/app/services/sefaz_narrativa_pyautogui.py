@@ -7,6 +7,7 @@ no código original: leitura do conteúdo que está sendo exibido no Chrome.
 from __future__ import annotations
 
 import os
+import subprocess
 import re
 import time
 from datetime import datetime
@@ -31,6 +32,15 @@ URL_SEFAZ_NARRATIVA = (
     "https://efisco.sefaz.pe.gov.br/sfi_trb_gpf/PREmitirCertidaoNegativaNarrativaDebitoFiscal"
 )
 CERTIFICADO_PADRAO = os.getenv("SEFAZ_CERTIFICADO_NOME", "OMEGA CONTABILIDADE")
+
+def _fechar_chrome_completo() -> None:
+    if os.getenv("OMEGA_CLOSE_CHROME_HARD", "true").strip().lower() not in {"1", "true", "sim", "yes"}:
+        return
+    try:
+        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe", "/T"], capture_output=True, text=True, timeout=15)
+    except Exception:
+        pass
+
 STORAGE_BASE = Path(__file__).resolve().parents[3] / "storage" / "automacoes" / "sefaz_narrativa"
 
 
@@ -58,7 +68,7 @@ def _classificar_documento(texto: str) -> str:
         return "REGULAR"
     if "CERTIDÃO POSITIVA" in normalizado:
         return "IRREGULAR"
-    return "AGUARDANDO_INTERVENCAO"
+    return "ERRO"
 
 
 def _ler_texto_visivel_no_chrome() -> str:
@@ -87,8 +97,8 @@ def _salvar_texto_debug(texto: str, cnpj: str) -> str | None:
     return str(caminho.resolve().relative_to(STORAGE_BASE.parent.parent.resolve()))
 
 
-def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None) -> dict[str, Any]:
-    """Executa o fluxo original e, no final, lê o documento no navegador."""
+def _executar_automacao_interna(cnpj: str, certificado_nome: str | None = None) -> dict[str, Any]:
+    """Executa o fluxo original e sempre fecha o Chrome ao final."""
     cnpj = re.sub(r"\D", "", cnpj or "")
     certificado_nome = certificado_nome or CERTIFICADO_PADRAO
 
@@ -169,13 +179,22 @@ def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None)
     pg.write(cnpj)
     time.sleep(0.2)
     pg.press('enter')
-    pg.click(x=961, y=494)
+
+    # O layout da SEFAZ pode deslocar o botão alguns pixels conforme DPI/zoom.
+    # Mantemos o clique visual configurável e usamos a posição ajustada como
+    # padrão para a tela do servidor: o ponto antigo (961, 494) ficava acima
+    # do botão Emitir.
+    emitir_x = int(os.getenv("SEFAZ_NARRATIVA_EMITIR_X", "961"))
+    emitir_y = int(os.getenv("SEFAZ_NARRATIVA_EMITIR_Y", "520"))
+    print(f"Clicando no botão Emitir em ({emitir_x}, {emitir_y})...")
+    pg.moveTo(x=emitir_x, y=emitir_y, duration=0.5)
+    pg.click()
     time.sleep(2)
+
     for i in range(9):
         pg.press('tab')
         time.sleep(0.2)
     pg.press('enter')
-    # onde aparece aqui após rodar toda a automação
     time.sleep(12)
     # --- FIM DO FLUXO ORIGINAL ---
 
@@ -194,7 +213,7 @@ def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None)
 
     mensagem = "Documento lido no navegador."
     if not texto:
-        situacao = "AGUARDANDO_INTERVENCAO"
+        situacao = "ERRO"
         mensagem = "A página final foi alcançada, mas não foi possível copiar o texto do documento no navegador."
 
     return {
@@ -202,7 +221,7 @@ def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None)
         "cnpj_formatado": f"{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:14]}",
         "tipo_certidao": "Narrativa de Débito Fiscal - SEFAZ",
         "situacao": situacao,
-        "status_processamento": "Sucesso" if texto else "Aguardando intervenção",
+        "status_processamento": "Sucesso" if texto else "Erro técnico",
         "mensagem": mensagem,
         "numero_certidao": numero,
         "data_emissao": data_emissao,
@@ -215,3 +234,21 @@ def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None)
         "arquivo_pdf": None,
         "pdf_path": None,
     }
+
+
+def executar_automacao_pyautogui(cnpj: str, certificado_nome: str | None = None) -> dict[str, Any]:
+    try:
+        return _executar_automacao_interna(cnpj, certificado_nome)
+    except Exception as exc:
+        return {
+            "cnpj": re.sub(r"\D", "", cnpj or ""),
+            "tipo_certidao": "Narrativa de Débito Fiscal - SEFAZ",
+            "situacao": "ERRO",
+            "status_processamento": "Erro técnico",
+            "mensagem": "A automação Narrativa não conseguiu concluir o fluxo.",
+            "erro_tecnico": f"{type(exc).__name__}: {exc}",
+            "pendencia": False,
+            "origem": "SEFAZ-PE / PyAutoGUI",
+        }
+    finally:
+        _fechar_chrome_completo()

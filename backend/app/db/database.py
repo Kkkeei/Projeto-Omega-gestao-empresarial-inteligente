@@ -121,7 +121,24 @@ def criar_tabelas() -> None:
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            categoria_id INTEGER,
             FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS categorias_documentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            categoria_pai_id INTEGER,
+            nome TEXT NOT NULL,
+            descricao TEXT,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            arquivado_em TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(empresa_id, categoria_pai_id, nome),
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (categoria_pai_id) REFERENCES categorias_documentos(id) ON DELETE SET NULL
         );
 
         CREATE TABLE IF NOT EXISTS documento_versoes (
@@ -133,6 +150,8 @@ def criar_tabelas() -> None:
             extensao TEXT,
             tamanho INTEGER,
             hash_arquivo TEXT,
+            mime_type TEXT,
+            usuario_upload_id INTEGER,
             origem TEXT,
             observacao TEXT,
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -248,6 +267,20 @@ def criar_tabelas() -> None:
             FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE SET NULL
         );
 
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            senha_hash TEXT NOT NULL,
+            perfil TEXT NOT NULL DEFAULT 'USUARIO',
+            ativo INTEGER NOT NULL DEFAULT 1,
+            token_version INTEGER NOT NULL DEFAULT 0,
+            deve_trocar_senha INTEGER NOT NULL DEFAULT 0,
+            ultimo_login TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS auditorias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             entidade TEXT NOT NULL,
@@ -258,6 +291,29 @@ def criar_tabelas() -> None:
             origem TEXT,
             ip TEXT,
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS tokens_redefinicao_senha (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expira_em TEXT NOT NULL,
+            usado_em TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS automacao_locks (
+            lock_name TEXT PRIMARY KEY,
+            token TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            empresa_id INTEGER,
+            empresa TEXT,
+            iniciado_em TEXT NOT NULL,
+            expira_em TEXT NOT NULL,
+            host TEXT,
+            pid INTEGER,
+            mensagem TEXT
         );
 
         CREATE TABLE IF NOT EXISTS integracoes (
@@ -292,8 +348,36 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_pendencias_status ON pendencias(status);
         CREATE INDEX IF NOT EXISTS idx_execucoes_empresa ON execucoes_automacao(empresa_id);
         CREATE INDEX IF NOT EXISTS idx_documentos_empresa ON documentos(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_documentos_categoria ON documentos(categoria_id);
+        CREATE INDEX IF NOT EXISTS idx_categorias_empresa ON categorias_documentos(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_categorias_pai ON categorias_documentos(categoria_pai_id);
+        CREATE INDEX IF NOT EXISTS idx_documento_versoes_usuario ON documento_versoes(usuario_upload_id);
         CREATE INDEX IF NOT EXISTS idx_auditorias_entidade ON auditorias(entidade, entidade_id);
+        CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+        CREATE INDEX IF NOT EXISTS idx_reset_tokens_usuario ON tokens_redefinicao_senha(usuario_id);
+        CREATE INDEX IF NOT EXISTS idx_reset_tokens_expira ON tokens_redefinicao_senha(expira_em);
+        CREATE INDEX IF NOT EXISTS idx_automacao_locks_expira ON automacao_locks(expira_em);
         """)
+
+        # Migrations for Documentação. Never remove legacy data.
+        colunas_documentos = {r[1] for r in conexao.execute("PRAGMA table_info(documentos)").fetchall()}
+        if "categoria_id" not in colunas_documentos:
+            cursor.execute("ALTER TABLE documentos ADD COLUMN categoria_id INTEGER")
+        colunas_versoes = {r[1] for r in conexao.execute("PRAGMA table_info(documento_versoes)").fetchall()}
+        if "mime_type" not in colunas_versoes:
+            cursor.execute("ALTER TABLE documento_versoes ADD COLUMN mime_type TEXT")
+        if "usuario_upload_id" not in colunas_versoes:
+            cursor.execute("ALTER TABLE documento_versoes ADD COLUMN usuario_upload_id INTEGER")
+
+        empresas_existentes = cursor.execute("SELECT id FROM empresas").fetchall()
+        categorias_padrao = [
+            ("Societário", "Contratos, alterações, QSA, atos e certidões societárias.", 1),
+            ("Pessoal (Sócio)", "Documentos pessoais e cadastrais dos sócios.", 2),
+            ("Imposto de Renda", "IRPF/IRPJ, recibos, declarações e documentos relacionados.", 3),
+        ]
+        for emp in empresas_existentes:
+            for nome, descricao, ordem in categorias_padrao:
+                cursor.execute("INSERT OR IGNORE INTO categorias_documentos (empresa_id,categoria_pai_id,nome,descricao,ordem,ativo) VALUES (?,NULL,?,?,?,1)", (emp["id"], nome, descricao, ordem))
 
         tipos = [
             ("Federal - RFB/PGFN", "Certidão Federal", "FEDERAL"),
@@ -332,11 +416,15 @@ def criar_tabelas() -> None:
         )
         cursor.execute(
             "INSERT OR IGNORE INTO automacoes (tipo,nome,descricao,configuracao) VALUES (?,?,?,?)",
-            ("CONSULTA_CERTIDAO_FEDERAL", "Certidão Federal - RFB/PGFN", "Consulta da Certidão Federal de Regularidade Fiscal no portal da Receita Federal/PGFN.", "{\"origem\":\"RFB/PGFN\",\"metodo\":\"PLAYWRIGHT\"}"),
+            ("CONSULTA_CERTIDAO_FEDERAL", "Certidão Federal - RFB/PGFN", "Consulta da Certidão Federal de Regularidade Fiscal no portal da Receita Federal/PGFN.", "{\"origem\":\"RFB/PGFN\",\"metodo\":\"PYAUTOGUI\"}"),
         )
         cursor.execute(
             "INSERT OR IGNORE INTO integracoes (nome,tipo,descricao,url) VALUES (?,?,?,?)",
             ("Receita Federal / PGFN", "CERTIDAO_FEDERAL", "Consulta da Certidão de Débitos Relativos a Créditos Tributários Federais e à Dívida Ativa da União.", "https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cnpj"),
+        )
+        cursor.execute(
+            "UPDATE automacoes SET configuracao=? WHERE tipo=?",
+            ("{\"origem\":\"RFB/PGFN\",\"metodo\":\"PYAUTOGUI\"}", "CONSULTA_CERTIDAO_FEDERAL"),
         )
         cursor.execute(
             "INSERT OR IGNORE INTO automacoes (tipo,nome,descricao,configuracao) VALUES (?,?,?,?)",
@@ -436,6 +524,8 @@ def criar_tabelas() -> None:
         END;
         """)
         conexao.commit()
+        from app.services.auth_service import ensure_admin_user
+        ensure_admin_user()
     finally:
         conexao.close()
 

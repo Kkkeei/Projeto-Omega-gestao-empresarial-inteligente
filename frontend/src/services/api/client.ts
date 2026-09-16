@@ -1,4 +1,4 @@
-export const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+export const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://127.0.0.1:8000")).replace(/\/$/, "");
 
 function errorMessage(data: unknown, status: number): string {
   if (typeof data === "string" && data.trim()) return data;
@@ -21,10 +21,11 @@ function errorMessage(data: unknown, status: number): string {
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem("omega_access_token");
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) },
       ...options,
     });
   } catch {
@@ -33,6 +34,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   const contentType = response.headers.get("content-type") || "";
   const data = contentType.includes("application/json") ? await response.json() : await response.text();
+  if (response.status === 401 && !path.endsWith("/auth/login")) {
+    localStorage.removeItem("omega_access_token");
+    if (window.location.pathname !== "/login") window.location.href = "/login";
+  }
   if (!response.ok) throw new Error(errorMessage(data, response.status));
   return data as T;
 }

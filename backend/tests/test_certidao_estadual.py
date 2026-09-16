@@ -30,7 +30,7 @@ def test_leitura_conservadora_narrativa():
     assert _classificar_documento(texto_positiva) == "IRREGULAR"
 
     texto_ambiguous = "Documento emitido pela SEFAZ-PE."
-    assert _classificar_documento(texto_ambiguous) == "AGUARDANDO_INTERVENCAO"
+    assert _classificar_documento(texto_ambiguous) == "ERRO"
 
 
 def test_persistencia_narrativa_mock(monkeypatch):

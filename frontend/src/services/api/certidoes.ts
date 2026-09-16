@@ -12,5 +12,8 @@ export const consultarCertidaoNarrativa=(empresaId:number,certificadoNome?:strin
 export const consultarCertidaoFederal=(empresaId:number)=>apiFetch<CertidaoConsultaResultado>(`/api/v1/certidoes/federal/consultar/${empresaId}`,{method:'POST'});
 export const consultarCertidaoEstadual=(empresaId:number)=>apiFetch<CertidaoConsultaResultado>(`/api/v1/certidoes/estadual/consultar/${empresaId}`,{method:'POST'});
 export const pdfUrl=(path:string)=>`${API_URL}/api/v1/certidoes/pdf?path=${encodeURIComponent(path)}`;
+export const pdfDownloadUrl=(path:string)=>`${API_URL}/api/v1/certidoes/pdf?path=${encodeURIComponent(path)}&download=true`;
 
 export const consultarTodasCertidoesEstaduais=()=>apiFetch<{resumo:Record<string,number>;resultados:CertidaoConsultaResultado[]}>('/api/v1/certidoes/estadual/consultar-todas',{method:'POST'});
+
+export const statusAutomacaoCertidoes=()=>apiFetch<{ocupada:boolean;tipo?:string;empresa_id?:number|null;empresa?:string;iniciado_em?:string;expira_em?:string;mensagem?:string}>('/api/v1/certidoes/automacao/status');

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 from app.schemas.empresas import EmpresaCreate, EmpresaUpdate, InativarEmpresa, AlterarRegime
 from app.services.empresas_service import *
+import asyncio
+import os
 from app.services.certidoes_service import listar as listar_certidoes
 from app.services.pendencias_service import listar as listar_pendencias
 
@@ -67,9 +69,16 @@ async def sincronizar(empresa_id:int):
 
 @router.post("/sync-todas")
 async def sincronizar_todas():
-    itens=listar_empresas(ativo=True); resultados=[]
-    for e in itens:
+    """Sincroniza uma empresa por vez, com intervalo, para reduzir 429 de provedores externos."""
+    itens = listar_empresas(ativo=True)
+    resultados = []
+    intervalo = float(os.getenv("BRASILAPI_INTERVAL_SECONDS", "2.0"))
+    for indice, e in enumerate(itens):
         try:
-            atualizado,alteracoes=await sincronizar_empresa(e['id']); resultados.append({'empresa_id':e['id'],'status':'OK','alteracoes':len(alteracoes),'empresa':atualizado})
-        except Exception as ex: resultados.append({'empresa_id':e['id'],'status':'ERRO','mensagem':str(ex)})
+            atualizado, alteracoes = await sincronizar_empresa(e['id'])
+            resultados.append({'empresa_id':e['id'],'status':'OK','alteracoes':len(alteracoes),'empresa':atualizado})
+        except Exception as ex:
+            resultados.append({'empresa_id':e['id'],'status':'ERRO','mensagem':str(ex)})
+        if indice < len(itens) - 1 and intervalo > 0:
+            await asyncio.sleep(intervalo)
     return {'total':len(resultados),'resultados':resultados}

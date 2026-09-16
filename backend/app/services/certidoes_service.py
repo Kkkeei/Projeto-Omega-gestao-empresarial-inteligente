@@ -376,17 +376,16 @@ def _registrar_execucao(conexao, empresa_id: int, resultado: dict) -> None:
 
 def _normalizar_resultado_final(resultado: dict) -> dict:
     resultado = dict(resultado or {})
-    if resultado.get("situacao") == "NAO IDENTIFICADO":
-        resultado["situacao"] = "AGUARDANDO_INTERVENCAO"
-        resultado["status_processamento"] = "Aguardando intervenção"
-        resultado.setdefault("mensagem", "PDF obtido, mas a situação fiscal não pôde ser identificada com segurança.")
-    else:
-        msg = (resultado.get("mensagem") or "").upper()
-        if resultado.get("status_processamento") != "Sucesso" and any(
-            x in msg for x in ("BOTÃO EMITIR", "LAYOUT", "CAPTCHA", "BLOQUEIO", "PDF INVÁLIDO", "PDF NÃO")
-        ):
-            resultado["situacao"] = "AGUARDANDO_INTERVENCAO"
-            resultado["status_processamento"] = "Aguardando intervenção"
+    situacao = resultado.get("situacao")
+    if situacao == "AGUARDANDO_INTERVENCAO" or situacao == "NAO IDENTIFICADO":
+        resultado["situacao"] = "ERRO"
+        resultado["status_processamento"] = "Erro técnico"
+        resultado.setdefault("erro_tecnico", "A automação não conseguiu identificar o resultado final com segurança.")
+        resultado.setdefault("mensagem", "A automação foi encerrada sem intervenção manual.")
+    elif resultado.get("status_processamento") and "aguardando" in str(resultado.get("status_processamento")).lower():
+        resultado["situacao"] = "ERRO"
+        resultado["status_processamento"] = "Erro técnico"
+        resultado.setdefault("erro_tecnico", "A automação não foi concluída automaticamente.")
     return resultado
 
 
@@ -750,7 +749,6 @@ async def consultar_estadual_todas(tentativas: int = 3) -> dict:
         "regular": sum(r.get("situacao") == "REGULAR" for r in resultados),
         "positiva_com_efeitos_de_negativa": sum(r.get("situacao") == "POSITIVA COM EFEITOS DE NEGATIVA" for r in resultados),
         "irregular": sum(r.get("situacao") == "IRREGULAR" for r in resultados),
-        "aguardando_intervencao": sum(r.get("situacao") == "AGUARDANDO_INTERVENCAO" for r in resultados),
         "erro": sum(r.get("situacao") == "ERRO" for r in resultados),
         "consultas_registradas": sum(bool(r.get("consulta_registrada")) for r in resultados),
     }
