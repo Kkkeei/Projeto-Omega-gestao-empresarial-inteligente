@@ -9,10 +9,12 @@ import {
   Folder,
   History,
   Upload,
+  Plus,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   baixarVersao,
+  criarCategoria,
   listarCategorias,
   listarDocumentos,
   listarVersoes,
@@ -36,7 +38,7 @@ export function EmpresaDocumentacaoPage() {
   const [docs, setDocs] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(false);
-  const [modal, setModal] = useState<'upload' | 'version' | null>(null);
+  const [modal, setModal] = useState<'upload' | 'version' | 'category' | null>(null);
   const [docTarget, setDocTarget] = useState<Documento | null>(null);
   const [versions, setVersions] = useState<Versao[]>([]);
   const [error, setError] = useState('');
@@ -175,7 +177,12 @@ export function EmpresaDocumentacaoPage() {
             <span className="eyebrow">1 · TIPO DE DOCUMENTAÇÃO</span>
             <h3>Escolha a pasta para consultar</h3>
           </div>
-          <span className="section-hint">Três áreas do dossiê empresarial</span>
+          <div className="doc-category-tools">
+            <span className="section-hint">Três áreas principais do dossiê empresarial</span>
+            <button className="button secondary small" type="button" onClick={() => setModal('category')}>
+              <Plus size={13} /> Nova pasta
+            </button>
+          </div>
         </div>
 
         <div className="doc-category-card-grid">
@@ -273,6 +280,20 @@ export function EmpresaDocumentacaoPage() {
         <div><strong>Estrutura da documentação</strong><span>As três pastas do dossiê são Pessoal (Sócio), Societário e IRPF. Selecione uma delas nos cards acima para carregar os documentos abaixo, sem sair da página.</span></div>
       </div>
 
+      {modal === 'category' && (
+        <Modal title="Criar nova pasta" onClose={() => setModal(null)}>
+          <CategoryForm
+            existingNames={folders.map((folder) => folder.nome)}
+            onCancel={() => setModal(null)}
+            onSave={async (data) => {
+              await criarCategoria(empresaId, data);
+              setModal(null);
+              await load();
+            }}
+          />
+        </Modal>
+      )}
+
       {modal === 'upload' && selectedFolder && (
         <Modal title={`Adicionar documento · ${selectedFolder.nome}`} onClose={() => setModal(null)}>
           <UploadForm onCancel={() => setModal(null)} onSave={async (data) => {
@@ -327,6 +348,68 @@ function Modal({
           </button>
         </div>
         {children}
+      </div>
+    </div>
+  );
+}
+
+function CategoryForm({
+  onCancel,
+  onSave,
+  existingNames,
+}: {
+  onCancel: () => void;
+  onSave: (data: { nome: string; descricao?: string; categoria_pai_id?: number | null }) => Promise<void>;
+  existingNames: string[];
+}) {
+  const [nome, setNome] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [saving, setSaving] = useState(false);
+  const duplicated = existingNames.some((value) => value.trim().toLocaleLowerCase() === nome.trim().toLocaleLowerCase());
+
+  async function handleSave() {
+    if (!nome.trim() || duplicated || saving) return;
+    setSaving(true);
+    try {
+      await onSave({
+        nome: nome.trim(),
+        descricao: descricao.trim() || undefined,
+        categoria_pai_id: null,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-form">
+      <label>
+        Nome da pasta
+        <input
+          value={nome}
+          onChange={(event) => setNome(event.target.value)}
+          placeholder="Ex.: Licitações"
+          autoFocus
+        />
+        {duplicated && <small className="form-error">Já existe uma pasta com esse nome.</small>}
+      </label>
+
+      <label>
+        Descrição (opcional)
+        <textarea
+          value={descricao}
+          onChange={(event) => setDescricao(event.target.value)}
+          placeholder="Ex.: Documentos de licitações e contratos"
+        />
+      </label>
+
+      <div className="modal-actions">
+        <button className="button secondary" type="button" onClick={onCancel}>
+          Cancelar
+        </button>
+        <button className="button primary" type="button" disabled={!nome.trim() || duplicated || saving} onClick={() => void handleSave()}>
+          {saving ? 'Criando...' : 'Criar pasta'}
+        </button>
       </div>
     </div>
   );
