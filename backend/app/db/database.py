@@ -331,6 +331,21 @@ def criar_tabelas() -> None:
             atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
+        """)
+
+        # Migrations for Documentação. Never remove legacy data.
+        # These changes must happen before creating indexes on the new columns.
+        colunas_documentos = {r[1] for r in conexao.execute("PRAGMA table_info(documentos)").fetchall()}
+        if "categoria_id" not in colunas_documentos:
+            cursor.execute("ALTER TABLE documentos ADD COLUMN categoria_id INTEGER")
+
+        colunas_versoes = {r[1] for r in conexao.execute("PRAGMA table_info(documento_versoes)").fetchall()}
+        for coluna, tipo in (("mime_type", "TEXT"), ("usuario_upload_id", "INTEGER"), ("tamanho", "INTEGER"), ("hash_arquivo", "TEXT")):
+            if coluna not in colunas_versoes:
+                cursor.execute(f"ALTER TABLE documento_versoes ADD COLUMN {coluna} {tipo}")
+
+        # All indexes are created only after compatibility migrations.
+        cursor.executescript("""
         CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
         CREATE INDEX IF NOT EXISTS idx_empresas_razao ON empresas(razao_social);
         CREATE INDEX IF NOT EXISTS idx_empresas_fantasia ON empresas(nome_fantasia);
@@ -359,21 +374,11 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_automacao_locks_expira ON automacao_locks(expira_em);
         """)
 
-        # Migrations for Documentação. Never remove legacy data.
-        colunas_documentos = {r[1] for r in conexao.execute("PRAGMA table_info(documentos)").fetchall()}
-        if "categoria_id" not in colunas_documentos:
-            cursor.execute("ALTER TABLE documentos ADD COLUMN categoria_id INTEGER")
-        colunas_versoes = {r[1] for r in conexao.execute("PRAGMA table_info(documento_versoes)").fetchall()}
-        if "mime_type" not in colunas_versoes:
-            cursor.execute("ALTER TABLE documento_versoes ADD COLUMN mime_type TEXT")
-        if "usuario_upload_id" not in colunas_versoes:
-            cursor.execute("ALTER TABLE documento_versoes ADD COLUMN usuario_upload_id INTEGER")
-
         empresas_existentes = cursor.execute("SELECT id FROM empresas").fetchall()
         categorias_padrao = [
             ("Societário", "Contratos, alterações, QSA, atos e certidões societárias.", 1),
             ("Pessoal (Sócio)", "Documentos pessoais e cadastrais dos sócios.", 2),
-            ("Imposto de Renda", "IRPF/IRPJ, recibos, declarações e documentos relacionados.", 3),
+            ("IRPF", "Declarações, recibos e documentos de Imposto de Renda da pessoa física.", 3),
         ]
         for emp in empresas_existentes:
             for nome, descricao, ordem in categorias_padrao:

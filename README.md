@@ -135,3 +135,8 @@ O endpoint público de criação de conta é `POST /api/v1/auth/registrar`. Em d
 ## Módulo Documentação
 
 Implementada a área Documentação conforme os requisitos e UML entregues: empresas em cards compactos, filtros por regime, pastas por tipo de documento (Societário, Pessoal (Sócio), Imposto de Renda), categorias dinâmicas, upload, download, visualização e histórico de versões. Os PDFs de especificação ficam em `docs/especificacoes_documentacao/`.
+
+
+## Documentação — estrutura atual
+
+A área Documentação segue uma estrutura inspirada no Explorador de Arquivos do Windows. Cada empresa possui somente três pastas visíveis e oficiais: **Pessoal (Sócio)**, **Societário** e **IRPF**. Categorias antigas ou extras são arquivadas e não aparecem na navegação.

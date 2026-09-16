@@ -16,9 +16,9 @@ from app.db.database import BASE_DIR, conectar_banco
 
 STORAGE_ROOT = BASE_DIR.parent / "storage" / "documentos" / "empresas"
 DEFAULT_CATEGORIES = [
-    ("Societário", "Contratos, alterações, QSA, atos e certidões societárias."),
     ("Pessoal (Sócio)", "Documentos pessoais e cadastrais dos sócios."),
-    ("Imposto de Renda", "IRPF/IRPJ, recibos, declarações e documentos relacionados."),
+    ("Societário", "Contrato social, alterações, QSA e demais documentos societários."),
+    ("IRPF", "Declarações, recibos e documentos de Imposto de Renda da pessoa física."),
 ]
 MAX_UPLOAD_MB = int(os.getenv("OMEGA_DOCUMENTO_MAX_MB", "25"))
 
@@ -29,10 +29,45 @@ def _safe_name(value: str) -> str:
 
 
 def ensure_default_categories(conexao, empresa_id: int) -> None:
-    for nome, descricao in DEFAULT_CATEGORIES:
+    """Mantém exatamente três pastas visíveis por empresa.
+
+    Categorias antigas/extra não são apagadas fisicamente: são arquivadas para preservar
+    histórico. Duplicatas dos três nomes oficiais são consolidadas na primeira categoria.
+    """
+    rows = conexao.execute(
+        "SELECT id, nome, categoria_pai_id, ativo FROM categorias_documentos WHERE empresa_id=? ORDER BY id",
+        (empresa_id,),
+    ).fetchall()
+    canonical = {}
+    for ordem, (nome, descricao) in enumerate(DEFAULT_CATEGORIES, start=1):
+        matches = [r for r in rows if r["categoria_pai_id"] is None and r["nome"].strip().casefold() == nome.casefold()]
+        if matches:
+            keep = matches[0]
+            canonical[nome.casefold()] = keep["id"]
+            conexao.execute(
+                "UPDATE categorias_documentos SET nome=?, descricao=?, ordem=?, ativo=1, arquivado_em=NULL WHERE id=?",
+                (nome, descricao, ordem, keep["id"]),
+            )
+            for duplicate in matches[1:]:
+                conexao.execute("UPDATE documentos SET categoria_id=? WHERE categoria_id=?", (keep["id"], duplicate["id"]))
+                conexao.execute("UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE id=?", (duplicate["id"],))
+        else:
+            cur = conexao.execute(
+                "INSERT INTO categorias_documentos (empresa_id, categoria_pai_id, nome, descricao, ordem, ativo) VALUES (?, NULL, ?, ?, ?, 1)",
+                (empresa_id, nome, descricao, ordem),
+            )
+            canonical[nome.casefold()] = cur.lastrowid
+
+    allowed_ids = tuple(canonical.values())
+    if allowed_ids:
+        placeholders = ','.join('?' for _ in allowed_ids)
         conexao.execute(
-            "INSERT OR IGNORE INTO categorias_documentos (empresa_id, categoria_pai_id, nome, descricao, ordem, ativo) VALUES (?, NULL, ?, ?, ?, 1)",
-            (empresa_id, nome, descricao, DEFAULT_CATEGORIES.index((nome, descricao)) + 1),
+            f"UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND categoria_pai_id IS NULL AND id NOT IN ({placeholders}) AND ativo=1",
+            (empresa_id, *allowed_ids),
+        )
+        conexao.execute(
+            f"UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND categoria_pai_id IS NOT NULL AND ativo=1",
+            (empresa_id,),
         )
 
 
@@ -90,7 +125,10 @@ def listar_categorias(empresa_id: int):
                    (SELECT COUNT(*) FROM documentos d WHERE d.categoria_id=c.id AND d.ativo=1) AS documentos_count
               FROM categorias_documentos c
              WHERE c.empresa_id=?
-             ORDER BY COALESCE(c.categoria_pai_id,0), c.ordem, UPPER(c.nome)
+               AND c.ativo=1
+               AND c.categoria_pai_id IS NULL
+               AND UPPER(c.nome) IN (UPPER('Pessoal (Sócio)'), UPPER('Societário'), UPPER('IRPF'))
+             ORDER BY c.ordem, UPPER(c.nome)
             """,
             (empresa_id,),
         ).fetchall()
@@ -100,6 +138,7 @@ def listar_categorias(empresa_id: int):
 
 
 def criar_categoria(empresa_id: int, nome: str, descricao: str | None, categoria_pai_id: int | None = None):
+    raise ValueError("A estrutura atual utiliza somente as pastas Pessoal (Sócio), Societário e IRPF.")
     nome = nome.strip()
     if not nome:
         raise ValueError("O nome da categoria é obrigatório.")
