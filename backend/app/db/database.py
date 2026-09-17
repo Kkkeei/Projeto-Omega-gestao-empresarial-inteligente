@@ -331,6 +331,34 @@ def criar_tabelas() -> None:
             atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS faturamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            competencia_ano INTEGER NOT NULL,
+            competencia_mes INTEGER NOT NULL,
+            valor REAL NOT NULL DEFAULT 0,
+            observacao TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(empresa_id, competencia_ano, competencia_mes),
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS declaracoes_faturamento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            tipo TEXT NOT NULL,
+            periodo_inicio TEXT NOT NULL,
+            periodo_fim TEXT NOT NULL,
+            valor_total REAL NOT NULL DEFAULT 0,
+            nome_arquivo TEXT NOT NULL,
+            caminho_arquivo TEXT NOT NULL,
+            usuario_id INTEGER,
+            data_geracao TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+        );
+
         """)
 
         # Migrations for Documentação. Never remove legacy data.
@@ -372,6 +400,9 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_reset_tokens_usuario ON tokens_redefinicao_senha(usuario_id);
         CREATE INDEX IF NOT EXISTS idx_reset_tokens_expira ON tokens_redefinicao_senha(expira_em);
         CREATE INDEX IF NOT EXISTS idx_automacao_locks_expira ON automacao_locks(expira_em);
+        CREATE INDEX IF NOT EXISTS idx_faturamentos_empresa_competencia ON faturamentos(empresa_id, competencia_ano, competencia_mes);
+        CREATE INDEX IF NOT EXISTS idx_faturamentos_competencia ON faturamentos(competencia_ano, competencia_mes);
+        CREATE INDEX IF NOT EXISTS idx_declaracoes_faturamento_empresa ON declaracoes_faturamento(empresa_id, data_geracao);
         """)
 
         empresas_existentes = cursor.execute("SELECT id FROM empresas").fetchall()

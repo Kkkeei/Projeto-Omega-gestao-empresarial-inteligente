@@ -1,0 +1,88 @@
+.fat-regime-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}.fat-regime-card{border:1px solid #dfe4ea;border-radius:10px;background:#fff;padding:12px;display:flex;align-items:center;gap:9px;text-align:left;cursor:pointer;transition:.14s}.fat-regime-card:hover{background:#f7fbff;border-color:#c8d6e8}.fat-regime-card.active{box-shadow:inset 3px 0 0 #2f73d6;background:#f7fbff;border-color:#bcd0e9}.fat-regime-card>span:first-child{width:30px;height:30px;border-radius:7px;background:#f5f7fa;display:grid;place-items:center;color:#687588;flex:0 0 30px}.fat-regime-card strong{display:block;color:#263244;font-size:10px}.fat-regime-card small{display:block;color:#8a94a4;font-size:8px;margin-top:2px}.fat-company-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.fat-company-card{display:block;border:1px solid #e2e7ee;background:#fff;border-radius:10px;padding:12px;text-decoration:none;color:inherit;transition:.14s}.fat-company-card:hover{transform:translateY(-1px);border-color:#b9cce5;box-shadow:0 6px 18px rgba(31,68,112,.08)}.fat-company-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.fat-company-main{display:flex;align-items:center;gap:9px;min-width:0}.fat-company-icon{width:30px;height:30px;border-radius:7px;background:#eef4ff;color:#2f73d6;display:grid;place-items:center;flex:0 0 30px}.fat-company-name{min-width:0}.fat-company-name strong{display:block;color:#263244;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fat-company-name small{display:block;color:#98a2b3;font-size:8px;margin-top:3px}.fat-status{display:inline-flex;align-items:center;gap:5px;font-size:8px;font-weight:800}.fat-status-dot{width:9px;height:9px;border-radius:50%;display:inline-block}.fat-status.pending .fat-status-dot{background:#b42318;box-shadow:0 0 0 3px #fff1f3}.fat-status.done .fat-status-dot{background:#087443;box-shadow:0 0 0 3px #ecfdf3}.fat-status.pending{color:#b42318}.fat-status.done{color:#087443}.fat-company-bottom{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px;padding-top:10px;border-top:1px solid #edf0f4}.fat-company-bottom span{display:flex;flex-direction:column;gap:3px}.fat-company-bottom b{font-size:7px;color:#98a2b3;text-transform:uppercase;letter-spacing:.05em}.fat-company-bottom strong{font-size:9px;color:#344054}.fat-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.fat-detail-meta{color:#778397;font-size:10px;margin-top:4px}.fat-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.fat-summary .metric-card{padding:13px}.fat-summary .metric-card strong{font-size:18px}.fat-action-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.fat-action-card{border:1px solid #e2e7ee;background:#fff;border-radius:10px;padding:12px;text-align:left;cursor:pointer;transition:.14s}.fat-action-card:hover{border-color:#bfd0e4;background:#f9fbfe}.fat-action-card strong{display:block;color:#263244;font-size:10px}.fat-action-card span{display:block;color:#98a2b3;font-size:8px;margin-top:3px;line-height:1.4}.fat-inline-form{padding:12px 13px;margin:-5px 0 14px;border:1px solid #dce5ef;background:#f8fbff;border-radius:9px}.fat-inline-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end}.fat-inline-form label{display:flex;flex-direction:column;gap:4px;font-size:8px;font-weight:800;color:#475467}.fat-inline-form .span-2{grid-column:span 2}.fat-inline-form-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:9px}.fat-table-actions{display:flex;gap:4px}.fat-period-label{font-size:8px;color:#667085}.fat-empty-note{padding:10px 13px;background:#fafbfc;border:1px dashed #dbe2ea;border-radius:8px;color:#8a94a4;font-size:9px;margin-bottom:12px}.fat-declaration-links{display:flex;gap:5px;justify-content:flex-end}.fat-declaration-history td{font-size:10px}@media(max-width:1000px){.fat-regime-grid{grid-template-columns:repeat(2,1fr)}.fat-company-grid{grid-template-columns:1fr}.fat-action-grid{grid-template-columns:1fr}.fat-summary{grid-template-columns:1fr 1fr}.fat-inline-form-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.fat-regime-grid,.fat-summary,.fat-inline-form-grid{grid-template-columns:1fr}.fat-inline-form .span-2{grid-column:span 1}.fat-detail-head{flex-direction:column}}
+
+/* Refinos de UX da área Faturamento */
+.faturamento-heading{margin-bottom:18px}
+.faturamento-metrics{margin-bottom:16px}
+.faturamento-metrics .empresa-metric strong{font-size:19px}
+.faturamento-filters{grid-template-columns:minmax(300px,1fr) auto}
+.faturamento-list-head{margin-bottom:9px}
+.faturamento-list-tools{display:flex;align-items:center;gap:10px}
+.faturamento-list-tools>span{font-size:9px;color:#98a2b3}
+.faturamento-card-grid{grid-template-columns:repeat(3,1fr)}
+.faturamento-company-card{min-height:100%}
+.faturamento-card-foot{align-items:center}
+.faturamento-card-status{font-size:8px;font-weight:800}
+.faturamento-card-status.pending{color:#b42318}
+.faturamento-card-status.done{color:#087443}
+.faturamento-card-actions{display:flex;align-items:center;gap:5px}
+.button.small.icon-only{width:29px;min-width:29px;padding:0}
+.faturamento-table-panel td{font-size:10px}
+.faturamento-table-panel .row-actions{align-items:center;white-space:nowrap}
+.faturamento-entry-grid label input,.faturamento-entry-grid label select{height:39px}
+.fat-declaration-section{margin-top:17px}
+.fat-declaration-body{padding:13px}
+.fat-action-card{position:relative;min-height:116px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start}
+.fat-action-card b{display:inline-flex;margin-top:auto;padding-top:10px;color:#2f73d6;font-size:8px}
+.fat-action-card.active{border-color:#9fc1ef;background:#f7fbff;box-shadow:inset 3px 0 0 #2f73d6}
+.fat-declaration-form-card{margin-top:10px;padding:14px;border:1px solid #dce5ef;background:#f8fbff;border-radius:10px}
+.fat-declaration-form-card h4{margin:3px 0 4px;color:#263244;font-size:12px}
+.fat-declaration-form-card p{margin:0;color:#778397;font-size:9px;line-height:1.45}
+.fat-declaration-form-row{display:grid;grid-template-columns:180px 1fr;gap:12px;align-items:end;margin-top:12px}
+.fat-declaration-form-row.period{grid-template-columns:1fr 1fr auto}
+.fat-declaration-form-row label{display:flex;flex-direction:column;gap:6px;font-size:9px;font-weight:800;color:#475467}
+.fat-declaration-form-row input{height:39px}
+.fat-declaration-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.fat-history-section{margin-top:17px}
+.faturamento-modal-backdrop{background:rgba(15,23,38,.48);backdrop-filter:blur(2px)}
+.faturamento-launch-modal{width:min(560px,100%);border-radius:16px}
+.faturamento-modal-company{display:flex;align-items:center;gap:10px;padding:13px 16px;background:#f8fafc;border-bottom:1px solid #edf0f4}
+.faturamento-modal-company strong{display:block;color:#263244;font-size:11px}
+.faturamento-modal-company small{display:block;color:#8a94a4;font-size:8px;margin-top:3px}
+.faturamento-modal-form{padding:16px}
+.faturamento-form-highlight{padding:11px 12px;border:1px solid #dce7f5;background:#eef5ff;border-radius:10px;margin-bottom:1px}
+.faturamento-form-highlight span{display:block;color:#6b7b91;font-size:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.faturamento-form-highlight strong{display:block;color:#263244;font-size:14px;margin:3px 0}
+.faturamento-form-highlight small{display:block;color:#718096;font-size:8px;line-height:1.45}
+.faturamento-modal-form label{display:flex;flex-direction:column;gap:6px;font-size:9px;font-weight:800;color:#475467}
+.faturamento-modal-form input,.faturamento-modal-form textarea{border:1px solid #d8dee7;border-radius:9px;padding:10px 11px;font-size:11px;outline:0;background:#fff}
+.faturamento-modal-form input:focus,.faturamento-modal-form textarea:focus{border-color:#80a9db;box-shadow:0 0 0 3px #eef5ff}
+.faturamento-modal-form textarea{min-height:82px;resize:vertical}
+.faturamento-modal-actions{padding:0 16px 16px;margin-top:0}
+.modal-error{padding:9px 10px;border-radius:8px;background:#fff1f3;border:1px solid #ffd0d7;color:#b42318;font-size:9px;font-weight:700}
+.optional{font-weight:500;color:#98a2b3}
+
+@media(max-width:1050px){
+  .faturamento-card-grid{grid-template-columns:1fr 1fr}
+  .fat-declaration-form-row.period{grid-template-columns:1fr 1fr}
+  .fat-declaration-form-row.period .fat-declaration-form-actions{grid-column:1 / -1;justify-content:flex-end}
+}
+@media(max-width:780px){
+  .faturamento-filters{grid-template-columns:1fr}
+  .faturamento-list-tools{align-items:flex-end;flex-direction:column}
+  .faturamento-card-grid{grid-template-columns:1fr}
+  .fat-declaration-form-row,.fat-declaration-form-row.period{grid-template-columns:1fr}
+  .fat-declaration-form-actions{justify-content:stretch}
+  .fat-declaration-form-actions .button{flex:1}
+}
+
+/* Lista de empresas alinhada ao padrão visual da área Empresas */
+.faturamento-empresa-list{display:flex;flex-direction:column;gap:10px}
+.faturamento-empresa-row{display:grid;grid-template-columns:minmax(300px,2.15fr) minmax(150px,1fr) minmax(150px,1fr) minmax(120px,.8fr) minmax(175px,1.05fr) auto;align-items:center;gap:18px;padding:12px 16px;background:#fff;border:1px solid #e2e7ee;border-radius:12px;box-shadow:0 1px 0 rgba(16,24,40,.01);transition:.14s}
+.faturamento-empresa-row:hover{border-color:#c9d6e6;box-shadow:0 5px 18px rgba(31,68,112,.06)}
+.faturamento-empresa-main{display:flex;align-items:center;gap:10px;min-width:0}
+.faturamento-empresa-main .empresa-icon{flex:0 0 34px}
+.faturamento-empresa-name{min-width:0}
+.faturamento-empresa-name strong{display:block;color:#263244;font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.faturamento-empresa-name small{display:block;color:#8b97a8;font-size:9px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.faturamento-empresa-field{min-width:0;display:flex;flex-direction:column;gap:4px}
+.faturamento-empresa-field>span:first-child{color:#8d99aa;font-size:8px;font-weight:800;letter-spacing:.06em}
+.faturamento-empresa-field>strong{color:#526174;font-size:10px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.faturamento-empresa-field .regime{width:max-content;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.faturamento-empresa-field small{color:#98a2b3;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.faturamento-last-field strong{color:#344054}
+.faturamento-empresa-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;white-space:nowrap}
+.faturamento-empresa-actions .button.small{height:31px}
+.faturamento-list-tools>span{font-size:9px;color:#98a2b3}
+@media(max-width:1250px){.faturamento-empresa-row{grid-template-columns:minmax(250px,2fr) minmax(135px,1fr) minmax(135px,1fr) minmax(115px,.8fr) minmax(160px,1fr);}.faturamento-empresa-actions{grid-column:1 / -1;justify-content:flex-end}}
+@media(max-width:900px){.faturamento-empresa-row{grid-template-columns:minmax(220px,1fr) minmax(150px,1fr) minmax(150px,1fr)}.faturamento-empresa-field:nth-of-type(4),.faturamento-last-field{grid-column:span 1}.faturamento-empresa-actions{grid-column:1 / -1;justify-content:flex-start}}
+@media(max-width:650px){.faturamento-empresa-row{grid-template-columns:1fr;gap:10px}.faturamento-empresa-actions{justify-content:stretch}.faturamento-empresa-actions .button{flex:1}}

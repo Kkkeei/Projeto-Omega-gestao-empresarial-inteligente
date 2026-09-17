@@ -1,0 +1,109 @@
+ABA FATURAMENTO - ÔMEGA
+=======================
+
+Este ZIP contém o módulo completo de Faturamento para ser extraído na pasta raiz do projeto OMEGA.
+
+Estrutura incluída:
+- backend/app/modules/faturamento/
+- frontend/src/modules/faturamento/
+- frontend/src/app/App.tsx (já com as rotas de Faturamento)
+- frontend/src/vite-env.d.ts
+
+1) EXTRAÇÃO
+-----------
+Extraia o conteúdo deste ZIP diretamente em:
+C:\Users\Administrador.SRV\Desktop\OMEGA
+
+O ZIP foi montado preservando os caminhos relativos.
+
+2) BANCO
+--------
+A partir da pasta backend, execute:
+
+python -m app.modules.faturamento.setup_db
+
+O comando cria/garante:
+- faturamentos
+- declaracoes_faturamento
+- índice único por empresa + competência
+
+Se o banco já tiver a tabela faturamentos, o comando não apaga dados.
+
+ATENÇÃO: o índice único pode falhar caso existam registros duplicados para a mesma empresa/competência. Nesse caso, o terminal mostrará o erro e os duplicados precisarão ser tratados antes.
+
+3) REPORTLAB
+------------
+No ambiente virtual do backend:
+
+pip install reportlab
+
+4) LIGAR O ROUTER NO BACKEND
+----------------------------
+No backend/app/main.py, adicione:
+
+from app.modules.faturamento.routes import router as faturamento_router
+
+E depois da criação do app, adicione:
+
+app.include_router(faturamento_router)
+
+Não altere a estrutura existente do main.py; apenas inclua essas duas linhas no local correspondente aos demais routers.
+
+5) CONTADOR NA DECLARAÇÃO
+--------------------------
+O PDF usa estas variáveis de ambiente, caso existam:
+
+OMEGA_CONTADOR_NOME
+OMEGA_CONTADOR_CRC
+
+Exemplo:
+OMEGA_CONTADOR_NOME=HORACIO DATIVO TAVARES FILHO
+OMEGA_CONTADOR_CRC=PE-00000/O-0
+
+Se não forem definidas, o sistema usa "Contador Responsável" e deixa o CRC em branco.
+
+6) FRONTEND
+-----------
+O App.tsx incluído já registra:
+
+/faturamento
+/faturamento/empresa/:id
+
+O módulo usa:
+VITE_API_URL
+
+Se não existir, o padrão é:
+http://192.168.100.3:8000
+
+7) SUBIR O BACKEND
+------------------
+A partir de backend:
+
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+8) SUBIR O FRONTEND
+-------------------
+A partir de frontend:
+
+npm run dev -- --host 0.0.0.0
+
+9) FUNCIONALIDADES
+------------------
+- Lista empresas em ordem alfabética
+- Filtro por regime
+- Busca por razão social, nome fantasia e CNPJ
+- Competência anterior automaticamente marcada como pendente
+- Status vermelho/verde por empresa
+- Último faturamento exibido no card
+- Inclusão de faturamento
+- Edição de faturamento
+- Histórico mensal
+- Declaração dos últimos 12 meses
+- Declaração anual
+- Declaração personalizada
+- Histórico de declarações
+- Visualização e download de PDF
+
+10) IMPORTANTE
+--------------
+O gerador de PDF incluído é um modelo funcional inicial. O código já está separado em declaracao_service.py para que o layout possa ser substituído pelo modelo oficial de declaração do escritório sem alterar a regra de faturamento.
