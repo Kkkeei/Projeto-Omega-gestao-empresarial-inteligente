@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Edit3, Power, History, ShieldCheck } from "lucide-react";
+import { ArrowLeft, RefreshCw, Edit3, Power, History, ShieldCheck, X } from "lucide-react";
 import { buscarEmpresa, sincronizarEmpresa, atualizarEmpresa, inativarEmpresa, alterarRegime, historicoEmpresa } from "../../services/api/empresas";
 import type { Empresa, Historico } from "../../types";
 import { Loading } from "../../components/ui/Loading";
@@ -23,6 +23,8 @@ export function EmpresaDetailPage() {
   const [edit, setEdit] = useState(false);
   const [sync, setSync] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [regimeOpen, setRegimeOpen] = useState(false);
+  const [regimeSaving, setRegimeSaving] = useState(false);
 
   const load = async () => {
     try {
@@ -63,15 +65,11 @@ export function EmpresaDetailPage() {
     catch (x) { setErr(x instanceof Error ? x.message : "Falha ao inativar."); }
   }
 
-  async function regime() {
-    const novo = window.prompt("Novo regime: Lucro Real, Lucro Presumido ou Simples Nacional");
-    if (!novo || !["Lucro Real", "Lucro Presumido", "Simples Nacional"].includes(novo)) return;
-    const inicio = window.prompt("Mês/ano de início (MM/AAAA):");
-    if (!inicio || !/^(0[1-9]|1[0-2])\/\d{4}$/.test(inicio)) return;
-    const [mes, ano] = inicio.split("/").map(Number);
-    setErr("");
-    try { setE(await alterarRegime(e.id, novo, mes, ano)); await load(); }
+  async function regime(novo: string, mes: number, ano: number, observacao: string) {
+    setRegimeSaving(true); setErr("");
+    try { setE(await alterarRegime(e.id, novo, mes, ano, observacao)); setRegimeOpen(false); await load(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Falha ao alterar regime."); }
+    finally { setRegimeSaving(false); }
   }
 
   return (
@@ -105,14 +103,61 @@ export function EmpresaDetailPage() {
             </div>
 
             <div className="side-stack">
-              <div className="panel"><div className="panel-header"><div><span className="eyebrow">REGIME</span><h3>Controle tributário</h3></div><ShieldCheck size={18} /></div><div className="side-content"><strong>{e.regime_tributario || "Não informado"}</strong><p>O regime fica bloqueado na edição cadastral. Para alterá-lo, use a ação específica e informe mês/ano da mudança.</p><button className="button secondary" onClick={regime}>Alterar regime tributário</button></div></div>
+              <div className="panel"><div className="panel-header"><div><span className="eyebrow">REGIME</span><h3>Controle tributário</h3></div><ShieldCheck size={18} /></div><div className="side-content"><strong>{e.regime_tributario || "Não informado"}</strong><p>O regime fica bloqueado na edição cadastral. Para alterá-lo, use a ação específica e informe mês/ano da mudança.</p><button className="button secondary" onClick={() => setRegimeOpen(true)}>Alterar regime tributário</button></div></div>
               <div className="panel"><div className="panel-header"><div><span className="eyebrow">HISTÓRICO</span><h3>Últimos eventos</h3></div><History size={18} /></div><div className="history-list">{h.slice(0, 8).map(x => <div className="history-item" key={x.id}><strong>{x.tipo_evento}</strong><span>{x.descricao || "—"}</span><small>{x.criado_em} · {x.origem || "—"}</small></div>)}</div></div>
             </div>
           </div>
         </>
       )}
+
+      {regimeOpen && <RegimeModal
+        atual={e.regime_tributario || "Não informado"}
+        onClose={() => setRegimeOpen(false)}
+        onSave={regime}
+        saving={regimeSaving}
+      />}
     </div>
   );
+}
+
+function RegimeModal({ atual, onClose, onSave, saving }: {
+  atual: string;
+  onClose: () => void;
+  onSave: (regime: string, mes: number, ano: number, observacao: string) => void;
+  saving: boolean;
+}) {
+  const hoje = new Date();
+  const [novo, setNovo] = useState("");
+  const [mes, setMes] = useState(String(hoje.getMonth() + 1).padStart(2, "0"));
+  const [ano, setAno] = useState(String(hoje.getFullYear()));
+  const [observacao, setObservacao] = useState("");
+  const opcoes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"];
+  const confirmar = () => {
+    const m = Number(mes); const a = Number(ano);
+    if (!novo || novo === atual || m < 1 || m > 12 || a < 2000 || a > 2100) return;
+    onSave(novo, m, a, observacao.trim());
+  };
+  return <div className="modal-backdrop" onMouseDown={onClose}>
+    <div className="modal-card regime-modal" onMouseDown={e => e.stopPropagation()}>
+      <div className="modal-head"><div><span className="eyebrow">ALTERAÇÃO TRIBUTÁRIA</span><h3>Alterar regime da empresa</h3></div><button className="icon-button" onClick={onClose} title="Fechar"><X size={15}/></button></div>
+      <div className="regime-modal-body">
+        <div className="regime-current"><span>Regime atual</span><strong>{atual}</strong></div>
+        <label> Novo regime
+          <select value={novo} onChange={e => setNovo(e.target.value)}>
+            <option value="">Selecione</option>
+            {opcoes.map(x => <option key={x} value={x} disabled={x === atual}>{x}</option>)}
+          </select>
+        </label>
+        <div className="regime-date-grid">
+          <label>Mês de início<select value={mes} onChange={e=>setMes(e.target.value)}>{Array.from({length:12},(_,i)=>{const v=String(i+1).padStart(2,'0');return <option key={v} value={v}>{v}</option>})}</select></label>
+          <label>Ano de início<input inputMode="numeric" maxLength={4} value={ano} onChange={e=>setAno(e.target.value.replace(/\D/g,'').slice(0,4))}/></label>
+        </div>
+        <label>Observação <span className="optional">(opcional)</span><textarea value={observacao} onChange={e=>setObservacao(e.target.value)} placeholder="Ex.: alteração por opção tributária para 2027." /></label>
+        <div className="regime-note">A alteração será registrada no histórico da empresa com o regime anterior, o novo regime e a data de início.</div>
+      </div>
+      <div className="modal-actions"><button className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" onClick={confirmar} disabled={saving || !novo || novo === atual}>{saving ? 'Salvando...' : 'Confirmar alteração'}</button></div>
+    </div>
+  </div>;
 }
 
 function Editor({ empresa, onSave, saving, onCancel }: { empresa: Empresa; onSave: (p: EmpresaEditPayload) => void; saving: boolean; onCancel: () => void }) {

@@ -177,13 +177,23 @@ export function CertidoesPage(){
 
       {renderResult()}
 
-      <div className="current-certs-grid">
-        {currentCards.map(({card,item})=>{const Icon=card.icon;return <article key={card.key} className={`current-cert-card ${card.className}`}>
-          <div className="current-cert-head"><span className="type-icon-v2"><Icon size={19}/></span><div><strong>{card.short}</strong><small>{card.title}</small></div><span className={`mini-situation ${classeSituacao(item?.situacao)}`}>{item?.situacao||'—'}</span></div>
-          <div className="current-cert-data"><div><span>Emissão</span><strong>{formatarData(item?.data_emissao)}</strong></div><div><span>Validade</span><strong>{formatarData(item?.data_validade)}</strong></div></div>
-          <div className="current-cert-actions">{item?.pdf_path?<><a className="button secondary small" href={pdfDownloadUrl(item.pdf_path)}><Download size={13}/> Baixar</a><button className="button secondary small" onClick={()=>window.open(pdfUrl(item.pdf_path!), '_blank','noopener,noreferrer')}><ExternalLink size={13}/> Ver PDF</button></>:<span className="cert-no-pdf">Nenhum PDF armazenado</span>}<button className="button primary small" onClick={()=>void executar(card.key)} disabled={busy}><RefreshCw size={13}/> Emitir</button></div>
-        </article>})}
-      </div>
+      {(() => {
+        const selected = certAtual(cardAtual.typeName);
+        const Icon = cardAtual.icon;
+        return <section className={`cert-selected-panel ${cardAtual.className}`}>
+          <div className="cert-selected-head">
+            <div className="cert-selected-title"><span className="type-icon-v2"><Icon size={20}/></span><div><span className="eyebrow">CERTIDÃO SELECIONADA</span><h3>{cardAtual.title}</h3><p>{cardAtual.desc}</p></div></div>
+            <button className="button primary" onClick={()=>void executar(tipoSelecionado)} disabled={busy}><Play size={14} fill="currentColor"/> Emitir {cardAtual.short}</button>
+          </div>
+          <div className="cert-selected-grid">
+            <div><span>Situação</span><strong className={`selected-status ${classeSituacao(selected?.situacao)}`}>{selected?.situacao||'Ainda não consultada'}</strong></div>
+            <div><span>Emissão</span><strong>{formatarData(selected?.data_emissao)}</strong></div>
+            <div><span>Validade</span><strong>{formatarData(selected?.data_validade)}</strong></div>
+            <div><span>Número</span><strong>{selected?.numero_certidao||'—'}</strong></div>
+          </div>
+          <div className="cert-selected-actions">{selected?.pdf_path?<><a className="button secondary small" href={pdfDownloadUrl(selected.pdf_path)}><Download size={13}/> Baixar PDF</a><button className="button secondary small" onClick={()=>window.open(pdfUrl(selected.pdf_path!), '_blank','noopener,noreferrer')}><ExternalLink size={13}/> Visualizar PDF</button></>:<span className="cert-no-pdf">Nenhum PDF armazenado para esta certidão.</span>}</div>
+        </section>;
+      })()}
 
       <section className="downloads-panel panel">
         <div className="panel-header"><div><span className="eyebrow">DOCUMENTOS DISPONÍVEIS</span><h3>Certidões para download</h3></div><span className="download-count">{pdfHistory.length} PDF(s)</span></div>

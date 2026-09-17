@@ -138,7 +138,6 @@ def listar_categorias(empresa_id: int):
 
 
 def criar_categoria(empresa_id: int, nome: str, descricao: str | None, categoria_pai_id: int | None = None):
-    raise ValueError("A estrutura atual utiliza somente as pastas Pessoal (Sócio), Societário e IRPF.")
     nome = nome.strip()
     if not nome:
         raise ValueError("O nome da categoria é obrigatório.")
@@ -162,18 +161,51 @@ def criar_categoria(empresa_id: int, nome: str, descricao: str | None, categoria
         conexao.close()
 
 
-def arquivar_categoria(categoria_id: int):
+def arquivar_categoria(categoria_id: int, user_id: int | None = None):
     conexao = conectar_banco()
     try:
         categoria = conexao.execute("SELECT * FROM categorias_documentos WHERE id=?", (categoria_id,)).fetchone()
         if not categoria:
-            raise LookupError("Categoria não encontrada.")
+            raise LookupError("Pasta não encontrada.")
         if not categoria["ativo"]:
             return dict(categoria)
+        documentos = conexao.execute("SELECT id,nome FROM documentos WHERE categoria_id=? AND ativo=1", (categoria_id,)).fetchall()
         conexao.execute("UPDATE categorias_documentos SET ativo=0,arquivado_em=CURRENT_TIMESTAMP WHERE id=?", (categoria_id,))
-        conexao.execute("INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,origem) VALUES (?,?,?,?,?)", ("CATEGORIA_DOCUMENTO", categoria_id, "ARQUIVAR", json.dumps(dict(categoria), ensure_ascii=False), "DOCUMENTACAO"))
+        conexao.execute("UPDATE documentos SET ativo=0,atualizado_em=CURRENT_TIMESTAMP WHERE categoria_id=? AND ativo=1", (categoria_id,))
+        conexao.execute(
+            "INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)",
+            ("CATEGORIA_DOCUMENTO", categoria_id, "ARQUIVAR", json.dumps(dict(categoria), ensure_ascii=False),
+             json.dumps({"usuario_id": user_id, "documentos_arquivados": len(documentos)}, ensure_ascii=False), "DOCUMENTACAO"),
+        )
+        for doc in documentos:
+            conexao.execute(
+                "INSERT INTO auditorias (entidade,entidade_id,acao,dados_novos,origem) VALUES (?,?,?,?,?)",
+                ("DOCUMENTO", doc["id"], "ARQUIVADO_PELA_PASTA", json.dumps({"categoria_id": categoria_id, "usuario_id": user_id}, ensure_ascii=False), "DOCUMENTACAO"),
+            )
         conexao.commit()
-        return dict(conexao.execute("SELECT * FROM categorias_documentos WHERE id=?", (categoria_id,)).fetchone())
+        result = dict(conexao.execute("SELECT * FROM categorias_documentos WHERE id=?", (categoria_id,)).fetchone())
+        result["documentos_arquivados"] = len(documentos)
+        return result
+    finally:
+        conexao.close()
+
+
+def arquivar_documento(documento_id: int, user_id: int | None = None):
+    conexao = conectar_banco()
+    try:
+        documento = conexao.execute("SELECT * FROM documentos WHERE id=?", (documento_id,)).fetchone()
+        if not documento:
+            raise LookupError("Documento não encontrado.")
+        if not documento["ativo"]:
+            return dict(documento)
+        conexao.execute("UPDATE documentos SET ativo=0,atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (documento_id,))
+        conexao.execute(
+            "INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)",
+            ("DOCUMENTO", documento_id, "ARQUIVAR", json.dumps(dict(documento), ensure_ascii=False),
+             json.dumps({"usuario_id": user_id}, ensure_ascii=False), "DOCUMENTACAO"),
+        )
+        conexao.commit()
+        return dict(conexao.execute("SELECT * FROM documentos WHERE id=?", (documento_id,)).fetchone())
     finally:
         conexao.close()
 

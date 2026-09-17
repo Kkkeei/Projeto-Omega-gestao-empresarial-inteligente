@@ -10,9 +10,12 @@ import {
   History,
   Upload,
   Plus,
+  Trash2,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  arquivarCategoria,
+  arquivarDocumento,
   baixarVersao,
   criarCategoria,
   listarCategorias,
@@ -41,6 +44,8 @@ export function EmpresaDocumentacaoPage() {
   const [modal, setModal] = useState<'upload' | 'version' | 'category' | null>(null);
   const [docTarget, setDocTarget] = useState<Documento | null>(null);
   const [versions, setVersions] = useState<Versao[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: 'document' | 'category'; id: number; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
   const folders = useMemo(() => {
@@ -135,6 +140,27 @@ export function EmpresaDocumentacaoPage() {
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    setError('');
+    try {
+      if (deleteTarget.kind === 'document') {
+        await arquivarDocumento(deleteTarget.id);
+        setDeleteTarget(null);
+        await refreshSelectedFolder();
+      } else {
+        await arquivarCategoria(deleteTarget.id);
+        setDeleteTarget(null);
+        await load();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível excluir o item.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (loading && !empresa) {
     return (
       <div className="page">
@@ -206,6 +232,23 @@ export function EmpresaDocumentacaoPage() {
                 <small>{count} documento{count === 1 ? '' : 's'}</small>
                 <span className="doc-category-footer">
                   <span>{selected ? 'Documentos abaixo' : 'Clique para abrir'}</span>
+                  <span
+                    className="doc-category-delete"
+                    role="button"
+                    tabIndex={0}
+                    title={`Excluir pasta ${folder.nome}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleteTarget({ kind: 'category', id: folder.id, name: folder.nome });
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setDeleteTarget({ kind: 'category', id: folder.id, name: folder.nome });
+                      }
+                    }}
+                  ><Trash2 size={12} /></span>
                   <ChevronRight size={15} className={selected ? 'active' : ''} />
                 </span>
               </button>
@@ -266,6 +309,7 @@ export function EmpresaDocumentacaoPage() {
                         <button className="icon-button" title="Visualizar" onClick={() => void visualizarVersao(doc.ultima_versao_id as number)}><Eye size={15} /></button>
                         <button className="icon-button" title="Baixar" onClick={() => void baixarVersao(doc.ultima_versao_id as number, doc.nome_arquivo || doc.nome)}><Download size={15} /></button>
                       </>}
+                      <button className="icon-button danger-icon" title="Excluir documento" onClick={() => setDeleteTarget({ kind: 'document', id: doc.id, name: doc.nome })}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 ))}
@@ -323,6 +367,24 @@ export function EmpresaDocumentacaoPage() {
             setVersions(versionResult.versoes);
             await refreshSelectedFolder();
           }} />
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <Modal
+          title={deleteTarget.kind === 'document' ? 'Excluir documento' : 'Excluir pasta'}
+          onClose={() => { if (!deleting) setDeleteTarget(null); }}
+        >
+          <div className="delete-confirm">
+            <div className="delete-confirm-icon"><Trash2 size={22} /></div>
+            <h4>Tem certeza que deseja excluir?</h4>
+            <p>Você está prestes a excluir <strong>“{deleteTarget.name}”</strong>. O item será arquivado e deixará de aparecer na documentação. O histórico físico será preservado para auditoria.</p>
+            {deleteTarget.kind === 'category' && <p className="delete-warning">Os documentos desta pasta também serão arquivados.</p>}
+            <div className="modal-actions">
+              <button className="button secondary" type="button" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="button danger" type="button" disabled={deleting} onClick={() => void confirmDelete()}><Trash2 size={13} /> {deleting ? 'Excluindo...' : 'Excluir'}</button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

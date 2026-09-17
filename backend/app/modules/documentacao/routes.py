@@ -41,7 +41,7 @@ def categoria_criar(empresa_id: int, data: CategoriaCreate, _user=Depends(_user)
 @router.delete("/categorias/{categoria_id}")
 def categoria_arquivar(categoria_id: int, _user=Depends(_user)):
     try:
-        return service.arquivar_categoria(categoria_id)
+        return service.arquivar_categoria(categoria_id, _user["id"])
     except LookupError as exc:
         raise HTTPException(404, str(exc))
 
@@ -69,6 +69,14 @@ async def upload_documento(
         raise HTTPException(404, str(exc))
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+
+
+@router.delete("/documentos/{documento_id}")
+def documento_arquivar(documento_id: int, _user=Depends(_user)):
+    try:
+        return service.arquivar_documento(documento_id, _user["id"])
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
 
 
 @router.get("/documentos/{documento_id}")
