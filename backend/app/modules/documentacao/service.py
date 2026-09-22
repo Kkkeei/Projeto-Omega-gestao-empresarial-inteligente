@@ -29,47 +29,24 @@ def _safe_name(value: str) -> str:
 
 
 def ensure_default_categories(conexao, empresa_id: int) -> None:
-    """Mantém exatamente três pastas visíveis por empresa.
+    """Cria as três pastas iniciais somente quando a empresa ainda não possui pastas.
 
-    Categorias antigas/extra não são apagadas fisicamente: são arquivadas para preservar
-    histórico. Duplicatas dos três nomes oficiais são consolidadas na primeira categoria.
+    Depois que a empresa já possui estrutura de documentação, as pastas passam a ser
+    totalmente administradas pelo usuário. Assim, pastas personalizadas não são
+    arquivadas automaticamente e os nomes das pastas padrão podem ser editados.
     """
     rows = conexao.execute(
-        "SELECT id, nome, categoria_pai_id, ativo FROM categorias_documentos WHERE empresa_id=? ORDER BY id",
+        "SELECT id FROM categorias_documentos WHERE empresa_id=? LIMIT 1",
         (empresa_id,),
     ).fetchall()
-    canonical = {}
+    if rows:
+        return
+
     for ordem, (nome, descricao) in enumerate(DEFAULT_CATEGORIES, start=1):
-        matches = [r for r in rows if r["categoria_pai_id"] is None and r["nome"].strip().casefold() == nome.casefold()]
-        if matches:
-            keep = matches[0]
-            canonical[nome.casefold()] = keep["id"]
-            conexao.execute(
-                "UPDATE categorias_documentos SET nome=?, descricao=?, ordem=?, ativo=1, arquivado_em=NULL WHERE id=?",
-                (nome, descricao, ordem, keep["id"]),
-            )
-            for duplicate in matches[1:]:
-                conexao.execute("UPDATE documentos SET categoria_id=? WHERE categoria_id=?", (keep["id"], duplicate["id"]))
-                conexao.execute("UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE id=?", (duplicate["id"],))
-        else:
-            cur = conexao.execute(
-                "INSERT INTO categorias_documentos (empresa_id, categoria_pai_id, nome, descricao, ordem, ativo) VALUES (?, NULL, ?, ?, ?, 1)",
-                (empresa_id, nome, descricao, ordem),
-            )
-            canonical[nome.casefold()] = cur.lastrowid
-
-    allowed_ids = tuple(canonical.values())
-    if allowed_ids:
-        placeholders = ','.join('?' for _ in allowed_ids)
         conexao.execute(
-            f"UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND categoria_pai_id IS NULL AND id NOT IN ({placeholders}) AND ativo=1",
-            (empresa_id, *allowed_ids),
+            "INSERT INTO categorias_documentos (empresa_id, categoria_pai_id, nome, descricao, ordem, ativo) VALUES (?, NULL, ?, ?, ?, 1)",
+            (empresa_id, nome, descricao, ordem),
         )
-        conexao.execute(
-            f"UPDATE categorias_documentos SET ativo=0, arquivado_em=CURRENT_TIMESTAMP WHERE empresa_id=? AND categoria_pai_id IS NOT NULL AND ativo=1",
-            (empresa_id,),
-        )
-
 
 def _empresa_exists(conexao, empresa_id: int) -> bool:
     return conexao.execute("SELECT 1 FROM empresas WHERE id=?", (empresa_id,)).fetchone() is not None
@@ -127,7 +104,6 @@ def listar_categorias(empresa_id: int):
              WHERE c.empresa_id=?
                AND c.ativo=1
                AND c.categoria_pai_id IS NULL
-               AND UPPER(c.nome) IN (UPPER('Pessoal (Sócio)'), UPPER('Societário'), UPPER('IRPF'))
              ORDER BY c.ordem, UPPER(c.nome)
             """,
             (empresa_id,),
@@ -135,7 +111,6 @@ def listar_categorias(empresa_id: int):
         return [dict(r) for r in rows]
     finally:
         conexao.close()
-
 
 def criar_categoria(empresa_id: int, nome: str, descricao: str | None, categoria_pai_id: int | None = None):
     nome = nome.strip()
@@ -160,6 +135,70 @@ def criar_categoria(empresa_id: int, nome: str, descricao: str | None, categoria
     finally:
         conexao.close()
 
+
+def atualizar_categoria(categoria_id: int, nome: str, descricao: str | None, user_id: int | None = None):
+    nome = nome.strip()
+    descricao = descricao.strip() if descricao else None
+    if not nome:
+        raise ValueError("O nome da pasta é obrigatório.")
+
+    conexao = conectar_banco()
+    try:
+        categoria = conexao.execute(
+            "SELECT * FROM categorias_documentos WHERE id=?",
+            (categoria_id,),
+        ).fetchone()
+        if not categoria:
+            raise LookupError("Pasta não encontrada.")
+        if not categoria["ativo"]:
+            raise LookupError("A pasta está arquivada.")
+        if categoria["categoria_pai_id"] is not None:
+            raise ValueError("Somente pastas principais podem ser editadas nesta tela.")
+
+        existente = conexao.execute(
+            """
+            SELECT id FROM categorias_documentos
+             WHERE empresa_id=? AND categoria_pai_id IS NULL
+               AND ativo=1 AND UPPER(nome)=UPPER(?) AND id<>?
+             LIMIT 1
+            """,
+            (categoria["empresa_id"], nome, categoria_id),
+        ).fetchone()
+        if existente:
+            raise ValueError("Já existe outra pasta com esse nome.")
+
+        conexao.execute(
+            """
+            UPDATE categorias_documentos
+               SET nome=?, descricao=?, atualizado_em=CURRENT_TIMESTAMP
+             WHERE id=?
+            """,
+            (nome, descricao, categoria_id),
+        )
+        conexao.execute(
+            "INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)",
+            (
+                "CATEGORIA_DOCUMENTO",
+                categoria_id,
+                "EDITAR",
+                json.dumps(dict(categoria), ensure_ascii=False),
+                json.dumps({"nome": nome, "descricao": descricao, "usuario_id": user_id}, ensure_ascii=False),
+                "DOCUMENTACAO",
+            ),
+        )
+        conexao.commit()
+        row = conexao.execute(
+            """
+            SELECT c.id,c.empresa_id,c.categoria_pai_id,c.nome,c.descricao,c.ordem,c.ativo,
+                   (SELECT COUNT(*) FROM documentos d WHERE d.categoria_id=c.id AND d.ativo=1) AS documentos_count
+              FROM categorias_documentos c
+             WHERE c.id=?
+            """,
+            (categoria_id,),
+        ).fetchone()
+        return dict(row)
+    finally:
+        conexao.close()
 
 def arquivar_categoria(categoria_id: int, user_id: int | None = None):
     conexao = conectar_banco()

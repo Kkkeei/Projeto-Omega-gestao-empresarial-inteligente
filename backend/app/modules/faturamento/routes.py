@@ -6,12 +6,21 @@ from fastapi.responses import FileResponse
 from app.api.v1.auth.routes import current_user
 from app.db.database import BASE_DIR
 from .declaracao_service import gerar_declaracao_periodo, ultimo_periodo_completo_12_meses
-from .schemas import FaturamentoCreate, FaturamentoUpdate, DeclaracaoAnualCreate, DeclaracaoPersonalizadaCreate
+from .schemas import (
+    DeclaracaoAnualCreate,
+    DeclaracaoPersonalizadaCreate,
+    FaturamentoCreate,
+    FaturamentoLoteCreate,
+    FaturamentoUpdate,
+    ObservacaoEmpresaFaturamento,
+)
 from .service import (
     editar_faturamento,
     obter_dashboard_faturamento,
     obter_empresa_faturamento,
     registrar_faturamento,
+    registrar_faturamentos_lote,
+    salvar_observacao_empresa,
 )
 from .repository import listar_declaracoes_empresa, obter_declaracao
 
@@ -23,14 +32,21 @@ router = APIRouter(prefix="/api/v1", tags=["Faturamento"])
 def listar_empresas_faturamento(
     regime: str | None = Query(default=None),
     busca: str | None = Query(default=None),
+    ano: int | None = Query(default=None, ge=2000, le=2100),
+    mes: int | None = Query(default=None, ge=1, le=12),
 ):
-    return obter_dashboard_faturamento(regime=regime, busca=busca)
+    if (ano is None) != (mes is None):
+        raise HTTPException(status_code=400, detail="Informe ano e mês juntos para a competência de controle.")
+    return obter_dashboard_faturamento(regime=regime, busca=busca, ano=ano, mes=mes)
 
 
 @router.get("/empresas/{empresa_id}/faturamento")
-def detalhe_faturamento(empresa_id: int):
+def detalhe_faturamento(
+    empresa_id: int,
+    ano: int | None = Query(default=None, ge=2000, le=2100),
+):
     try:
-        return obter_empresa_faturamento(empresa_id)
+        return obter_empresa_faturamento(empresa_id, ano=ano)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -48,6 +64,30 @@ def cadastrar_faturamento(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/empresas/{empresa_id}/faturamento/lote", status_code=201)
+def cadastrar_faturamento_lote(
+    empresa_id: int,
+    dados: FaturamentoLoteCreate,
+):
+    try:
+        return registrar_faturamentos_lote(empresa_id, dados)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.patch("/empresas/{empresa_id}/faturamento/observacao")
+def alterar_observacao_empresa(
+    empresa_id: int,
+    dados: ObservacaoEmpresaFaturamento,
+):
+    try:
+        return salvar_observacao_empresa(empresa_id, dados.observacao)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.put("/faturamentos/{faturamento_id}")

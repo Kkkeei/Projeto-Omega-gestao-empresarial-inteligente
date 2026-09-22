@@ -5,6 +5,10 @@ class CategoriaCreate(BaseModel):
     descricao: str | None = Field(default=None, max_length=500)
     categoria_pai_id: int | None = None
 
+class CategoriaUpdate(BaseModel):
+    nome: str = Field(min_length=1, max_length=120)
+    descricao: str | None = Field(default=None, max_length=500)
+
 class CategoriaOut(BaseModel):
     id: int
     empresa_id: int

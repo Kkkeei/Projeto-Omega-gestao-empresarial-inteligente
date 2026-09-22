@@ -338,6 +338,8 @@ def criar_tabelas() -> None:
             competencia_mes INTEGER NOT NULL,
             valor REAL NOT NULL DEFAULT 0,
             observacao TEXT,
+            data_faturamento TEXT,
+            periodicidade TEXT NOT NULL DEFAULT 'Mensal',
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(empresa_id, competencia_ano, competencia_mes),
@@ -360,6 +362,21 @@ def criar_tabelas() -> None:
         );
 
         """)
+
+        # Migrations for Faturamento. Nunca remover dados existentes.
+        colunas_faturamentos = {r[1] for r in conexao.execute("PRAGMA table_info(faturamentos)").fetchall()}
+        if "data_faturamento" not in colunas_faturamentos:
+            cursor.execute("ALTER TABLE faturamentos ADD COLUMN data_faturamento TEXT")
+        if "periodicidade" not in colunas_faturamentos:
+            cursor.execute("ALTER TABLE faturamentos ADD COLUMN periodicidade TEXT NOT NULL DEFAULT 'Mensal'")
+        # Registros legados recebem como data o primeiro dia da própria competência.
+        cursor.execute(
+            """
+            UPDATE faturamentos
+               SET data_faturamento = printf('%04d-%02d-01', competencia_ano, competencia_mes)
+             WHERE data_faturamento IS NULL OR TRIM(data_faturamento) = ''
+            """
+        )
 
         # Migrations for Documentação. Never remove legacy data.
         # These changes must happen before creating indexes on the new columns.
@@ -395,6 +412,8 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_categorias_empresa ON categorias_documentos(empresa_id);
         CREATE INDEX IF NOT EXISTS idx_categorias_pai ON categorias_documentos(categoria_pai_id);
         CREATE INDEX IF NOT EXISTS idx_documento_versoes_usuario ON documento_versoes(usuario_upload_id);
+        CREATE INDEX IF NOT EXISTS idx_faturamentos_empresa_competencia ON faturamentos(empresa_id, competencia_ano, competencia_mes);
+        CREATE INDEX IF NOT EXISTS idx_declaracoes_faturamento_empresa_data ON declaracoes_faturamento(empresa_id, data_geracao);
         CREATE INDEX IF NOT EXISTS idx_auditorias_entidade ON auditorias(entidade, entidade_id);
         CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
         CREATE INDEX IF NOT EXISTS idx_reset_tokens_usuario ON tokens_redefinicao_senha(usuario_id);
