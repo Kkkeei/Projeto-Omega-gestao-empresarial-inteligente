@@ -66,3 +66,22 @@ class DeclaracaoPersonalizadaCreate(BaseModel):
         if inicio > fim:
             raise ValueError("O período inicial não pode ser maior que o período final.")
         return self
+
+
+class BancoBrasilConfig(BaseModel):
+    percentual_a_vista: float = Field(default=20, ge=0, le=100)
+    percentual_a_prazo: float = Field(default=80, ge=0, le=100)
+    percentual_cartao: float | None = Field(default=None, ge=0, le=100)
+    percentual_cheque: float | None = Field(default=None, ge=0, le=100)
+    percentual_boleto: float | None = Field(default=None, ge=0, le=100)
+    prazo_medio_dias: int | None = Field(default=None, ge=0, le=3650)
+
+    @model_validator(mode="after")
+    def validar_percentuais(self):
+        if abs((self.percentual_a_vista + self.percentual_a_prazo) - 100) > 0.01:
+            raise ValueError("Percentual à vista + percentual a prazo deve totalizar 100%.")
+        meios = [self.percentual_cartao, self.percentual_cheque, self.percentual_boleto]
+        informados = [float(v) for v in meios if v is not None]
+        if informados and abs(sum(informados) - 100) > 0.01:
+            raise ValueError("Cartão + cheque + boleto/título deve totalizar 100% quando informado.")
+        return self

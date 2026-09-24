@@ -5,7 +5,8 @@ from fastapi.responses import FileResponse
 
 from app.api.v1.auth.routes import current_user
 from app.db.database import BASE_DIR
-from .declaracao_service import gerar_declaracao_periodo, ultimo_periodo_completo_12_meses
+from .declaracao_service import gerar_declaracao_periodo, ultimo_periodo_completo_12_meses, periodo_12_meses_por_empresa
+from .banco_brasil_service import gerar_declaracao_banco_brasil, obter_periodo_banco_brasil
 from .schemas import (
     DeclaracaoAnualCreate,
     DeclaracaoPersonalizadaCreate,
@@ -13,6 +14,7 @@ from .schemas import (
     FaturamentoLoteCreate,
     FaturamentoUpdate,
     ObservacaoEmpresaFaturamento,
+    BancoBrasilConfig,
 )
 from .service import (
     editar_faturamento,
@@ -22,7 +24,7 @@ from .service import (
     registrar_faturamentos_lote,
     salvar_observacao_empresa,
 )
-from .repository import listar_declaracoes_empresa, obter_declaracao
+from .repository import listar_declaracoes_empresa, obter_declaracao, obter_empresa
 
 
 router = APIRouter(prefix="/api/v1", tags=["Faturamento"])
@@ -100,7 +102,7 @@ def alterar_faturamento(faturamento_id: int, dados: FaturamentoUpdate):
 
 @router.post("/empresas/{empresa_id}/declaracoes-faturamento/12-meses")
 def declaracao_12_meses(empresa_id: int, user=Depends(current_user)):
-    ano_inicio, mes_inicio, ano_fim, mes_fim = ultimo_periodo_completo_12_meses()
+    ano_inicio, mes_inicio, ano_fim, mes_fim, _ = periodo_12_meses_por_empresa(empresa_id)
     try:
         return gerar_declaracao_periodo(
             empresa_id=empresa_id,
@@ -112,6 +114,57 @@ def declaracao_12_meses(empresa_id: int, user=Depends(current_user)):
             usuario_id=user["id"],
         )
     except (LookupError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/empresas/{empresa_id}/declaracoes-faturamento/banco-brasil/periodo")
+def periodo_declaracao_banco_brasil(empresa_id: int, user=Depends(current_user)):
+    try:
+        return obter_periodo_banco_brasil(empresa_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/empresas/{empresa_id}/declaracoes-faturamento/banco-brasil/config")
+def config_banco_brasil(empresa_id: int, user=Depends(current_user)):
+    from .repository import obter_config_banco_brasil
+    empresa = None
+    try:
+        empresa = obter_empresa(empresa_id)
+    except Exception:
+        pass
+    if not empresa:
+        raise HTTPException(status_code=404, detail="Empresa não encontrada.")
+    return obter_config_banco_brasil(empresa_id) or {
+        "empresa_id": empresa_id,
+        "percentual_a_vista": 20,
+        "percentual_a_prazo": 80,
+        "percentual_cartao": None,
+        "percentual_cheque": None,
+        "percentual_boleto": None,
+        "prazo_medio_dias": None,
+    }
+
+
+@router.put("/empresas/{empresa_id}/declaracoes-faturamento/banco-brasil/config")
+def salvar_configuracao_banco_brasil(empresa_id: int, dados: BancoBrasilConfig, user=Depends(current_user)):
+    from .repository import empresa_existe, salvar_config_banco_brasil
+    if not empresa_existe(empresa_id):
+        raise HTTPException(status_code=404, detail="Empresa não encontrada.")
+    return salvar_config_banco_brasil(empresa_id, dados.model_dump())
+
+
+@router.post("/empresas/{empresa_id}/declaracoes-faturamento/banco-brasil")
+async def declaracao_banco_brasil(empresa_id: int, dados: BancoBrasilConfig | None = None, user=Depends(current_user)):
+    try:
+        return await gerar_declaracao_banco_brasil(
+            empresa_id=empresa_id,
+            usuario_id=user["id"],
+            config=(dados.model_dump() if dados else BancoBrasilConfig().model_dump()),
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

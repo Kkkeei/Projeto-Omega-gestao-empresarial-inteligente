@@ -1,21 +1,22 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Building2,
-  ChevronRight,
   Download,
   Eye,
   FileText,
   Folder,
   History,
-  Upload,
+  Pencil,
   Plus,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   arquivarCategoria,
   arquivarDocumento,
+  atualizarCategoria,
   baixarVersao,
   criarCategoria,
   listarCategorias,
@@ -41,28 +42,28 @@ export function EmpresaDocumentacaoPage() {
   const [docs, setDocs] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(false);
-  const [modal, setModal] = useState<'upload' | 'version' | 'category' | null>(null);
+  const [modal, setModal] = useState<'upload' | 'version' | 'category' | 'editCategory' | null>(null);
   const [docTarget, setDocTarget] = useState<Documento | null>(null);
+  const [categoryTarget, setCategoryTarget] = useState<CategoriaDocumento | null>(null);
   const [versions, setVersions] = useState<Versao[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'document' | 'category'; id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const [dropFile, setDropFile] = useState<File | null>(null);
 
-  const folders = useMemo(() => {
-    const wanted = ['Pessoal (Sócio)', 'Societário', 'IRPF'];
-    const activeRoots = cats.filter(
-      (c) => c.ativo && c.categoria_pai_id === null && wanted.includes(c.nome),
-    );
-    return wanted
-      .map((name) => activeRoots.find((c) => c.nome === name))
-      .filter((c): c is CategoriaDocumento => Boolean(c));
-  }, [cats]);
+  const folders = useMemo(
+    () => cats
+      .filter((c) => c.ativo && c.categoria_pai_id === null)
+      .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR')),
+    [cats],
+  );
 
   const selectedFolder = selectedCategoryId
     ? folders.find((c) => c.id === selectedCategoryId) ?? null
     : null;
 
-  async function load() {
+  async function load(preferredCategoryId?: number) {
     setLoading(true);
     setError('');
     try {
@@ -70,29 +71,28 @@ export function EmpresaDocumentacaoPage() {
         apiFetch<any>(`/api/v1/empresas/${empresaId}`),
         listarCategorias(empresaId),
       ]);
+      const nextFolders = categoriaData.categorias
+        .filter((c: CategoriaDocumento) => c.ativo && c.categoria_pai_id === null)
+        .sort((a: CategoriaDocumento, b: CategoriaDocumento) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
+
       setEmpresa(empresaData);
       setCats(categoriaData.categorias);
 
-      const wanted = ['Pessoal (Sócio)', 'Societário', 'IRPF'];
-      const first = wanted
-        .map((name) => categoriaData.categorias.find(
-          (c: CategoriaDocumento) => c.ativo && c.categoria_pai_id === null && c.nome === name,
-        ))
-        .find(Boolean) as CategoriaDocumento | undefined;
+      const wantedId = preferredCategoryId
+        ?? (selectedCategoryId && nextFolders.some((c: CategoriaDocumento) => c.id === selectedCategoryId)
+          ? selectedCategoryId
+          : nextFolders[0]?.id ?? null);
 
-      if (selectedCategoryId && categoriaData.categorias.some((c: CategoriaDocumento) => c.id === selectedCategoryId && c.ativo)) {
-        // mantém a pasta selecionada
-      } else if (first) {
-        setSelectedCategoryId(first.id);
+      setSelectedCategoryId(wantedId);
+      if (wantedId) {
         setLoadingDocs(true);
         try {
-          const result = await listarDocumentos(empresaId, first.id);
+          const result = await listarDocumentos(empresaId, wantedId);
           setDocs(result.documentos);
         } finally {
           setLoadingDocs(false);
         }
       } else {
-        setSelectedCategoryId(null);
         setDocs([]);
       }
     } catch (err) {
@@ -126,7 +126,7 @@ export function EmpresaDocumentacaoPage() {
     if (!selectedCategoryId) return;
     const result = await listarDocumentos(empresaId, selectedCategoryId);
     setDocs(result.documentos);
-    await load();
+    await load(selectedCategoryId);
   }
 
   async function openVersions(doc: Documento) {
@@ -138,6 +138,17 @@ export function EmpresaDocumentacaoPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar versões.');
     }
+  }
+
+  function openEditCategory() {
+    if (!selectedFolder) return;
+    setCategoryTarget(selectedFolder);
+    setModal('editCategory');
+  }
+
+  function openDeleteCategory() {
+    if (!selectedFolder) return;
+    setDeleteTarget({ kind: 'category', id: selectedFolder.id, name: selectedFolder.nome });
   }
 
   async function confirmDelete() {
@@ -159,6 +170,24 @@ export function EmpresaDocumentacaoPage() {
     } finally {
       setDeleting(false);
     }
+  }
+
+  function prepareDroppedFile(file: File) {
+    const maxSize = 25 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError('O arquivo excede o limite de 25 MB.');
+      return;
+    }
+    setError('');
+    setDropFile(file);
+    setModal('upload');
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) prepareDroppedFile(file);
   }
 
   if (loading && !empresa) {
@@ -183,7 +212,7 @@ export function EmpresaDocumentacaoPage() {
         <Link to="/documentacao"><ArrowLeft size={15} /> Voltar para documentação</Link>
       </div>
 
-      <div className="page-heading">
+      <div className="page-heading doc-company-heading">
         <div>
           <span className="eyebrow">DOSSIÊ EMPRESARIAL</span>
           <h2><Building2 size={24} /> {empresa?.razao_social}</h2>
@@ -197,63 +226,60 @@ export function EmpresaDocumentacaoPage() {
 
       {error && <div className="panel doc-inline-error"><strong>{error}</strong></div>}
 
-      <section className="doc-category-section">
-        <div className="section-title-row">
-          <div>
-            <span className="eyebrow">1 · TIPO DE DOCUMENTAÇÃO</span>
-            <h3>Escolha a pasta para consultar</h3>
-          </div>
-          <div className="doc-category-tools">
-            <span className="section-hint">Três áreas principais do dossiê empresarial</span>
-            <button className="button secondary small" type="button" onClick={() => setModal('category')}>
-              <Plus size={13} /> Nova pasta
-            </button>
-          </div>
+      <section className="doc-folder-area">
+        <div className="doc-folder-toolbar">
+          <div className="doc-folder-spacer" />
+          <button className="button secondary small" type="button" onClick={() => setModal('category')}>
+            <Plus size={13} /> Nova pasta
+          </button>
         </div>
 
-        <div className="doc-category-card-grid">
-          {folders.map((folder) => {
-            const selected = selectedCategoryId === folder.id;
-            const count = folder.documentos_count ?? 0;
-            const tone = folder.nome === 'Pessoal (Sócio)' ? 'blue' : folder.nome === 'Societário' ? 'green' : 'amber';
-            return (
-              <button
-                key={folder.id}
-                type="button"
-                className={`doc-category-card ${tone} ${selected ? 'selected' : ''}`}
-                onClick={() => void selectFolder(folder.id)}
-              >
-                <span className="doc-category-card-top">
-                  <span className="doc-category-icon"><Folder size={23} /></span>
-                  {selected && <span className="doc-category-selected">Selecionada</span>}
-                </span>
-                <span className="doc-category-kicker">PASTA</span>
-                <strong>{folder.nome}</strong>
-                <small>{count} documento{count === 1 ? '' : 's'}</small>
-                <span className="doc-category-footer">
-                  <span>{selected ? 'Documentos abaixo' : 'Clique para abrir'}</span>
-                  <span
-                    className="doc-category-delete"
-                    role="button"
-                    tabIndex={0}
-                    title={`Excluir pasta ${folder.nome}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDeleteTarget({ kind: 'category', id: folder.id, name: folder.nome });
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setDeleteTarget({ kind: 'category', id: folder.id, name: folder.nome });
-                      }
-                    }}
-                  ><Trash2 size={12} /></span>
-                  <ChevronRight size={15} className={selected ? 'active' : ''} />
-                </span>
-              </button>
-            );
-          })}
+        <div className="doc-folder-frame panel">
+          <div className="doc-folder-tabs" role="tablist" aria-label="Pastas da documentação">
+            {folders.map((folder) => {
+              const selected = selectedCategoryId === folder.id;
+              return (
+                <button
+                  key={folder.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  className={`doc-folder-tab ${selected ? 'selected' : ''}`}
+                  onClick={() => void selectFolder(folder.id)}
+                >
+                  <Folder size={19} />
+                  <span>{folder.nome}</span>
+                  <small>{folder.documentos_count ?? 0}</small>
+                </button>
+              );
+            })}
+            {folders.length === 0 && (
+              <div className="doc-folder-empty-inline">Nenhuma pasta criada.</div>
+            )}
+          </div>
+
+          <div className="doc-folder-actions-row">
+            <div className="doc-folder-selection-text">
+              {selectedFolder ? (
+                <>
+                  <strong>{selectedFolder.nome}</strong>
+                  <span>{selectedFolder.descricao || 'Pasta de documentação da empresa'}</span>
+                </>
+              ) : (
+                <span>Selecione uma pasta para consultar os documentos.</span>
+              )}
+            </div>
+            {selectedFolder && (
+              <div className="doc-folder-actions">
+                <button className="icon-button" type="button" title="Editar pasta" onClick={openEditCategory}>
+                  <Pencil size={15} />
+                </button>
+                <button className="icon-button danger-icon" type="button" title="Excluir pasta" onClick={openDeleteCategory}>
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -262,7 +288,7 @@ export function EmpresaDocumentacaoPage() {
           <div className="doc-selected-empty">
             <Folder size={34} />
             <strong>Selecione uma pasta acima</strong>
-            <span>Escolha Pessoal (Sócio), Societário ou IRPF para visualizar os documentos.</span>
+            <span>Clique em uma das pastas para visualizar os documentos.</span>
           </div>
         ) : (
           <>
@@ -270,26 +296,47 @@ export function EmpresaDocumentacaoPage() {
               <div className="doc-selected-title">
                 <span className="doc-selected-folder-icon"><Folder size={20} /></span>
                 <div>
-                  <span className="eyebrow">2 · CONTEÚDO DA PASTA</span>
+                  <span className="eyebrow">CONTEÚDO DA PASTA</span>
                   <h3>{selectedFolder.nome}</h3>
                   <p>{docs.length} arquivo(s) disponível(eis) nesta pasta.</p>
                 </div>
               </div>
-              <button className="button primary" onClick={() => setModal('upload')}>
+              <button className="button primary" type="button" onClick={() => setModal('upload')}>
                 <Upload size={14} /> Adicionar documento
               </button>
             </div>
 
             {loadingDocs ? (
               <div className="doc-accordion-empty"><Loading text="Carregando documentos..." /></div>
-            ) : docs.length === 0 ? (
-              <div className="doc-selected-empty compact">
-                <FileText size={28} />
-                <strong>Nenhum documento nesta pasta</strong>
-                <span>Use “Adicionar documento” para enviar o primeiro arquivo.</span>
-                <button className="button secondary small" onClick={() => setModal('upload')}><Upload size={13} /> Adicionar documento</button>
-              </div>
             ) : (
+              <>
+                <div
+                  className={`doc-drop-zone ${dragActive ? 'drag-active' : ''} ${docs.length ? 'with-documents' : ''}`}
+                  onDragEnter={(event) => { event.preventDefault(); setDragActive(true); }}
+                  onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false);
+                  }}
+                  onDrop={handleDrop}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setModal('upload'); }}
+                  onClick={() => setModal('upload')}
+                  aria-label={`Arraste um documento para a pasta ${selectedFolder.nome}`}
+                >
+                  <span className="doc-drop-icon"><Upload size={23} /></span>
+                  <strong>{dragActive ? 'Solte o documento aqui' : 'Arraste o documento para esta pasta'}</strong>
+                  <span>{dragActive ? `O arquivo será salvo em ${selectedFolder.nome}.` : 'ou clique para selecionar um arquivo do computador'}</span>
+                  <small>Até 25 MB · o arquivo será vinculado automaticamente à pasta atual</small>
+                </div>
+
+                {docs.length === 0 ? (
+                  <div className="doc-selected-empty compact">
+                    <FileText size={28} />
+                    <strong>Nenhum documento nesta pasta</strong>
+                    <span>Use a área acima ou “Adicionar documento” para enviar o primeiro arquivo.</span>
+                  </div>
+                ) : (
               <div className="doc-table">
                 <div className="doc-table-head">
                   <span>Nome</span><span>Arquivo</span><span>Versões</span><span>Atualizado</span><span></span>
@@ -304,16 +351,18 @@ export function EmpresaDocumentacaoPage() {
                     <span>{doc.versoes_count}</span>
                     <span>{doc.atualizado_em}</span>
                     <div className="doc-table-actions">
-                      <button className="icon-button" title="Histórico" onClick={() => void openVersions(doc)}><History size={15} /></button>
+                      <button className="icon-button" type="button" title="Histórico" onClick={() => void openVersions(doc)}><History size={15} /></button>
                       {doc.ultima_versao_id && <>
-                        <button className="icon-button" title="Visualizar" onClick={() => void visualizarVersao(doc.ultima_versao_id as number)}><Eye size={15} /></button>
-                        <button className="icon-button" title="Baixar" onClick={() => void baixarVersao(doc.ultima_versao_id as number, doc.nome_arquivo || doc.nome)}><Download size={15} /></button>
+                        <button className="icon-button" type="button" title="Visualizar" onClick={() => void visualizarVersao(doc.ultima_versao_id as number)}><Eye size={15} /></button>
+                        <button className="icon-button" type="button" title="Baixar" onClick={() => void baixarVersao(doc.ultima_versao_id as number, doc.nome_arquivo || doc.nome)}><Download size={15} /></button>
                       </>}
-                      <button className="icon-button danger-icon" title="Excluir documento" onClick={() => setDeleteTarget({ kind: 'document', id: doc.id, name: doc.nome })}><Trash2 size={15} /></button>
+                      <button className="icon-button danger-icon" type="button" title="Excluir documento" onClick={() => setDeleteTarget({ kind: 'document', id: doc.id, name: doc.nome })}><Trash2 size={15} /></button>
                     </div>
                   </div>
                 ))}
               </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -321,7 +370,7 @@ export function EmpresaDocumentacaoPage() {
 
       <div className="doc-explorer-note panel">
         <Folder size={16} />
-        <div><strong>Estrutura da documentação</strong><span>As três pastas do dossiê são Pessoal (Sócio), Societário e IRPF. Selecione uma delas nos cards acima para carregar os documentos abaixo, sem sair da página.</span></div>
+        <div><strong>Estrutura da documentação</strong><span>Crie quantas pastas principais precisar. As pastas podem ser renomeadas e arquivadas, preservando o histórico e os documentos já registrados.</span></div>
       </div>
 
       {modal === 'category' && (
@@ -330,21 +379,41 @@ export function EmpresaDocumentacaoPage() {
             existingNames={folders.map((folder) => folder.nome)}
             onCancel={() => setModal(null)}
             onSave={async (data) => {
-              await criarCategoria(empresaId, data);
+              const created = await criarCategoria(empresaId, data);
               setModal(null);
-              await load();
+              await load(created.id);
+            }}
+          />
+        </Modal>
+      )}
+
+      {modal === 'editCategory' && categoryTarget && (
+        <Modal title={`Editar pasta · ${categoryTarget.nome}`} onClose={() => setModal(null)}>
+          <CategoryEditForm
+            category={categoryTarget}
+            existingNames={folders.filter((folder) => folder.id !== categoryTarget.id).map((folder) => folder.nome)}
+            onCancel={() => setModal(null)}
+            onSave={async (data) => {
+              await atualizarCategoria(categoryTarget.id, data);
+              setModal(null);
+              await load(categoryTarget.id);
             }}
           />
         </Modal>
       )}
 
       {modal === 'upload' && selectedFolder && (
-        <Modal title={`Adicionar documento · ${selectedFolder.nome}`} onClose={() => setModal(null)}>
-          <UploadForm onCancel={() => setModal(null)} onSave={async (data) => {
-            await uploadDocumento(empresaId, selectedFolder.id, data.nome, data.file, data.observacao);
-            setModal(null);
-            await refreshSelectedFolder();
-          }} />
+        <Modal title={`Adicionar documento · ${selectedFolder.nome}`} onClose={() => { setDropFile(null); setModal(null); }}>
+          <UploadForm
+            initialFile={dropFile}
+            onCancel={() => { setDropFile(null); setModal(null); }}
+            onSave={async (data) => {
+              await uploadDocumento(empresaId, selectedFolder.id, data.nome, data.file, data.observacao);
+              setDropFile(null);
+              setModal(null);
+              await refreshSelectedFolder();
+            }}
+          />
         </Modal>
       )}
 
@@ -355,13 +424,13 @@ export function EmpresaDocumentacaoPage() {
               <div className="version-row" key={version.id}>
                 <div><strong>Versão {version.versao}</strong><small>{version.nome_arquivo || 'Arquivo'} · {version.usuario_nome || 'Usuário'} · {version.criado_em}</small></div>
                 <div className="download-actions">
-                  <button className="icon-button" onClick={() => void visualizarVersao(version.id)} title="Visualizar"><Eye size={14} /></button>
-                  <button className="icon-button" onClick={() => void baixarVersao(version.id, version.nome_arquivo || `documento_v${version.versao}`)} title="Baixar"><Download size={14} /></button>
+                  <button className="icon-button" type="button" onClick={() => void visualizarVersao(version.id)} title="Visualizar"><Eye size={14} /></button>
+                  <button className="icon-button" type="button" onClick={() => void baixarVersao(version.id, version.nome_arquivo || `documento_v${version.versao}`)} title="Baixar"><Download size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
-          <div className="modal-actions"><button className="button secondary" onClick={() => setModal(null)}>Fechar</button></div>
+          <div className="modal-actions"><button className="button secondary" type="button" onClick={() => setModal(null)}>Fechar</button></div>
           <InlineVersionForm documentId={docTarget.id} onDone={async () => {
             const versionResult = await listarVersoes(docTarget.id);
             setVersions(versionResult.versoes);
@@ -391,23 +460,13 @@ export function EmpresaDocumentacaoPage() {
   );
 }
 
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="modal-backdrop">
       <div className="modal-card">
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-button" type="button" onClick={onClose}>
-            ×
-          </button>
+          <button className="icon-button" type="button" onClick={onClose}>×</button>
         </div>
         {children}
       </div>
@@ -415,11 +474,7 @@ function Modal({
   );
 }
 
-function CategoryForm({
-  onCancel,
-  onSave,
-  existingNames,
-}: {
+function CategoryForm({ onCancel, onSave, existingNames }: {
   onCancel: () => void;
   onSave: (data: { nome: string; descricao?: string; categoria_pai_id?: number | null }) => Promise<void>;
   existingNames: string[];
@@ -433,11 +488,7 @@ function CategoryForm({
     if (!nome.trim() || duplicated || saving) return;
     setSaving(true);
     try {
-      await onSave({
-        nome: nome.trim(),
-        descricao: descricao.trim() || undefined,
-        categoria_pai_id: null,
-      });
+      await onSave({ nome: nome.trim(), descricao: descricao.trim() || undefined, categoria_pai_id: null });
     } finally {
       setSaving(false);
     }
@@ -447,112 +498,114 @@ function CategoryForm({
     <div className="modal-form">
       <label>
         Nome da pasta
-        <input
-          value={nome}
-          onChange={(event) => setNome(event.target.value)}
-          placeholder="Ex.: Licitações"
-          autoFocus
-        />
+        <input value={nome} onChange={(event) => setNome(event.target.value)} placeholder="Ex.: Licitações" autoFocus />
         {duplicated && <small className="form-error">Já existe uma pasta com esse nome.</small>}
       </label>
-
       <label>
         Descrição (opcional)
-        <textarea
-          value={descricao}
-          onChange={(event) => setDescricao(event.target.value)}
-          placeholder="Ex.: Documentos de licitações e contratos"
-        />
+        <textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Ex.: Documentos de licitações e contratos" />
       </label>
-
       <div className="modal-actions">
-        <button className="button secondary" type="button" onClick={onCancel}>
-          Cancelar
-        </button>
-        <button className="button primary" type="button" disabled={!nome.trim() || duplicated || saving} onClick={() => void handleSave()}>
-          {saving ? 'Criando...' : 'Criar pasta'}
-        </button>
+        <button className="button secondary" type="button" onClick={onCancel}>Cancelar</button>
+        <button className="button primary" type="button" disabled={!nome.trim() || duplicated || saving} onClick={() => void handleSave()}>{saving ? 'Criando...' : 'Criar pasta'}</button>
       </div>
     </div>
   );
 }
 
-function UploadForm({
-  onCancel,
-  onSave,
-}: {
+function CategoryEditForm({ category, onCancel, onSave, existingNames }: {
+  category: CategoriaDocumento;
   onCancel: () => void;
-  onSave: (data: { nome: string; file: File; observacao?: string }) => Promise<void>;
+  onSave: (data: { nome: string; descricao?: string }) => Promise<void>;
+  existingNames: string[];
 }) {
-  const [nome, setNome] = useState('');
-  const [observacao, setObservacao] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [nome, setNome] = useState(category.nome);
+  const [descricao, setDescricao] = useState(category.descricao || '');
+  const [saving, setSaving] = useState(false);
+  const duplicated = existingNames.some((value) => value.trim().toLocaleLowerCase() === nome.trim().toLocaleLowerCase());
+
+  async function handleSave() {
+    if (!nome.trim() || duplicated || saving) return;
+    setSaving(true);
+    try {
+      await onSave({ nome: nome.trim(), descricao: descricao.trim() || undefined });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="modal-form">
+      <div className="doc-edit-folder-preview"><Folder size={19} /><div><strong>{category.nome}</strong><small>Esta alteração afeta apenas o nome e a descrição da pasta.</small></div></div>
       <label>
-        Nome do documento
-        <input
-          value={nome}
-          onChange={(event) => setNome(event.target.value)}
-          placeholder="Ex.: Contrato Social"
-        />
+        Nome da pasta
+        <input value={nome} onChange={(event) => setNome(event.target.value)} autoFocus />
+        {duplicated && <small className="form-error">Já existe outra pasta com esse nome.</small>}
       </label>
-
       <label>
-        Arquivo
-        <input
-          type="file"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-        <small>Limite padrão: 25 MB.</small>
+        Descrição (opcional)
+        <textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Descrição da pasta" />
       </label>
-
-      <label>
-        Observação
-        <textarea
-          value={observacao}
-          onChange={(event) => setObservacao(event.target.value)}
-        />
-      </label>
-
       <div className="modal-actions">
-        <button className="button secondary" type="button" onClick={onCancel}>
-          Cancelar
-        </button>
-        <button
-          className="button primary"
-          type="button"
-          disabled={!nome.trim() || !file}
-          onClick={() => {
-            if (!file) return;
-            void onSave({
-              nome: nome.trim(),
-              file,
-              observacao: observacao.trim() || undefined,
-            });
-          }}
-        >
-          Enviar documento
-        </button>
+        <button className="button secondary" type="button" onClick={onCancel}>Cancelar</button>
+        <button className="button primary" type="button" disabled={!nome.trim() || duplicated || saving} onClick={() => void handleSave()}>{saving ? 'Salvando...' : 'Salvar alterações'}</button>
       </div>
     </div>
   );
 }
 
-function InlineVersionForm({
-  documentId,
-  onDone,
-}: {
-  documentId: number;
-  onDone: () => Promise<void>;
+function UploadForm({ initialFile, onCancel, onSave }: {
+  initialFile?: File | null;
+  onCancel: () => void;
+  onSave: (data: { nome: string; file: File; observacao?: string }) => Promise<void>;
 }) {
+  const [nome, setNome] = useState(initialFile ? initialFile.name.replace(/\.[^.]+$/, '') : '');
+  const [observacao, setObservacao] = useState('');
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (!initialFile) return;
+    setFile(initialFile);
+    setNome(initialFile.name.replace(/\.[^.]+$/, ''));
+  }, [initialFile]);
+
+  function acceptFile(nextFile: File) {
+    if (nextFile.size > 25 * 1024 * 1024) return;
+    setFile(nextFile);
+    setNome(nextFile.name.replace(/\.[^.]+$/, ''));
+  }
+
+  return (
+    <div className="modal-form">
+      <label>Nome do documento<input value={nome} onChange={(event) => setNome(event.target.value)} placeholder="Ex.: Contrato Social" /></label>
+      <div
+        className={`doc-modal-drop ${dragging ? 'drag-active' : ''}`}
+        onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+        onDrop={(event) => { event.preventDefault(); setDragging(false); const next = event.dataTransfer.files?.[0]; if (next) acceptFile(next); }}
+      >
+        <Upload size={20} />
+        <strong>{dragging ? 'Solte o arquivo aqui' : file ? file.name : 'Arraste o arquivo para cá'}</strong>
+        <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · pronto para envio` : 'ou clique no campo abaixo para selecionar'}</span>
+        <input type="file" onChange={(event) => { const next = event.target.files?.[0]; if (next) acceptFile(next); }} />
+      </div>
+      <label>Observação<textarea value={observacao} onChange={(event) => setObservacao(event.target.value)} /></label>
+      <div className="modal-actions">
+        <button className="button secondary" type="button" onClick={onCancel}>Cancelar</button>
+        <button className="button primary" type="button" disabled={!nome.trim() || !file} onClick={() => { if (file) void onSave({ nome: nome.trim(), file, observacao: observacao.trim() || undefined }); }}>Enviar documento</button>
+      </div>
+    </div>
+  );
+}
+
+function InlineVersionForm({ documentId, onDone }: { documentId: number; onDone: () => Promise<void> }) {
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
 
   async function handleUpload() {
     if (!file || sending) return;
-
     setSending(true);
     try {
       await uploadNovaVersao(documentId, file);
@@ -566,18 +619,8 @@ function InlineVersionForm({
   return (
     <div className="version-upload">
       <h4>Adicionar nova versão</h4>
-      <input
-        type="file"
-        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-      />
-      <button
-        className="button primary"
-        type="button"
-        disabled={!file || sending}
-        onClick={() => void handleUpload()}
-      >
-        {sending ? 'Enviando...' : 'Enviar nova versão'}
-      </button>
+      <input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+      <button className="button primary" type="button" disabled={!file || sending} onClick={() => void handleUpload()}>{sending ? 'Enviando...' : 'Enviar nova versão'}</button>
     </div>
   );
 }

@@ -20,16 +20,27 @@ function errorMessage(data: unknown, status: number): string {
   return `Erro HTTP ${status}`;
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export type ApiRequestInit = RequestInit & { timeoutMs?: number };
+
+export async function apiFetch<T>(path: string, options: ApiRequestInit = {}): Promise<T> {
   const token = localStorage.getItem("omega_access_token");
   let response: Response;
+  const { timeoutMs = 20000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     response = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) },
-      ...options,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(fetchOptions.headers || {}) },
+      ...fetchOptions,
+      signal: fetchOptions.signal || controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`O backend demorou mais de ${Math.round(timeoutMs / 1000)} segundos para responder a ${path}. Verifique o FastAPI e o banco omega.db.`);
+    }
     throw new Error(`Não foi possível conectar ao backend em ${API_URL}. Verifique se o FastAPI está em execução.`);
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 
   const contentType = response.headers.get("content-type") || "";

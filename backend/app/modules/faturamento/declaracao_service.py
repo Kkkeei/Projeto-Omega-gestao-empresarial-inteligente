@@ -11,7 +11,13 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from app.db.database import BASE_DIR, STORAGE_BASE
-from .repository import criar_declaracao, listar_faturamentos_periodo, obter_empresa
+from .repository import (
+    criar_declaracao,
+    listar_faturamentos_empresa,
+    listar_faturamentos_periodo,
+    obter_empresa,
+    obter_ultima_competencia_faturamento,
+)
 
 
 MESES_PT = [
@@ -44,6 +50,34 @@ def ultimo_periodo_completo_12_meses() -> tuple[int, int, int, int]:
     fim_ano, fim_mes = _mes_anterior(date.today().year, date.today().month)
     inicio_ano, inicio_mes = _adicionar_meses(fim_ano, fim_mes, -11)
     return inicio_ano, inicio_mes, fim_ano, fim_mes
+
+
+def periodo_12_meses_por_empresa(empresa_id: int) -> tuple[int, int, int, int, bool]:
+    """Calcula os 12 meses a partir do último faturamento informado.
+
+    Regra: o último mês com lançamento é o mês final da janela. A partir dele,
+    o sistema volta 11 meses. Competências sem lançamento continuam na janela e
+    recebem R$ 0,00 no detalhamento, sem bloquear a geração da declaração.
+
+    Se ainda não existir nenhum lançamento, usa como referência o mês anterior
+    ao mês civil atual e retorna os 12 meses correspondentes, todos podendo ficar
+    zerados. O booleano de retorno informa se foi encontrado algum lançamento.
+    """
+    hoje = date.today()
+    limite_ano, limite_mes = hoje.year, hoje.month
+
+    # Consulta somente a última competência informada. O banco já possui índice
+    # composto por empresa + competência; não carregamos o histórico inteiro.
+    ultimo = obter_ultima_competencia_faturamento(empresa_id, limite_ano, limite_mes)
+    if ultimo:
+        fim_ano, fim_mes = ultimo
+        controle_informado = True
+    else:
+        fim_ano, fim_mes = _mes_anterior(hoje.year, hoje.month)
+        controle_informado = False
+
+    inicio_ano, inicio_mes = _adicionar_meses(fim_ano, fim_mes, -11)
+    return inicio_ano, inicio_mes, fim_ano, fim_mes, controle_informado
 
 
 def _periodo_label(ano_inicio: int, mes_inicio: int, ano_fim: int, mes_fim: int) -> str:
@@ -420,7 +454,7 @@ def gerar_declaracao_anual(empresa_id: int, ano: int, usuario_id: int) -> dict:
 
 
 def gerar_declaracao_12_meses(empresa_id: int, usuario_id: int) -> dict:
-    ano_inicio, mes_inicio, ano_fim, mes_fim = ultimo_periodo_completo_12_meses()
+    ano_inicio, mes_inicio, ano_fim, mes_fim, _ = periodo_12_meses_por_empresa(empresa_id)
     return gerar_declaracao_periodo(
         empresa_id=empresa_id,
         tipo="Últimos 12 meses",

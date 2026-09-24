@@ -8,6 +8,7 @@ export type Versao={id:number;documento_id:number;versao:number;nome_arquivo?:st
 export async function listarEmpresasDocumentacao(params:URLSearchParams=new URLSearchParams()){return apiFetch<{total:number;page:number;page_size:number;empresas:EmpresaDocumento[]}>(`/api/v1/documentacao/empresas?${params.toString()}`)}
 export async function listarCategorias(empresaId:number){return apiFetch<{categorias:CategoriaDocumento[]}>(`/api/v1/documentacao/empresas/${empresaId}/categorias`)}
 export async function criarCategoria(empresaId:number,data:{nome:string;descricao?:string;categoria_pai_id?:number|null}){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/empresas/${empresaId}/categorias`,{method:'POST',body:JSON.stringify(data)})}
+export async function atualizarCategoria(categoriaId:number,data:{nome:string;descricao?:string}){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/categorias/${categoriaId}`,{method:'PUT',body:JSON.stringify(data)})}
 export async function arquivarCategoria(id:number){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/categorias/${id}`,{method:'DELETE'})}
 export async function arquivarDocumento(id:number){return apiFetch<Documento>(`/api/v1/documentacao/documentos/${id}`,{method:'DELETE'})}
 export async function listarDocumentos(empresaId:number,categoriaId?:number){const q=categoriaId?`?categoria_id=${categoriaId}`:'';return apiFetch<{documentos:Documento[]}>(`/api/v1/documentacao/empresas/${empresaId}/documentos${q}`)}

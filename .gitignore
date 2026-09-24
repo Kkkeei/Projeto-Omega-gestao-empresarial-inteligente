@@ -10,3 +10,9 @@ dist/
 *.sqlite
 *.sqlite3
 storage/backups/database/
+
+# Dados locais do OMEGA
+backend/omega.db
+backend/omega.db-shm
+backend/omega.db-wal
+storage/

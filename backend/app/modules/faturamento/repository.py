@@ -26,7 +26,7 @@ def obter_empresa(empresa_id: int) -> dict[str, Any] | None:
         row = conn.execute(
             """
             SELECT id, cnpj, razao_social, nome_fantasia, regime_tributario,
-                   municipio, uf, ativo, observacoes
+                   data_abertura, municipio, uf, ativo, observacoes
               FROM empresas
              WHERE id=?
             """,
@@ -212,6 +212,27 @@ def listar_faturamentos_periodo(
     finally:
         conn.close()
 
+
+
+def obter_ultima_competencia_faturamento(empresa_id: int, ano_limite: int, mes_limite: int) -> tuple[int,int] | None:
+    """Retorna somente a última competência informada da empresa. Usa o índice
+    (empresa_id, competencia_ano, competencia_mes) e evita carregar o histórico inteiro."""
+    conn = conectar_banco()
+    try:
+        row = conn.execute(
+            """
+            SELECT competencia_ano, competencia_mes
+              FROM faturamentos
+             WHERE empresa_id=?
+               AND (competencia_ano < ? OR (competencia_ano=? AND competencia_mes<=?))
+             ORDER BY competencia_ano DESC, competencia_mes DESC
+             LIMIT 1
+            """,
+            (empresa_id, ano_limite, ano_limite, mes_limite),
+        ).fetchone()
+        return (int(row['competencia_ano']), int(row['competencia_mes'])) if row else None
+    finally:
+        conn.close()
 
 def resumo_faturamento(empresa_id: int, ano: int) -> dict[str, Any]:
     conn = conectar_banco()
@@ -490,5 +511,62 @@ def listar_declaracoes_empresa(empresa_id: int) -> list[dict[str, Any]]:
             (empresa_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def obter_config_banco_brasil(empresa_id: int) -> dict[str, Any] | None:
+    conn = conectar_banco()
+    try:
+        row = conn.execute(
+            """
+            SELECT empresa_id, percentual_a_vista, percentual_a_prazo,
+                   percentual_cartao, percentual_cheque, percentual_boleto,
+                   prazo_medio_dias, criado_em, atualizado_em
+              FROM banco_brasil_config
+             WHERE empresa_id=?
+             LIMIT 1
+            """,
+            (empresa_id,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def salvar_config_banco_brasil(empresa_id: int, dados: dict[str, Any]) -> dict[str, Any]:
+    conn = conectar_banco()
+    try:
+        conn.execute(
+            """
+            INSERT INTO banco_brasil_config
+                (empresa_id, percentual_a_vista, percentual_a_prazo,
+                 percentual_cartao, percentual_cheque, percentual_boleto,
+                 prazo_medio_dias)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(empresa_id) DO UPDATE SET
+                percentual_a_vista=excluded.percentual_a_vista,
+                percentual_a_prazo=excluded.percentual_a_prazo,
+                percentual_cartao=excluded.percentual_cartao,
+                percentual_cheque=excluded.percentual_cheque,
+                percentual_boleto=excluded.percentual_boleto,
+                prazo_medio_dias=excluded.prazo_medio_dias,
+                atualizado_em=CURRENT_TIMESTAMP
+            """,
+            (
+                empresa_id,
+                dados.get("percentual_a_vista", 20),
+                dados.get("percentual_a_prazo", 80),
+                dados.get("percentual_cartao"),
+                dados.get("percentual_cheque"),
+                dados.get("percentual_boleto"),
+                dados.get("prazo_medio_dias"),
+            ),
+        )
+        conn.commit()
+        result = obter_config_banco_brasil(empresa_id)
+        if not result:
+            raise LookupError("Configuração do Banco do Brasil não encontrada após o salvamento.")
+        return result
     finally:
         conn.close()

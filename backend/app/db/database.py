@@ -361,6 +361,20 @@ def criar_tabelas() -> None:
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
         );
 
+        CREATE TABLE IF NOT EXISTS banco_brasil_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL UNIQUE,
+            percentual_a_vista REAL NOT NULL DEFAULT 20,
+            percentual_a_prazo REAL NOT NULL DEFAULT 80,
+            percentual_cartao REAL,
+            percentual_cheque REAL,
+            percentual_boleto REAL,
+            prazo_medio_dias INTEGER,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+        );
+
         """)
 
         # Migrations for Faturamento. Nunca remover dados existentes.
@@ -414,6 +428,7 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_documento_versoes_usuario ON documento_versoes(usuario_upload_id);
         CREATE INDEX IF NOT EXISTS idx_faturamentos_empresa_competencia ON faturamentos(empresa_id, competencia_ano, competencia_mes);
         CREATE INDEX IF NOT EXISTS idx_declaracoes_faturamento_empresa_data ON declaracoes_faturamento(empresa_id, data_geracao);
+        CREATE INDEX IF NOT EXISTS idx_banco_brasil_config_empresa ON banco_brasil_config(empresa_id);
         CREATE INDEX IF NOT EXISTS idx_auditorias_entidade ON auditorias(entidade, entidade_id);
         CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
         CREATE INDEX IF NOT EXISTS idx_reset_tokens_usuario ON tokens_redefinicao_senha(usuario_id);
