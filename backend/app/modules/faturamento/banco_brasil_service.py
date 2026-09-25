@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from datetime import date
+from html import escape as html_escape
+from io import BytesIO
 import os
 import re
 from pathlib import Path
+
+from PIL import Image, ImageChops
 from typing import Any
 
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError, async_playwright
@@ -20,7 +24,7 @@ from .repository import (
 BANCO_BRASIL_URL = "https://www45.bb.com.br/fmc/frm/fw0711677_1.jsp"
 BANCO_BRASIL_DIR = STORAGE_BASE / "declaracoes_faturamento" / "banco_brasil"
 BB_HEADLESS = os.getenv("OMEGA_BB_HEADLESS", "true").strip().lower() in {"1", "true", "sim", "yes"}
-BB_BROWSER = os.getenv("OMEGA_BB_BROWSER", "firefox").strip().lower()
+BB_BROWSER = os.getenv("OMEGA_BB_BROWSER", "chromium").strip().lower()
 
 
 def _periodo_12_meses_dinamico(empresa_id: int) -> tuple[int, int, int, int, bool]:
@@ -141,27 +145,59 @@ async def _localizar_frame_formulario(page):
     ultimo_mapa = []
     melhor = None
 
+    # O site do BB usa frames legados. A quantidade de inputs varia conforme
+    # o navegador/layout carregado, então não usamos 40 campos como critério
+    # obrigatório para reconhecer o formulário. O critério principal passa a
+    # ser a presença dos rótulos estruturais do próprio formulário.
     for _ in range(24):
         candidatos = []
         for frame in page.frames:
             try:
                 text_inputs = await _frame_inputs(frame)
                 quantidade = len(text_inputs)
-                meta = {"url": frame.url, "editaveis": quantidade}
+                texto_frame = ""
+                try:
+                    texto_frame = (await frame.locator("body").inner_text(timeout=1000))[:12000]
+                except Exception:
+                    pass
+
+                tem_razao = bool(re.search(r"Raz[aã]o\s+Social", texto_frame, re.I))
+                tem_cnpj = bool(re.search(r"CNPJ", texto_frame, re.I))
+                tem_tabela = bool(
+                    re.search(r"Faturamento\s+bruto\s+total", texto_frame, re.I)
+                    or re.search(r"Compet[eê]ncia", texto_frame, re.I)
+                )
+
+                pontuacao = (int(tem_razao) + int(tem_cnpj) + int(tem_tabela), quantidade)
+                meta = {
+                    "url": frame.url,
+                    "editaveis": quantidade,
+                    "razao_social": tem_razao,
+                    "cnpj": tem_cnpj,
+                    "tabela": tem_tabela,
+                }
                 candidatos.append(meta)
-                if melhor is None or quantidade > melhor[0]:
-                    melhor = (quantidade, frame)
-                if quantidade >= 40:
+
+                if melhor is None or pontuacao > melhor[0]:
+                    melhor = (pontuacao, frame)
+
+                if tem_razao and tem_cnpj and quantidade >= 10:
                     return frame, candidatos
             except Exception:
                 continue
+
         ultimo_mapa = candidatos
         await page.wait_for_timeout(350)
 
     if melhor:
-        quantidade, frame = melhor
-        if quantidade >= 30:
-            return frame, ultimo_mapa
+        _, frame = melhor
+        try:
+            text_inputs = await _frame_inputs(frame)
+            texto_frame = (await frame.locator("body").inner_text(timeout=1000))[:12000]
+            if len(text_inputs) >= 10 and re.search(r"Raz[aã]o\s+Social", texto_frame, re.I) and re.search(r"CNPJ", texto_frame, re.I):
+                return frame, ultimo_mapa
+        except Exception:
+            pass
 
     try:
         titulo = await page.title()
@@ -350,6 +386,47 @@ async def _preencher_faturamento_bruto(frame, text_inputs, valor: float):
     )
 
 
+
+def _salvar_pdf_bb_em_a4(png_bytes: bytes, destino: Path) -> None:
+    """Converte apenas o conteúdo útil do formulário BB em uma única folha A4.
+
+    O site do BB é legado e seus elementos podem ocupar uma altura maior que A4.
+    Em vez de deixar o Chromium paginar o HTML, renderizamos o formulário uma vez,
+    removemos margens brancas e colocamos o resultado dentro de uma folha A4 fixa.
+    """
+    imagem = Image.open(BytesIO(png_bytes)).convert("RGB")
+
+    # Remove as margens externas totalmente brancas geradas pelo documento HTML.
+    fundo = Image.new("RGB", imagem.size, "white")
+    diferenca = ImageChops.difference(imagem, fundo).convert("L")
+    bbox = diferenca.point(lambda px: 255 if px > 10 else 0).getbbox()
+    if bbox:
+        imagem = imagem.crop(bbox)
+
+    # A4 em 150 DPI. Mantemos margens discretas para o conteúdo não encostar na borda.
+    dpi = 150
+    a4_largura = round(8.27 * dpi)
+    a4_altura = round(11.69 * dpi)
+    margem = round(0.28 * dpi)  # aproximadamente 7 mm
+    area_largura = a4_largura - (margem * 2)
+    area_altura = a4_altura - (margem * 2)
+
+    largura, altura = imagem.size
+    escala = min(area_largura / max(largura, 1), area_altura / max(altura, 1))
+    nova_largura = max(1, int(round(largura * escala)))
+    nova_altura = max(1, int(round(altura * escala)))
+    if (nova_largura, nova_altura) != imagem.size:
+        imagem = imagem.resize((nova_largura, nova_altura), Image.Resampling.LANCZOS)
+
+    folha = Image.new("RGB", (a4_largura, a4_altura), "white")
+    x = (a4_largura - imagem.width) // 2
+    y = (a4_altura - imagem.height) // 2
+    folha.paste(imagem, (x, y))
+
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    folha.save(destino, "PDF", resolution=dpi)
+
+
 async def _fill_and_print_bb(
     *,
     empresa: dict[str, Any],
@@ -441,7 +518,7 @@ async def _fill_and_print_bb(
 
             local = str(empresa.get("municipio") or "").strip().title()
             uf = str(empresa.get("uf") or "").strip().upper()
-            local_data = f"{local} - {uf}" if local and uf else local
+            local_data = f"{local}-{uf}" if local and uf else local
             if local_data:
                 local_data += f" {date.today().strftime('%d/%m/%Y')}"
             else:
@@ -453,6 +530,92 @@ async def _fill_and_print_bb(
             if regime_index is not None and await radios.count() > regime_index:
                 await radios.nth(regime_index).check(force=True)
 
+            # Gera o PDF somente do formulário preenchido, antes do clique em Salvar.
+            # Não usamos page.pdf() diretamente na página do BB, porque o HTML legado
+            # pode ultrapassar A4 e produzir uma saída exageradamente comprida.
+            destino.parent.mkdir(parents=True, exist_ok=True)
+
+            html_formulario = await form_frame.evaluate(
+                """() => {
+                    const origem = document.documentElement;
+                    const clone = origem.cloneNode(true);
+                    const camposOrigem = origem.querySelectorAll('input, textarea, select');
+                    const camposClone = clone.querySelectorAll('input, textarea, select');
+
+                    camposOrigem.forEach((campo, index) => {
+                        const destino = camposClone[index];
+                        if (!destino) return;
+                        const tag = campo.tagName.toLowerCase();
+                        const tipo = (campo.getAttribute('type') || '').toLowerCase();
+
+                        if (tag === 'textarea') {
+                            destino.textContent = campo.value || '';
+                        } else if (tag === 'select') {
+                            Array.from(destino.options).forEach((option, optionIndex) => {
+                                const origemOption = campo.options[optionIndex];
+                                if (origemOption?.selected) option.setAttribute('selected', 'selected');
+                                else option.removeAttribute('selected');
+                            });
+                        } else if (tipo === 'checkbox' || tipo === 'radio') {
+                            if (campo.checked) destino.setAttribute('checked', 'checked');
+                            else destino.removeAttribute('checked');
+                        } else {
+                            destino.setAttribute('value', campo.value || '');
+                        }
+                    });
+
+                    return clone.outerHTML;
+                }"""
+            )
+            frame_url = form_frame.url or BANCO_BRASIL_URL
+            base_tag = f'<base href="{html_escape(frame_url, quote=True)}">'
+            if '<head>' in html_formulario.lower():
+                pos = html_formulario.lower().find('<head>') + len('<head>')
+                html_formulario = html_formulario[:pos] + base_tag + html_formulario[pos:]
+            else:
+                html_formulario = html_formulario.replace('<html>', f'<html><head>{base_tag}</head>', 1)
+
+            pdf_context = await browser.new_context(
+                viewport={"width": 1400, "height": 1400},
+                device_scale_factor=2,
+                locale="pt-BR",
+                ignore_https_errors=True,
+                user_agent=(
+                    "Mozilla/5.0 (X11; Linux x86_64; rv:146.0) Gecko/20100101 Firefox/146.0"
+                    if browser_name == "firefox"
+                    else "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+                ),
+            )
+            pdf_page = await pdf_context.new_page()
+            try:
+                await pdf_page.set_content('<!DOCTYPE html>' + html_formulario, wait_until="domcontentloaded")
+                await pdf_page.add_style_tag(content="""
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                    }
+                    input[type=submit], input[type=button], input[type=image], button, a[href*="print" i] {
+                        display: none !important;
+                    }
+                """)
+                await pdf_page.wait_for_timeout(800)
+
+                # Captura somente o documento renderizado pelo frame, sem menu, frameset
+                # ou áreas vazias do site.
+                png_bytes = await pdf_page.locator("body").screenshot(
+                    type="png",
+                    animations="disabled",
+                    caret="hide",
+                )
+                _salvar_pdf_bb_em_a4(png_bytes, destino)
+            finally:
+                try:
+                    await pdf_context.close()
+                except Exception:
+                    pass
+
+            # Somente agora clicamos no botão Salvar do rodapé do formulário oficial.
             save_button = form_frame.locator(
                 'input[value*="Salvar" i], input[name*="Salvar" i], input[alt*="Salvar" i], '
                 'input[title*="Salvar" i], input[src*="salvar" i], button:has-text("Salvar"), a:has-text("Salvar")'
@@ -460,48 +623,18 @@ async def _fill_and_print_bb(
             if await save_button.count() == 0:
                 raise RuntimeError("Não foi localizado o botão 'Salvar' no formulário do Banco do Brasil.")
 
+            async def accept_dialog(dialog):
+                await dialog.accept()
+
+            page.on("dialog", accept_dialog)
             try:
-                await save_button.click(timeout=8000)
-            except PlaywrightTimeoutError:
                 await save_button.evaluate("el => el.click()")
-            await page.wait_for_timeout(700)
-
-            await page.emulate_media(media="print")
-            destino.parent.mkdir(parents=True, exist_ok=True)
-            screenshot_tmp = destino.with_name(destino.stem + "_render.png")
-            await page.screenshot(path=str(screenshot_tmp), full_page=True)
-
-            from PIL import Image
-            from reportlab.lib.pagesizes import A4
-            from reportlab.lib.utils import ImageReader
-            from reportlab.pdfgen import canvas
-
-            imagem = Image.open(screenshot_tmp).convert("RGB")
-            largura_px, altura_px = imagem.size
-            largura_pt, altura_pt = A4
-            escala = largura_pt / float(largura_px)
-            pagina_px_h = max(1, int(altura_pt / escala))
-            documento_pdf = canvas.Canvas(str(destino), pagesize=A4)
-            for inicio_px in range(0, altura_px, pagina_px_h):
-                fim_px = min(altura_px, inicio_px + pagina_px_h)
-                recorte = imagem.crop((0, inicio_px, largura_px, fim_px))
-                recorte_h_pt = (fim_px - inicio_px) * escala
-                tmp = screenshot_tmp.with_name(f"{screenshot_tmp.stem}_{inicio_px}.png")
-                recorte.save(tmp, format="PNG")
-                documento_pdf.drawImage(
-                    ImageReader(str(tmp)), 0, altura_pt - recorte_h_pt,
-                    width=largura_pt, height=recorte_h_pt, preserveAspectRatio=True, mask="auto"
-                )
-                documento_pdf.showPage()
+            except Exception:
                 try:
-                    tmp.unlink()
-                except OSError:
-                    pass
-            documento_pdf.save()
-            try:
-                screenshot_tmp.unlink()
-            except OSError:
-                pass
+                    await save_button.click(timeout=8000, no_wait_after=True)
+                except PlaywrightTimeoutError:
+                    await save_button.evaluate("el => el.click()")
+            await page.wait_for_timeout(700)
 
             return float(total_bruto)
         finally:

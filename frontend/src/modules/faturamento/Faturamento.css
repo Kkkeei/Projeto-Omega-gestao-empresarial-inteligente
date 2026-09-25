@@ -24,13 +24,13 @@
 .fat-year-toolbar{display:flex;align-items:center;gap:6px;padding:10px 14px}.fat-year-label{display:flex;align-items:center;gap:6px;color:#0d1f4d;font-size:13px;font-weight:800}.fat-year-help{margin-left:auto;color:#768499;font-size:8px;background:#f4f8fc;border:1px solid #e2eaf3;border-radius:7px;padding:7px 9px;max-width:53%}.fat-year-toolbar .icon-button{width:29px;height:29px}
 .fat-month-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:7px;padding:0 14px 13px;overflow-x:auto}.fat-month-card{min-width:85px;background:#fff;border:1px solid #e4e9ef;border-radius:8px;padding:9px 8px;text-align:left;cursor:pointer;transition:.12s;position:relative}.fat-month-card:hover{border-color:#b8cee8;background:#fbfdff}.fat-month-card.active{border-color:#2e88e9;box-shadow:inset 0 0 0 1px #2e88e9;background:#f8fbff}.fat-month-top{display:flex;flex-direction:column;gap:6px}.fat-month-top>strong{font-size:9px;color:#223052}.fat-month-top>span{font-size:7px;font-weight:800;align-self:flex-start;border-radius:999px;padding:3px 5px}.fat-month-top .informed{color:#159460;background:#ecfaf3}.fat-month-top .pending{color:#c88505;background:#fff6df}.fat-month-value{display:block;margin-top:10px;font-size:9px;color:#152347}.fat-month-edit{display:flex;justify-content:center;align-items:center;height:27px;margin-top:7px;border:1px solid #dce4ed;border-radius:6px;color:#1879e6;background:#fff}
 .fat-observation-box{margin:0 14px;border:1px solid #dfe8f1;background:#f8fbfe;border-radius:8px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.fat-observation-box>div{display:flex;align-items:center;gap:9px;min-width:0}.fat-observation-icon{width:27px;height:27px;border-radius:7px;background:#eef5ff;color:#1671df;display:grid;place-items:center;flex:0 0 27px}.fat-observation-box strong{display:block;color:#273757;font-size:9px}.fat-observation-box small{display:block;color:#8491a3;font-size:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:650px}.fat-observation-box .button{font-size:8px;height:30px;white-space:nowrap}.fat-observation-editor{margin:8px 14px 0;padding:9px;background:#fff;border:1px solid #dde5ed;border-radius:8px}.fat-observation-editor textarea{min-height:67px}.fat-observation-editor>div{display:flex;justify-content:flex-end;gap:6px;margin-top:7px}
-.fat-declarations-layout{display:grid;grid-template-columns:1.8fr .9fr;gap:10px;margin-top:13px}.fat-declaration-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:11px;align-items:stretch}.fat-declaration-card{border:1px solid #e1e7ef;border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:202px;background:#fff}.fat-declaration-card.featured{border-color:#2d88e9;background:#f9fcff}.fat-declaration-card>svg{color:#1671df}.fat-declaration-card strong{color:#152145;font-size:10px}.fat-declaration-card>span{color:#778499;font-size:8px;line-height:1.4;min-height:34px}.fat-declaration-card label{font-size:8px;font-weight:800;color:#506079;width:100%}.fat-declaration-card input{height:32px;margin-top:4px}.fat-declaration-card .button{width:100%;margin-top:auto;height:32px;font-size:8px}.fat-declaration-card small{color:#8a96a7;font-size:7px;align-self:center}
+.fat-declarations-layout{display:grid;grid-template-columns:1.8fr .9fr;gap:10px;margin-top:13px}.fat-declaration-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:11px}.fat-declaration-card{border:1px solid #e1e7ef;border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:202px;background:#fff}.fat-declaration-card.featured{border-color:#2d88e9;background:#f9fcff}.fat-declaration-card>svg{color:#1671df}.fat-declaration-card strong{color:#152145;font-size:10px}.fat-declaration-card>span{color:#778499;font-size:8px;line-height:1.4;min-height:34px}.fat-declaration-card label{font-size:8px;font-weight:800;color:#506079;width:100%}.fat-declaration-card input{height:32px;margin-top:4px}.fat-declaration-card .button{width:100%;margin-top:auto;height:32px;font-size:8px}.fat-declaration-card small{color:#8a96a7;font-size:7px;align-self:center}
 .fat-history-side{min-width:0}.fat-history-list{padding:7px 10px}.fat-history-item{display:grid;grid-template-columns:25px 1fr auto;gap:7px;align-items:center;padding:9px 0;border-bottom:1px solid #edf0f4}.fat-history-item:last-child{border-bottom:none}.fat-history-icon{width:25px;height:25px;border-radius:7px;background:#eef5ff;color:#1671df;display:grid;place-items:center}.fat-history-item strong{display:block;color:#263658;font-size:8px}.fat-history-item small{display:block;color:#8995a6;font-size:7px;margin-top:2px}.fat-history-item .button{height:28px;padding:0 8px;font-size:7px}.fat-see-all{border:0;background:transparent;color:#126dd0;font-weight:800;font-size:8px;display:block;margin:0 auto 10px;cursor:pointer}
 .fat-two-inputs{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%}
-.fat-modal-backdrop{position:fixed;inset:0;background:rgba(21,31,49,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000}.fat-modal{background:#fff;border-radius:12px;border:1px solid #dfe6ef;box-shadow:0 22px 60px rgba(18,39,68,.22);width:min(700px,100%);max-height:90vh;overflow:auto}.fat-modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid #edf0f4}.fat-modal-header>div{display:flex;align-items:center;gap:9px}.fat-modal-header strong{display:block;color:#142047;font-size:12px}.fat-modal-header small{display:block;color:#7d8a9c;font-size:8px;margin-top:2px}.fat-modal-icon{width:29px;height:29px;border-radius:8px;background:#edf5ff;color:#1671df;display:grid;place-items:center}.fat-modal-section{padding:13px 15px}.fat-modal-section label,.fat-modal-body>label{display:flex;flex-direction:column;gap:5px;color:#4c5b70;font-size:9px;font-weight:800}.fat-modal-section select{height:35px}.fat-declaration-choice-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;padding:14px}.fat-declaration-choice{border:1px solid #dfe5ed;background:#fff;border-radius:9px;padding:13px;text-align:left;display:flex;flex-direction:column;gap:7px;min-height:145px;cursor:pointer}.fat-declaration-choice:hover,.fat-declaration-choice.active{border-color:#2d89ed;background:#f7fbff}.fat-declaration-choice svg{color:#1671df}.fat-declaration-choice strong{font-size:10px;color:#17213d}.fat-declaration-choice span{font-size:8px;line-height:1.45;color:#7c889a}.fat-declaration-form{padding:14px}.fat-back-mini{border:0;background:transparent;color:#1671df;font-size:9px;font-weight:800;padding:0;margin-bottom:12px;cursor:pointer}.fat-declaration-form-title{display:flex;gap:8px;align-items:center;margin-bottom:12px}.fat-declaration-form-title>svg{color:#1671df}.fat-declaration-form-title strong{display:block;font-size:12px;color:#17213d}.fat-declaration-form-title span{display:block;font-size:8px;color:#7d899b;margin-top:2px}.fat-declaration-form>label{display:flex;flex-direction:column;gap:5px;color:#485770;font-size:9px;font-weight:800}.fat-declaration-form label input{margin-top:4px}.fat-modal-body{padding:14px 15px}.fat-form-highlight{border:1px solid #deebf9;background:#f7fbff;border-radius:8px;padding:9px 11px;margin-bottom:12px}.fat-form-highlight span{display:block;color:#7d899b;font-size:8px}.fat-form-highlight strong{display:block;color:#16366e;font-size:11px;margin-top:3px}.fat-modal-body textarea,.fat-observation-editor textarea{width:100%;border:1px solid #d6dde7;border-radius:7px;padding:9px;resize:vertical;min-height:80px;font-size:10px;font-family:inherit}.fat-label-help{color:#8b96a7;font-weight:400}.fat-modal-actions{display:flex;justify-content:flex-end;gap:7px;padding:11px 15px;border-top:1px solid #edf0f4}.fat-modal-actions .button{height:33px;font-size:8px}.fat-period-picker{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}.fat-period-picker label{display:flex;flex-direction:column;gap:5px;color:#485770;font-size:8px;font-weight:800}.fat-period-picker input{height:34px}.fat-batch-table-wrap{border:1px solid #e3e8ee;border-radius:8px;overflow:auto;max-height:360px}.fat-batch-table th,.fat-batch-table td{padding:8px 9px;font-size:8px}.fat-batch-table input{height:31px;font-size:8px}.fat-success-toast{position:fixed;right:22px;bottom:22px;background:#fff;border:1px solid #cfeee0;box-shadow:0 14px 35px rgba(17,64,45,.14);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;z-index:1100}.fat-success-toast>svg{color:#10a56c}.fat-success-toast strong{display:block;color:#173b2c;font-size:9px}.fat-success-toast span{display:block;color:#849284;font-size:7px;margin-top:2px}.fat-success-toast .icon-button{width:25px;height:25px;margin-left:10px}.fat-global-error{margin-top:8px}
+.fat-modal-backdrop{position:fixed;inset:0;background:rgba(21,31,49,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000}.fat-modal{background:#fff;border-radius:12px;border:1px solid #dfe6ef;box-shadow:0 22px 60px rgba(18,39,68,.22);width:min(700px,100%);max-height:90vh;overflow:auto}.fat-modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid #edf0f4}.fat-modal-header>div{display:flex;align-items:center;gap:9px}.fat-modal-header strong{display:block;color:#142047;font-size:12px}.fat-modal-header small{display:block;color:#7d8a9c;font-size:8px;margin-top:2px}.fat-modal-icon{width:29px;height:29px;border-radius:8px;background:#edf5ff;color:#1671df;display:grid;place-items:center}.fat-modal-section{padding:13px 15px}.fat-modal-section label,.fat-modal-body>label{display:flex;flex-direction:column;gap:5px;color:#4c5b70;font-size:9px;font-weight:800}.fat-modal-section select{height:35px}.fat-declaration-choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px}.fat-declaration-choice{border:1px solid #dfe5ed;background:#fff;border-radius:9px;padding:13px;text-align:left;display:flex;flex-direction:column;gap:7px;min-height:145px;cursor:pointer}.fat-declaration-choice:hover,.fat-declaration-choice.active{border-color:#2d89ed;background:#f7fbff}.fat-declaration-choice svg{color:#1671df}.fat-declaration-choice strong{font-size:10px;color:#17213d}.fat-declaration-choice span{font-size:8px;line-height:1.45;color:#7c889a}.fat-declaration-form{padding:14px}.fat-back-mini{border:0;background:transparent;color:#1671df;font-size:9px;font-weight:800;padding:0;margin-bottom:12px;cursor:pointer}.fat-declaration-form-title{display:flex;gap:8px;align-items:center;margin-bottom:12px}.fat-declaration-form-title>svg{color:#1671df}.fat-declaration-form-title strong{display:block;font-size:12px;color:#17213d}.fat-declaration-form-title span{display:block;font-size:8px;color:#7d899b;margin-top:2px}.fat-declaration-form>label{display:flex;flex-direction:column;gap:5px;color:#485770;font-size:9px;font-weight:800}.fat-declaration-form label input{margin-top:4px}.fat-modal-body{padding:14px 15px}.fat-form-highlight{border:1px solid #deebf9;background:#f7fbff;border-radius:8px;padding:9px 11px;margin-bottom:12px}.fat-form-highlight span{display:block;color:#7d899b;font-size:8px}.fat-form-highlight strong{display:block;color:#16366e;font-size:11px;margin-top:3px}.fat-modal-body textarea,.fat-observation-editor textarea{width:100%;border:1px solid #d6dde7;border-radius:7px;padding:9px;resize:vertical;min-height:80px;font-size:10px;font-family:inherit}.fat-label-help{color:#8b96a7;font-weight:400}.fat-modal-actions{display:flex;justify-content:flex-end;gap:7px;padding:11px 15px;border-top:1px solid #edf0f4}.fat-modal-actions .button{height:33px;font-size:8px}.fat-period-picker{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px}.fat-period-picker label{display:flex;flex-direction:column;gap:5px;color:#485770;font-size:8px;font-weight:800}.fat-period-picker input{height:34px}.fat-batch-table-wrap{border:1px solid #e3e8ee;border-radius:8px;overflow:auto;max-height:360px}.fat-batch-table th,.fat-batch-table td{padding:8px 9px;font-size:8px}.fat-batch-table input{height:31px;font-size:8px}.fat-success-toast{position:fixed;right:22px;bottom:22px;background:#fff;border:1px solid #cfeee0;box-shadow:0 14px 35px rgba(17,64,45,.14);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;z-index:1100}.fat-success-toast>svg{color:#10a56c}.fat-success-toast strong{display:block;color:#173b2c;font-size:9px}.fat-success-toast span{display:block;color:#849284;font-size:7px;margin-top:2px}.fat-success-toast .icon-button{width:25px;height:25px;margin-left:10px}.fat-global-error{margin-top:8px}
 .fat-generated-links-hidden{display:none}
-@media(max-width:1250px){.fat-metrics-grid{grid-template-columns:repeat(2,1fr)}.fat-detail-summary{grid-template-columns:repeat(3,1fr)}.fat-month-grid{grid-template-columns:repeat(6,minmax(100px,1fr))}.fat-declarations-layout{grid-template-columns:1fr}.fat-declaration-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){.fat-regime-grid{grid-template-columns:repeat(2,1fr)}.fat-filter-row{grid-template-columns:1fr}.fat-competencia-select{justify-content:space-between}.fat-year-help{max-width:100%}.fat-declaration-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.fat-declaration-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fat-period-picker{grid-template-columns:1fr}.fat-section-heading{flex-direction:column}.fat-detail-summary{grid-template-columns:1fr 1fr}.fat-company-detail-heading{flex-direction:column;align-items:flex-start}}
+@media(max-width:1250px){.fat-metrics-grid{grid-template-columns:repeat(2,1fr)}.fat-detail-summary{grid-template-columns:repeat(3,1fr)}.fat-month-grid{grid-template-columns:repeat(6,minmax(100px,1fr))}.fat-declarations-layout{grid-template-columns:1fr}.fat-declaration-cards{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.fat-regime-grid{grid-template-columns:repeat(2,1fr)}.fat-filter-row{grid-template-columns:1fr}.fat-competencia-select{justify-content:space-between}.fat-year-help{max-width:100%}.fat-declaration-cards{grid-template-columns:1fr}.fat-declaration-choice-grid{grid-template-columns:1fr}.fat-period-picker{grid-template-columns:1fr}.fat-section-heading{flex-direction:column}.fat-detail-summary{grid-template-columns:1fr 1fr}.fat-company-detail-heading{flex-direction:column;align-items:flex-start}}
 @media(max-width:650px){.fat-metrics-grid,.fat-regime-grid,.fat-detail-summary{grid-template-columns:1fr}.page{padding-left:15px;padding-right:15px}.fat-filter-row{padding:9px}.fat-month-grid{grid-template-columns:repeat(3,minmax(100px,1fr))}.fat-two-inputs{grid-template-columns:1fr}.fat-modal{width:100%}}
 
 /* Interação da lista: toda a linha/cartão é clicável. */
@@ -68,33 +68,71 @@
 .fat-bb-flow>svg{color:#10a56c;flex:0 0 auto;margin-top:1px;}
 .spin{animation:omega-spin .8s linear infinite;}
 @keyframes omega-spin{to{transform:rotate(360deg)}}
-@media(max-width:650px){.fat-declaration-cards{grid-template-columns:1fr}.fat-declaration-choice-grid{grid-template-columns:1fr}.fat-current-competencia{border-left:0;border-top:1px solid #edf0f4;padding-left:0;padding-top:8px}.fat-filter-row{grid-template-columns:1fr;}}
-
-/* Modal inicial de declarações: quatro opções lado a lado no desktop. */
-.fat-declaration-start-modal{width:min(900px,100%);}
-.fat-declaration-start-modal .fat-declaration-choice-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
-@media(max-width:1050px){.fat-declaration-start-modal .fat-declaration-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:650px){.fat-declaration-start-modal .fat-declaration-choice-grid{grid-template-columns:1fr;}}
+@media(max-width:1250px){.fat-declaration-cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.fat-declaration-cards{grid-template-columns:1fr}.fat-current-competencia{border-left:0;border-top:1px solid #edf0f4;padding-left:0;padding-top:8px}.fat-filter-row{grid-template-columns:1fr;}}
 
 
-/* PATCH BB V12 — não altera a lógica do faturamento; apenas o layout e o novo card. */
-.fat-competencia-select { display: none !important; }
-.fat-declaration-choice-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-.fat-declaration-choice-bb { border-color: #d8c52a; background: linear-gradient(180deg,#fffef4 0%,#fff 100%); }
-.fat-declaration-choice-bb:hover,
-.fat-declaration-choice-bb.active { border-color: #c7ab00; background: #fffdf0; }
-.fat-declaration-choice-bb svg { color: #b28e00; }
-.fat-bb-modal { width: min(760px, 100%); }
-.fat-bb-percentuais { margin-bottom: 12px; }
-.fat-input-suffix { display: flex; align-items: stretch; }
-.fat-input-suffix input { flex: 1; min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.fat-input-suffix span { min-width: 34px; display: grid; place-items: center; border: 1px solid #d6dde7; border-left: 0; background: #f7f9fc; color: #64738a; border-top-right-radius: 7px; border-bottom-right-radius: 7px; font-size: 9px; }
-.fat-bb-percentual-total { display:flex; align-items:center; justify-content:space-between; padding:10px 11px; border-radius:8px; border:1px solid #e3e8ee; background:#fbfcfe; margin-top:8px; }
-.fat-bb-percentual-total strong { color:#1671df; }
-.fat-bb-percentual-total.invalid { border-color:#f0c9c9; background:#fff8f8; }
-.fat-bb-percentual-total.invalid strong { color:#c0392b; }
-.fat-bb-progress { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:190px; color:#65738a; font-size:10px; text-align:center; }
-.fat-bb-success { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:160px; color:#2d6f51; text-align:center; }
-.fat-bb-success svg { color:#10a56c; }
-@media(max-width:1050px){ .fat-declaration-choice-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
-@media(max-width:650px){ .fat-declaration-choice-grid { grid-template-columns:1fr !important; } }
+/* OMEGA FIX FATURAMENTO BB INTERFACE v2 */
+.fat-declarations-layout{min-width:0;}
+.fat-declarations-layout>section,.fat-history-side{min-width:0;}
+.fat-declaration-cards{min-width:0;width:100%;box-sizing:border-box;}
+.fat-declaration-card{min-width:0;overflow:hidden;box-sizing:border-box;}
+.fat-declaration-card>span,.fat-declaration-card>strong,.fat-declaration-card>label{min-width:0;max-width:100%;}
+.fat-declaration-card input,.fat-declaration-card select{width:100%;max-width:100%;min-width:0;box-sizing:border-box;}
+.fat-two-inputs,.fat-entry-two-fields{min-width:0;}
+.fat-two-inputs>label,.fat-entry-two-fields>label{min-width:0;max-width:100%;}
+.fat-two-inputs input[type="month"]{min-width:0;width:100%;max-width:100%;box-sizing:border-box;}
+.fat-bb-modal .fat-entry-two-fields input{min-width:0;width:100%;max-width:100%;box-sizing:border-box;}
+@media(max-width:1100px){.fat-declaration-cards{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){.fat-declaration-cards{grid-template-columns:1fr;}}
+
+
+/* OMEGA FIX: modal de seleção de declaração organizado em 4 cards */
+.declaration-modal{width:min(900px,100%);}
+.fat-declaration-choice-grid{grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;}
+.fat-declaration-choice{min-width:0;box-sizing:border-box;height:100%;}
+.fat-declaration-choice span{min-width:0;}
+@media(max-width:1250px){.fat-declaration-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){.declaration-modal{width:100%;}.fat-declaration-choice-grid{grid-template-columns:1fr;}}
+
+/* OMEGA FIX BB LOADING MODAL v1 */
+.fat-bb-progress{
+  min-height:170px;
+  padding:26px 30px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  text-align:center;
+  box-sizing:border-box;
+}
+.fat-bb-progress > svg{flex:0 0 auto;color:#1671df;margin-bottom:2px;}
+.fat-bb-progress strong{
+  display:block;
+  width:100%;
+  color:#17213d;
+  font-size:12px;
+  line-height:1.35;
+  white-space:normal;
+}
+.fat-bb-progress span,
+.fat-bb-progress small{
+  display:block;
+  width:100%;
+  max-width:560px;
+  color:#64738a;
+  font-size:9px;
+  line-height:1.5;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.fat-bb-progress small{font-size:8px;color:#8996a7;}
+
+
+/* OMEGA FINAL - seleção de declaração do BB: quatro opções em uma linha no desktop */
+@media (min-width: 901px) {
+  .declaration-modal .fat-declaration-choice-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}

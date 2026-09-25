@@ -42,6 +42,16 @@ export function BancoBrasilDeclarationModal({open,empresaId,empresaNome,onClose,
     setConfig(current=>({...current,[campo]:Number.isFinite(numero)?numero:0}));
   }
 
+  async function abrirPdf(){
+    if(!gerada)return;
+    setError('');
+    try{
+      await visualizarDeclaracao(gerada.id);
+    }catch(e){
+      setError(e instanceof Error?e.message:'Não foi possível abrir o PDF da declaração.');
+    }
+  }
+
   async function gerar(){
     setError('');
     if(Math.abs(soma-100)>0.01){setError('Percentual à vista + percentual a prazo deve totalizar 100%.');return;}
@@ -49,7 +59,10 @@ export function BancoBrasilDeclarationModal({open,empresaId,empresaNome,onClose,
     try{
       const declaracao=await gerarDeclaracaoBancoBrasil(empresaId,{...config,percentual_cartao:null,percentual_cheque:null,percentual_boleto:null,prazo_medio_dias:null});
       setGerada({id:declaracao.id,nome_arquivo:declaracao.nome_arquivo});
-      await onGenerated?.();
+      setGerando(false);
+      // A atualização do histórico da página da empresa não pode bloquear o
+      // modal de sucesso. O PDF já foi gerado; a atualização da tela é paralela.
+      void Promise.resolve(onGenerated?.()).catch(()=>undefined);
     }catch(e){
       setError(e instanceof Error?e.message:'Não foi possível gerar a declaração do Banco do Brasil.');
     }finally{setGerando(false);}
@@ -69,7 +82,8 @@ export function BancoBrasilDeclarationModal({open,empresaId,empresaNome,onClose,
       </div>}
       {gerando&&<div className="fat-bb-progress"><LoaderCircle size={28} className="spin"/><strong>Gerando declaração do Banco do Brasil...</strong><span>O ÔMEGA está preenchendo o formulário oficial e preparando o PDF.</span><small>Isso pode levar alguns segundos porque depende do site do Banco do Brasil.</small></div>}
       {!gerando&&gerada&&<div className="fat-bb-success"><CheckCircle2 size={34}/><strong>Declaração gerada com sucesso</strong><span>{gerada.nome_arquivo}</span></div>}
-      {!gerando&&<div className="fat-modal-actions"><button className="button secondary" onClick={onClose}>Fechar</button>{gerada?<button className="button primary" onClick={()=>void visualizarDeclaracao(gerada.id)}><FileText size={13}/> Abrir PDF</button>:<button className="button primary" onClick={()=>void gerar()} disabled={Math.abs(soma-100)>0.01}>Gerar declaração</button>}</div>}
+      {!gerando&&error&&<div className="fat-entry-error form-error"><X size={14}/>{error}</div>}
+      {!gerando&&<div className="fat-modal-actions"><button className="button secondary" onClick={onClose}>Fechar</button>{gerada?<button className="button primary" onClick={()=>void abrirPdf()}><FileText size={13}/> Abrir PDF</button>:<button className="button primary" onClick={()=>void gerar()} disabled={Math.abs(soma-100)>0.01}>Gerar declaração</button>}</div>}
     </div>
   </div>;
 }

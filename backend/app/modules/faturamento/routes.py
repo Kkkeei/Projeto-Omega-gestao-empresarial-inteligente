@@ -155,12 +155,12 @@ def salvar_configuracao_banco_brasil(empresa_id: int, dados: BancoBrasilConfig, 
 
 
 @router.post("/empresas/{empresa_id}/declaracoes-faturamento/banco-brasil")
-async def declaracao_banco_brasil(empresa_id: int, dados: BancoBrasilConfig | None = None, user=Depends(current_user)):
+async def declaracao_banco_brasil(empresa_id: int, dados: BancoBrasilConfig, user=Depends(current_user)):
     try:
         return await gerar_declaracao_banco_brasil(
             empresa_id=empresa_id,
             usuario_id=user["id"],
-            config=(dados.model_dump() if dados else BancoBrasilConfig().model_dump()),
+            config=dados.model_dump(),
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

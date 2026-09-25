@@ -733,8 +733,6 @@ export async function gerarDeclaracaoBancoBrasil(
     {
       method: 'POST',
       body: JSON.stringify(data),
-      // A automação Playwright do BB é uma operação externa longa.
-      // Não use o timeout padrão de 20s da API.
       timeoutMs: 120000,
     }
   );
