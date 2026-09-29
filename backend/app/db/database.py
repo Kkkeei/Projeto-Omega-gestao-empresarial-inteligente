@@ -346,6 +346,86 @@ def criar_tabelas() -> None:
             FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS tributos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE,
+            sigla TEXT,
+            esfera TEXT,
+            categoria TEXT,
+            periodicidade TEXT,
+            descricao TEXT,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS empresa_impostos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            tributo_id INTEGER NOT NULL,
+            regime_tributario TEXT,
+            obrigatorio INTEGER NOT NULL DEFAULT 1,
+            vigencia_inicio TEXT,
+            vigencia_fim TEXT,
+            status TEXT NOT NULL DEFAULT 'ATIVO',
+            observacao TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(empresa_id, tributo_id, vigencia_inicio),
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (tributo_id) REFERENCES tributos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS impostos_mensais (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            tributo_id INTEGER NOT NULL,
+            competencia_ano INTEGER NOT NULL,
+            competencia_mes INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            valor REAL,
+            data_vencimento TEXT,
+            data_pagamento TEXT,
+            numero_documento TEXT,
+            observacao TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(empresa_id, tributo_id, competencia_ano, competencia_mes),
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (tributo_id) REFERENCES tributos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS documentos_impostos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            imposto_mensal_id INTEGER NOT NULL,
+            nome_arquivo TEXT NOT NULL,
+            caminho_arquivo TEXT NOT NULL,
+            extensao TEXT,
+            mime_type TEXT,
+            tamanho INTEGER,
+            hash_arquivo TEXT,
+            observacao TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (imposto_mensal_id) REFERENCES impostos_mensais(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS notificacoes_impostos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            imposto_mensal_id INTEGER,
+            tipo TEXT NOT NULL,
+            titulo TEXT NOT NULL,
+            mensagem TEXT,
+            prioridade TEXT NOT NULL DEFAULT 'NORMAL',
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            prazo TEXT,
+            lida_em TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (imposto_mensal_id) REFERENCES impostos_mensais(id) ON DELETE SET NULL
+        );
+
         CREATE TABLE IF NOT EXISTS declaracoes_faturamento (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             empresa_id INTEGER NOT NULL,
@@ -405,6 +485,14 @@ def criar_tabelas() -> None:
 
         # All indexes are created only after compatibility migrations.
         cursor.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_tributos_ativo ON tributos(ativo);
+        CREATE INDEX IF NOT EXISTS idx_empresa_impostos_empresa ON empresa_impostos(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_empresa_impostos_tributo ON empresa_impostos(tributo_id);
+        CREATE INDEX IF NOT EXISTS idx_impostos_mensais_competencia ON impostos_mensais(empresa_id, competencia_ano, competencia_mes);
+        CREATE INDEX IF NOT EXISTS idx_impostos_mensais_status ON impostos_mensais(status);
+        CREATE INDEX IF NOT EXISTS idx_documentos_impostos_mensal ON documentos_impostos(imposto_mensal_id);
+        CREATE INDEX IF NOT EXISTS idx_notificacoes_impostos_empresa ON notificacoes_impostos(empresa_id);
+
         CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
         CREATE INDEX IF NOT EXISTS idx_empresas_razao ON empresas(razao_social);
         CREATE INDEX IF NOT EXISTS idx_empresas_fantasia ON empresas(nome_fantasia);
