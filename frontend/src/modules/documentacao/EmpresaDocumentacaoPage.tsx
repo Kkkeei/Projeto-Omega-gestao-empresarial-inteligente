@@ -11,8 +11,13 @@ import {
   Plus,
   FolderPlus,
   ChevronRight,
+  ChevronLeft,
+  ArrowUp,
+  Home,
+  FolderOpen,
   Trash2,
   Upload,
+  Move,
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -21,6 +26,7 @@ import {
   atualizarCategoria,
   baixarVersao,
   criarCategoria,
+  moverCategoria,
   listarCategorias,
   listarDocumentos,
   listarVersoes,
@@ -44,7 +50,7 @@ export function EmpresaDocumentacaoPage() {
   const [docs, setDocs] = useState<Documento[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDocs, setLoadingDocs] = useState(false);
-  const [modal, setModal] = useState<'upload' | 'version' | 'category' | 'editCategory' | null>(null);
+  const [modal, setModal] = useState<'upload' | 'version' | 'category' | 'editCategory' | 'moveCategory' | null>(null);
   const [docTarget, setDocTarget] = useState<Documento | null>(null);
   const [categoryTarget, setCategoryTarget] = useState<CategoriaDocumento | null>(null);
   const [versions, setVersions] = useState<Versao[]>([]);
@@ -54,6 +60,8 @@ export function EmpresaDocumentacaoPage() {
   const [dragActive, setDragActive] = useState(false);
   const [dropFile, setDropFile] = useState<File | null>(null);
   const [categoryParentId, setCategoryParentId] = useState<number | null>(null);
+  const [dragCategoryId, setDragCategoryId] = useState<number | null>(null);
+  const [dropCategoryId, setDropCategoryId] = useState<number | null>(null);
 
   const activeCategories = useMemo(
     () => cats
@@ -66,19 +74,21 @@ export function EmpresaDocumentacaoPage() {
     [cats],
   );
 
-  const folders = useMemo(
-    () => activeCategories.filter((c) => c.categoria_pai_id === null),
-    [activeCategories],
-  );
-
   const selectedFolder = selectedCategoryId
     ? activeCategories.find((c) => c.id === selectedCategoryId) ?? null
     : null;
 
-  const selectedSubfolders = useMemo(
-    () => selectedFolder
-      ? activeCategories.filter((c) => c.categoria_pai_id === selectedFolder.id)
-      : [],
+  const visibleFolders = useMemo(
+    () => activeCategories
+      .filter((c) => (selectedCategoryId === null ? c.categoria_pai_id === null : c.categoria_pai_id === selectedCategoryId))
+      .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR')),
+    [activeCategories, selectedCategoryId],
+  );
+
+  const parentFolder = useMemo(
+    () => selectedFolder?.categoria_pai_id
+      ? activeCategories.find((c) => c.id === selectedFolder.categoria_pai_id) ?? null
+      : null,
     [activeCategories, selectedFolder],
   );
 
@@ -96,7 +106,7 @@ export function EmpresaDocumentacaoPage() {
     return path;
   }, [activeCategories, selectedFolder]);
 
-  async function load(preferredCategoryId?: number) {
+  async function load(preferredCategoryId: number | null = null) {
     setLoading(true);
     setError('');
     try {
@@ -104,18 +114,10 @@ export function EmpresaDocumentacaoPage() {
         apiFetch<any>(`/api/v1/empresas/${empresaId}`),
         listarCategorias(empresaId),
       ]);
-      const nextCategories = categoriaData.categorias.filter((c: CategoriaDocumento) => c.ativo);
-      const nextRoots = nextCategories
-        .filter((c: CategoriaDocumento) => c.categoria_pai_id === null)
-        .sort((a: CategoriaDocumento, b: CategoriaDocumento) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
-
       setEmpresa(empresaData);
       setCats(categoriaData.categorias);
 
-      const wantedId = preferredCategoryId
-        ?? (selectedCategoryId && nextCategories.some((c: CategoriaDocumento) => c.id === selectedCategoryId)
-          ? selectedCategoryId
-          : nextRoots[0]?.id ?? null);
+      const wantedId = preferredCategoryId ?? null;
 
       setSelectedCategoryId(wantedId);
       if (wantedId) {
@@ -154,6 +156,16 @@ export function EmpresaDocumentacaoPage() {
     } finally {
       setLoadingDocs(false);
     }
+  }
+
+  async function goToCategory(categoryId: number | null) {
+    if (categoryId === null) {
+      setSelectedCategoryId(null);
+      setDocs([]);
+      setLoadingDocs(false);
+      return;
+    }
+    await selectFolder(categoryId);
   }
 
   async function refreshSelectedFolder() {
@@ -203,6 +215,62 @@ export function EmpresaDocumentacaoPage() {
       setError(err instanceof Error ? err.message : 'Não foi possível excluir o item.');
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function beginCategoryDrag(event: DragEvent<HTMLElement>, categoryId: number) {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/omega-category-id', String(categoryId));
+    setDragCategoryId(categoryId);
+    setDropCategoryId(null);
+  }
+
+  function overCategoryDrop(event: DragEvent<HTMLElement>, targetCategoryId: number) {
+    if (!dragCategoryId || dragCategoryId === targetCategoryId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    setDropCategoryId(targetCategoryId);
+  }
+
+  function leaveCategoryDrop(event: DragEvent<HTMLElement>, targetCategoryId: number) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null) && dropCategoryId === targetCategoryId) {
+      setDropCategoryId(null);
+    }
+  }
+
+  async function dropCategoryInto(event: DragEvent<HTMLElement>, targetCategoryId: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    const draggedId = dragCategoryId ?? Number(event.dataTransfer.getData('text/omega-category-id') || 0);
+    setDropCategoryId(null);
+    setDragCategoryId(null);
+    if (!draggedId || draggedId === targetCategoryId) return;
+    setError('');
+    try {
+      await moverCategoria(draggedId, targetCategoryId);
+      await load(selectedCategoryId ?? targetCategoryId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível mover a pasta.');
+    }
+  }
+
+  function endCategoryDrag() {
+    setDragCategoryId(null);
+    setDropCategoryId(null);
+  }
+
+  async function moveSelectedFolder(targetParentId: number | null) {
+    if (!selectedFolder) return;
+    const sourceId = selectedFolder.id;
+    setError('');
+    try {
+      await moverCategoria(sourceId, targetParentId);
+      setModal(null);
+      await load(sourceId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível mover a pasta.');
     }
   }
 
@@ -261,16 +329,70 @@ export function EmpresaDocumentacaoPage() {
       {error && <div className="panel doc-inline-error"><strong>{error}</strong></div>}
 
       <section className="doc-folder-area">
-        <div className="doc-folder-toolbar">
-          <div className="doc-folder-breadcrumb">
-            <Folder size={14} />
-            {selectedPath.length ? selectedPath.map((item, index) => (
-              <span className="doc-breadcrumb-item" key={item.id}>
-                {index > 0 && <ChevronRight size={12} />}
-                {item.nome}
-              </span>
-            )) : <span>Estrutura de pastas</span>}
+        <div className="doc-folder-toolbar explorer-toolbar">
+          <div className="doc-explorer-nav">
+            <button
+              className="doc-explorer-nav-button"
+              type="button"
+              disabled={selectedCategoryId === null}
+              title="Voltar para a pasta anterior"
+              onClick={() => void goToCategory(parentFolder?.id ?? null)}
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <button
+              className="doc-explorer-nav-button"
+              type="button"
+              disabled={selectedCategoryId === null}
+              title="Subir um nível"
+              onClick={() => void goToCategory(parentFolder?.id ?? null)}
+            >
+              <ArrowUp size={14} />
+            </button>
+            <button
+              className="doc-explorer-nav-button"
+              type="button"
+              title="Ir para a raiz"
+              onClick={() => void goToCategory(null)}
+            >
+              <Home size={14} />
+            </button>
           </div>
+
+          <div
+            className={`doc-folder-breadcrumb ${dragCategoryId ? 'drag-root-target' : ''}`}
+            onDragOver={(event) => {
+              if (dragCategoryId) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+              }
+            }}
+            onDrop={(event) => {
+              if (dragCategoryId) {
+                event.preventDefault();
+                const draggedId = dragCategoryId;
+                setDragCategoryId(null);
+                setDropCategoryId(null);
+                void moverCategoria(draggedId, null)
+                  .then(() => load(selectedCategoryId ?? null))
+                  .catch((err) => setError(err instanceof Error ? err.message : 'Não foi possível mover a pasta.'));
+              }
+            }}
+          >
+            <button className="doc-breadcrumb-home" type="button" onClick={() => void goToCategory(null)} title="Raiz">
+              <Home size={13} />
+              <span>Documentação</span>
+            </button>
+            {selectedPath.map((item, index) => (
+              <span className="doc-breadcrumb-item" key={item.id}>
+                <ChevronRight size={12} />
+                <button type="button" onClick={() => void goToCategory(item.id)} title={`Abrir ${item.nome}`}>
+                  {item.nome}
+                </button>
+              </span>
+            ))}
+          </div>
+
           <div className="doc-folder-toolbar-actions">
             <button className="button secondary small" type="button" onClick={() => { setCategoryParentId(null); setModal('category'); }}>
               <Plus size={13} /> Nova pasta
@@ -283,50 +405,55 @@ export function EmpresaDocumentacaoPage() {
           </div>
         </div>
 
-        <div className="doc-folder-frame panel">
-          <div className="doc-folder-tabs" role="tablist" aria-label="Pastas principais da documentação">
-            {folders.map((folder) => {
+        <div className="doc-explorer-frame panel">
+          <div className="doc-explorer-location">
+            <div>
+              <span className="eyebrow">NAVEGAÇÃO DE PASTAS</span>
+              <strong>{selectedFolder?.nome || 'Documentação'}</strong>
+              <small>{selectedFolder ? 'Abra uma subpasta para navegar dentro dela.' : 'Pastas principais da empresa.'}</small>
+            </div>
+            {selectedFolder && (
+              <span className="doc-explorer-location-count">
+                {visibleFolders.length} {visibleFolders.length === 1 ? 'subpasta' : 'subpastas'}
+              </span>
+            )}
+          </div>
+
+          <div className="doc-explorer-list">
+            {visibleFolders.map((folder) => {
+              const childCount = activeCategories.filter((c) => c.categoria_pai_id === folder.id).length;
               const selected = selectedCategoryId === folder.id;
               return (
                 <button
                   key={folder.id}
                   type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  className={`doc-folder-tab ${selected ? 'selected' : ''}`}
+                  draggable
+                  onDragStart={(event) => beginCategoryDrag(event, folder.id)}
+                  onDragEnd={endCategoryDrag}
+                  onDragOver={(event) => overCategoryDrop(event, folder.id)}
+                  onDragLeave={(event) => leaveCategoryDrop(event, folder.id)}
+                  onDrop={(event) => void dropCategoryInto(event, folder.id)}
+                  className={`doc-explorer-folder ${selected ? 'selected' : ''} ${dropCategoryId === folder.id ? 'drop-target' : ''} ${dragCategoryId === folder.id ? 'dragging' : ''}`}
                   onClick={() => void selectFolder(folder.id)}
+                  title="Abrir pasta"
                 >
-                  <Folder size={19} />
-                  <span>{folder.nome}</span>
-                  <small>{folder.documentos_count ?? 0}</small>
+                  <span className="doc-explorer-folder-icon"><FolderOpen size={20} /></span>
+                  <span className="doc-explorer-folder-main">
+                    <strong>{folder.nome}</strong>
+                    <small>{childCount ? `${childCount} ${childCount === 1 ? 'subpasta' : 'subpastas'} · ` : ''}{folder.documentos_count ?? 0} documento(s)</small>
+                  </span>
+                  <ChevronRight size={16} className="doc-explorer-folder-chevron" />
                 </button>
               );
             })}
-            {folders.length === 0 && (
-              <div className="doc-folder-empty-inline">Nenhuma pasta criada.</div>
+            {visibleFolders.length === 0 && (
+              <div className="doc-explorer-empty">
+                <Folder size={30} />
+                <strong>{selectedFolder ? 'Nenhuma subpasta nesta pasta' : 'Nenhuma pasta criada'}</strong>
+                <span>{selectedFolder ? 'Use “Nova subpasta” para criar uma pasta dentro deste nível.' : 'Use “Nova pasta” para começar a organizar a documentação.'}</span>
+              </div>
             )}
           </div>
-
-          {selectedFolder && selectedSubfolders.length > 0 && (
-            <div className="doc-subfolder-strip">
-              <div className="doc-subfolder-label"><FolderPlus size={13} /> Subpastas</div>
-              <div className="doc-subfolder-list">
-                {selectedSubfolders.map((folder) => (
-                  <button
-                    key={folder.id}
-                    type="button"
-                    className={`doc-subfolder ${selectedCategoryId === folder.id ? 'selected' : ''}`}
-                    onClick={() => void selectFolder(folder.id)}
-                    title={folder.descricao || folder.nome}
-                  >
-                    <Folder size={15} />
-                    <span>{folder.nome}</span>
-                    <small>{folder.documentos_count ?? 0}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="doc-folder-actions-row">
             <div className="doc-folder-selection-text">
@@ -336,11 +463,14 @@ export function EmpresaDocumentacaoPage() {
                   <span>{selectedFolder.descricao || 'Pasta de documentação da empresa'}</span>
                 </>
               ) : (
-                <span>Selecione uma pasta para consultar os documentos.</span>
+                <span>Navegue pelas pastas usando a barra de caminho acima.</span>
               )}
             </div>
             {selectedFolder && (
               <div className="doc-folder-actions">
+                <button className="icon-button" type="button" title="Mover pasta" onClick={() => { setCategoryTarget(selectedFolder); setModal('moveCategory'); }}>
+                  <Move size={15} />
+                </button>
                 <button className="icon-button" type="button" title="Editar pasta" onClick={openEditCategory}>
                   <Pencil size={15} />
                 </button>
@@ -491,6 +621,17 @@ export function EmpresaDocumentacaoPage() {
         </Modal>
       )}
 
+      {modal === 'moveCategory' && categoryTarget && (
+        <Modal title={`Mover pasta · ${categoryTarget.nome}`} onClose={() => setModal(null)}>
+          <MoveCategoryForm
+            source={categoryTarget}
+            categories={activeCategories}
+            onCancel={() => setModal(null)}
+            onMove={(targetId) => moveSelectedFolder(targetId)}
+          />
+        </Modal>
+      )}
+
       {modal === 'version' && docTarget && (
         <Modal title={`Histórico · ${docTarget.nome}`} onClose={() => setModal(null)}>
           <div className="version-list">
@@ -543,6 +684,93 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
           <button className="icon-button" type="button" onClick={onClose}>×</button>
         </div>
         {children}
+      </div>
+    </div>
+  );
+}
+
+function MoveCategoryForm({
+  source,
+  categories,
+  onCancel,
+  onMove,
+}: {
+  source: CategoriaDocumento;
+  categories: CategoriaDocumento[];
+  onCancel: () => void;
+  onMove: (targetId: number | null) => Promise<void>;
+}) {
+  const [targetId, setTargetId] = useState<number | null>(source.categoria_pai_id ?? null);
+  const [saving, setSaving] = useState(false);
+
+  const descendants = useMemo(() => {
+    const ids = new Set<number>();
+    const pending = [source.id];
+    while (pending.length) {
+      const current = pending.pop()!;
+      categories.forEach((category) => {
+        if (category.categoria_pai_id === current && !ids.has(category.id)) {
+          ids.add(category.id);
+          pending.push(category.id);
+        }
+      });
+    }
+    return ids;
+  }, [categories, source.id]);
+
+  const options = useMemo(() => {
+    const sorted = [...categories].sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
+    const children = new Map<number | null, CategoriaDocumento[]>();
+    sorted.forEach((category) => {
+      const key = category.categoria_pai_id ?? null;
+      const list = children.get(key) ?? [];
+      list.push(category);
+      children.set(key, list);
+    });
+
+    const result: Array<{ id: number | null; label: string; disabled: boolean }> = [
+      { id: null, label: 'Pastas principais (raiz)', disabled: source.categoria_pai_id === null },
+    ];
+    const walk = (parentId: number | null, depth: number) => {
+      for (const category of children.get(parentId) ?? []) {
+        if (category.id === source.id || descendants.has(category.id)) continue;
+        result.push({
+          id: category.id,
+          label: `${'— '.repeat(depth)}${category.nome}`,
+          disabled: false,
+        });
+        walk(category.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    return result;
+  }, [categories, descendants, source]);
+
+  return (
+    <div className="modal-form move-folder-form">
+      <div className="move-folder-preview">
+        <span className="doc-file-icon"><Folder size={18} /></span>
+        <div>
+          <strong>{source.nome}</strong>
+          <small>Escolha onde esta pasta ficará. As subpastas e documentos acompanham a estrutura.</small>
+        </div>
+      </div>
+      <label>
+        Mover para
+        <select value={targetId === null ? '' : String(targetId)} onChange={(event) => setTargetId(event.target.value ? Number(event.target.value) : null)}>
+          {options.map((option) => (
+            <option key={option.id === null ? 'root' : option.id} value={option.id === null ? '' : option.id} disabled={option.disabled}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <small>Você também pode arrastar a pasta diretamente sobre outra pasta ou subpasta.</small>
+      <div className="modal-actions">
+        <button className="button secondary" type="button" disabled={saving} onClick={onCancel}>Cancelar</button>
+        <button className="button primary" type="button" disabled={saving || targetId === (source.categoria_pai_id ?? null)} onClick={async () => { setSaving(true); try { await onMove(targetId); } finally { setSaving(false); } }}>
+          <Move size={13} /> {saving ? 'Movendo...' : 'Mover pasta'}
+        </button>
       </div>
     </div>
   );
