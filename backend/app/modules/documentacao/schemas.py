@@ -9,6 +9,9 @@ class CategoriaUpdate(BaseModel):
     nome: str = Field(min_length=1, max_length=120)
     descricao: str | None = Field(default=None, max_length=500)
 
+class CategoriaMover(BaseModel):
+    categoria_pai_id: int | None = None
+
 class CategoriaOut(BaseModel):
     id: int
     empresa_id: int

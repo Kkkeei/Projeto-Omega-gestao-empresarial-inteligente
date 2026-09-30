@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from app.api.v1.auth.routes import current_user
-from app.modules.documentacao.schemas import CategoriaCreate, CategoriaUpdate
+from app.modules.documentacao.schemas import CategoriaCreate, CategoriaMover, CategoriaUpdate
 from app.modules.documentacao import service
 
 router = APIRouter(prefix="/api/v1/documentacao", tags=["Documentação"])
@@ -42,6 +42,16 @@ def categoria_criar(empresa_id: int, data: CategoriaCreate, _user=Depends(_user)
 def categoria_atualizar(categoria_id: int, data: CategoriaUpdate, _user=Depends(_user)):
     try:
         return service.atualizar_categoria(categoria_id, data.nome, data.descricao, _user["id"])
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@router.patch("/categorias/{categoria_id}/mover")
+def categoria_mover(categoria_id: int, data: CategoriaMover, _user=Depends(_user)):
+    try:
+        return service.mover_categoria(categoria_id, data.categoria_pai_id, _user["id"])
     except LookupError as exc:
         raise HTTPException(404, str(exc))
     except ValueError as exc:

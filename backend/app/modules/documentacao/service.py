@@ -200,6 +200,122 @@ def atualizar_categoria(categoria_id: int, nome: str, descricao: str | None, use
     finally:
         conexao.close()
 
+
+def mover_categoria(categoria_id: int, nova_categoria_pai_id: int | None, user_id: int | None = None):
+    conexao = conectar_banco()
+    try:
+        categoria = conexao.execute(
+            "SELECT * FROM categorias_documentos WHERE id=?",
+            (categoria_id,),
+        ).fetchone()
+        if not categoria:
+            raise LookupError("Pasta não encontrada.")
+        if not categoria["ativo"]:
+            raise LookupError("A pasta está arquivada.")
+
+        empresa_id = categoria["empresa_id"]
+        pai_anterior = categoria["categoria_pai_id"]
+
+        if nova_categoria_pai_id == categoria_id:
+            raise ValueError("Uma pasta não pode ser movida para dentro dela mesma.")
+
+        novo_pai = None
+        if nova_categoria_pai_id is not None:
+            novo_pai = conexao.execute(
+                "SELECT * FROM categorias_documentos WHERE id=? AND empresa_id=? AND ativo=1",
+                (nova_categoria_pai_id, empresa_id),
+            ).fetchone()
+            if not novo_pai:
+                raise ValueError("A pasta de destino não é válida.")
+
+            # Impede ciclos: uma pasta não pode ser colocada dentro de uma subpasta sua.
+            cursor_id = nova_categoria_pai_id
+            vistos: set[int] = set()
+            while cursor_id is not None and cursor_id not in vistos:
+                if cursor_id == categoria_id:
+                    raise ValueError("Uma pasta não pode ser movida para dentro de uma de suas subpastas.")
+                vistos.add(cursor_id)
+                row = conexao.execute(
+                    "SELECT categoria_pai_id FROM categorias_documentos WHERE id=? AND empresa_id=?",
+                    (cursor_id, empresa_id),
+                ).fetchone()
+                cursor_id = row["categoria_pai_id"] if row else None
+
+        # Evita duas pastas com o mesmo nome no novo nível.
+        duplicada = conexao.execute(
+            """
+            SELECT id FROM categorias_documentos
+             WHERE empresa_id=?
+               AND categoria_pai_id IS ?
+               AND ativo=1
+               AND UPPER(nome)=UPPER(?)
+               AND id<>?
+             LIMIT 1
+            """,
+            (empresa_id, nova_categoria_pai_id, categoria["nome"], categoria_id),
+        ).fetchone()
+        if duplicada:
+            raise ValueError("Já existe uma pasta com esse nome no destino escolhido.")
+
+        if pai_anterior == nova_categoria_pai_id:
+            return dict(categoria)
+
+        nova_ordem = conexao.execute(
+            """
+            SELECT COALESCE(MAX(ordem),0)+1 AS ordem
+              FROM categorias_documentos
+             WHERE empresa_id=? AND categoria_pai_id IS ? AND ativo=1 AND id<>?
+            """,
+            (empresa_id, nova_categoria_pai_id, categoria_id),
+        ).fetchone()["ordem"]
+
+        conexao.execute(
+            """
+            UPDATE categorias_documentos
+               SET categoria_pai_id=?, ordem=?, atualizado_em=CURRENT_TIMESTAMP
+             WHERE id=?
+            """,
+            (nova_categoria_pai_id, nova_ordem, categoria_id),
+        )
+
+        conexao.execute(
+            """
+            INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem)
+            VALUES (?,?,?,?,?,?)
+            """,
+            (
+                "CATEGORIA_DOCUMENTO",
+                categoria_id,
+                "MOVER",
+                json.dumps(
+                    {
+                        "empresa_id": empresa_id,
+                        "categoria_pai_id": pai_anterior,
+                        "nome": categoria["nome"],
+                    },
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    {
+                        "empresa_id": empresa_id,
+                        "categoria_pai_id": nova_categoria_pai_id,
+                        "usuario_id": user_id,
+                    },
+                    ensure_ascii=False,
+                ),
+                "DOCUMENTACAO",
+            ),
+        )
+        conexao.commit()
+        row = conexao.execute(
+            "SELECT * FROM categorias_documentos WHERE id=?",
+            (categoria_id,),
+        ).fetchone()
+        return dict(row)
+    finally:
+        conexao.close()
+
+
 def arquivar_categoria(categoria_id: int, user_id: int | None = None):
     conexao = conectar_banco()
     try:
