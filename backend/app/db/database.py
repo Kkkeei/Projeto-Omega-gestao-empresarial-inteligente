@@ -474,6 +474,79 @@ def criar_tabelas() -> None:
 
         # Migrations for Documentação. Never remove legacy data.
         # These changes must happen before creating indexes on the new columns.
+        # Migrations do módulo Impostos. Nunca remover dados existentes.
+        colunas_doc_imp = {r[1] for r in conexao.execute("PRAGMA table_info(documentos_impostos)").fetchall()}
+        for coluna, tipo in (
+            ("competencia_extraida", "TEXT"),
+            ("valor_extraido", "REAL"),
+            ("vencimento_extraido", "TEXT"),
+            ("codigo_receita", "TEXT"),
+            ("cnpj_extraido", "TEXT"),
+            ("data_pagamento_extraida", "TEXT"),
+            ("periodo_apuracao_inicio", "TEXT"),
+            ("periodo_apuracao_fim", "TEXT"),
+            ("mensagem_cliente", "TEXT"),
+            ("enviado_em", "TEXT"),
+            ("status_documento", "TEXT NOT NULL DEFAULT 'CONFIRMADO'"),
+        ):
+            if coluna not in colunas_doc_imp:
+                cursor.execute(f"ALTER TABLE documentos_impostos ADD COLUMN {coluna} {tipo}")
+
+        cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS impostos_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            imposto_mensal_id INTEGER NOT NULL,
+            empresa_id INTEGER NOT NULL,
+            tributo_id INTEGER NOT NULL,
+            competencia_ano INTEGER NOT NULL,
+            competencia_mes INTEGER NOT NULL,
+            acao TEXT NOT NULL,
+            status_anterior TEXT,
+            status_novo TEXT,
+            valor_anterior REAL,
+            valor_novo REAL,
+            dados_anteriores TEXT,
+            dados_novos TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (imposto_mensal_id) REFERENCES impostos_mensais(id) ON DELETE CASCADE,
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (tributo_id) REFERENCES tributos(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS impostos_notificacoes_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            publico TEXT NOT NULL UNIQUE,
+            guia_enviada INTEGER NOT NULL DEFAULT 1,
+            antes_vencimento INTEGER NOT NULL DEFAULT 1,
+            dias_antes INTEGER NOT NULL DEFAULT 5,
+            dia_vencimento INTEGER NOT NULL DEFAULT 1,
+            nao_pagamento INTEGER NOT NULL DEFAULT 1,
+            imposto_vencido INTEGER NOT NULL DEFAULT 1,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS impostos_notificacoes_eventos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empresa_id INTEGER NOT NULL,
+            imposto_mensal_id INTEGER,
+            publico TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            titulo TEXT NOT NULL,
+            mensagem TEXT,
+            agendado_para TEXT,
+            status TEXT NOT NULL DEFAULT 'PROGRAMADA',
+            enviado_em TEXT,
+            erro TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+            FOREIGN KEY (imposto_mensal_id) REFERENCES impostos_mensais(id) ON DELETE SET NULL
+        );
+        """)
+
+        cursor.execute("INSERT OR IGNORE INTO impostos_notificacoes_config (publico) VALUES ('CLIENTE')")
+        cursor.execute("INSERT OR IGNORE INTO impostos_notificacoes_config (publico) VALUES ('CONTABILIDADE')")
+
         colunas_documentos = {r[1] for r in conexao.execute("PRAGMA table_info(documentos)").fetchall()}
         if "categoria_id" not in colunas_documentos:
             cursor.execute("ALTER TABLE documentos ADD COLUMN categoria_id INTEGER")
@@ -492,6 +565,12 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_impostos_mensais_status ON impostos_mensais(status);
         CREATE INDEX IF NOT EXISTS idx_documentos_impostos_mensal ON documentos_impostos(imposto_mensal_id);
         CREATE INDEX IF NOT EXISTS idx_notificacoes_impostos_empresa ON notificacoes_impostos(empresa_id);
+        CREATE INDEX IF NOT EXISTS idx_impostos_historico_mensal ON impostos_historico(imposto_mensal_id);
+        CREATE INDEX IF NOT EXISTS idx_impostos_historico_empresa ON impostos_historico(empresa_id, criado_em);
+        CREATE INDEX IF NOT EXISTS idx_impostos_notif_eventos_empresa ON impostos_notificacoes_eventos(empresa_id, agendado_para);
+        CREATE INDEX IF NOT EXISTS idx_impostos_notif_eventos_mensal ON impostos_notificacoes_eventos(imposto_mensal_id);
+        CREATE INDEX IF NOT EXISTS idx_impostos_notif_config_publico ON impostos_notificacoes_config(publico);
+
 
         CREATE INDEX IF NOT EXISTS idx_empresas_cnpj ON empresas(cnpj);
         CREATE INDEX IF NOT EXISTS idx_empresas_razao ON empresas(razao_social);

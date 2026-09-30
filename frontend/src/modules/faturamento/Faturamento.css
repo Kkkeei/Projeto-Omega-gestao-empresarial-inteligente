@@ -129,10 +129,3 @@
 }
 .fat-bb-progress small{font-size:8px;color:#8996a7;}
 
-
-/* OMEGA FINAL - seleção de declaração do BB: quatro opções em uma linha no desktop */
-@media (min-width: 901px) {
-  .declaration-modal .fat-declaration-choice-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-}

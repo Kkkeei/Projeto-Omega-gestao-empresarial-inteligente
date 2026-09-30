@@ -145,59 +145,27 @@ async def _localizar_frame_formulario(page):
     ultimo_mapa = []
     melhor = None
 
-    # O site do BB usa frames legados. A quantidade de inputs varia conforme
-    # o navegador/layout carregado, então não usamos 40 campos como critério
-    # obrigatório para reconhecer o formulário. O critério principal passa a
-    # ser a presença dos rótulos estruturais do próprio formulário.
     for _ in range(24):
         candidatos = []
         for frame in page.frames:
             try:
                 text_inputs = await _frame_inputs(frame)
                 quantidade = len(text_inputs)
-                texto_frame = ""
-                try:
-                    texto_frame = (await frame.locator("body").inner_text(timeout=1000))[:12000]
-                except Exception:
-                    pass
-
-                tem_razao = bool(re.search(r"Raz[aã]o\s+Social", texto_frame, re.I))
-                tem_cnpj = bool(re.search(r"CNPJ", texto_frame, re.I))
-                tem_tabela = bool(
-                    re.search(r"Faturamento\s+bruto\s+total", texto_frame, re.I)
-                    or re.search(r"Compet[eê]ncia", texto_frame, re.I)
-                )
-
-                pontuacao = (int(tem_razao) + int(tem_cnpj) + int(tem_tabela), quantidade)
-                meta = {
-                    "url": frame.url,
-                    "editaveis": quantidade,
-                    "razao_social": tem_razao,
-                    "cnpj": tem_cnpj,
-                    "tabela": tem_tabela,
-                }
+                meta = {"url": frame.url, "editaveis": quantidade}
                 candidatos.append(meta)
-
-                if melhor is None or pontuacao > melhor[0]:
-                    melhor = (pontuacao, frame)
-
-                if tem_razao and tem_cnpj and quantidade >= 10:
+                if melhor is None or quantidade > melhor[0]:
+                    melhor = (quantidade, frame)
+                if quantidade >= 40:
                     return frame, candidatos
             except Exception:
                 continue
-
         ultimo_mapa = candidatos
         await page.wait_for_timeout(350)
 
     if melhor:
-        _, frame = melhor
-        try:
-            text_inputs = await _frame_inputs(frame)
-            texto_frame = (await frame.locator("body").inner_text(timeout=1000))[:12000]
-            if len(text_inputs) >= 10 and re.search(r"Raz[aã]o\s+Social", texto_frame, re.I) and re.search(r"CNPJ", texto_frame, re.I):
-                return frame, ultimo_mapa
-        except Exception:
-            pass
+        quantidade, frame = melhor
+        if quantidade >= 30:
+            return frame, ultimo_mapa
 
     try:
         titulo = await page.title()
