@@ -1,0 +1,7 @@
+NÃO SUBSTITUIR O BANCO
+
+O ZIP de atualização não inclui backend/omega.db.
+Na instalação do Windows, preserve o arquivo:
+C:\Users\Administrador.SRV\Desktop\OMEGA\backend\omega.db
+
+Nunca copie um omega.db de desenvolvimento por cima do banco operacional sem backup.

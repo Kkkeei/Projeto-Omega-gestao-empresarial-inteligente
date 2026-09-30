@@ -9,6 +9,8 @@ import {
   History,
   Pencil,
   Plus,
+  FolderPlus,
+  ChevronRight,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -51,17 +53,48 @@ export function EmpresaDocumentacaoPage() {
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [dropFile, setDropFile] = useState<File | null>(null);
+  const [categoryParentId, setCategoryParentId] = useState<number | null>(null);
 
-  const folders = useMemo(
+  const activeCategories = useMemo(
     () => cats
-      .filter((c) => c.ativo && c.categoria_pai_id === null)
-      .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR')),
+      .filter((c) => c.ativo)
+      .sort((a, b) => {
+        const parentA = a.categoria_pai_id ?? 0;
+        const parentB = b.categoria_pai_id ?? 0;
+        return parentA - parentB || a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR');
+      }),
     [cats],
   );
 
+  const folders = useMemo(
+    () => activeCategories.filter((c) => c.categoria_pai_id === null),
+    [activeCategories],
+  );
+
   const selectedFolder = selectedCategoryId
-    ? folders.find((c) => c.id === selectedCategoryId) ?? null
+    ? activeCategories.find((c) => c.id === selectedCategoryId) ?? null
     : null;
+
+  const selectedSubfolders = useMemo(
+    () => selectedFolder
+      ? activeCategories.filter((c) => c.categoria_pai_id === selectedFolder.id)
+      : [],
+    [activeCategories, selectedFolder],
+  );
+
+  const selectedPath = useMemo(() => {
+    const path: CategoriaDocumento[] = [];
+    let current = selectedFolder;
+    const seen = new Set<number>();
+    while (current && !seen.has(current.id)) {
+      path.unshift(current);
+      seen.add(current.id);
+      current = current.categoria_pai_id
+        ? activeCategories.find((item) => item.id === current?.categoria_pai_id) ?? null
+        : null;
+    }
+    return path;
+  }, [activeCategories, selectedFolder]);
 
   async function load(preferredCategoryId?: number) {
     setLoading(true);
@@ -71,17 +104,18 @@ export function EmpresaDocumentacaoPage() {
         apiFetch<any>(`/api/v1/empresas/${empresaId}`),
         listarCategorias(empresaId),
       ]);
-      const nextFolders = categoriaData.categorias
-        .filter((c: CategoriaDocumento) => c.ativo && c.categoria_pai_id === null)
+      const nextCategories = categoriaData.categorias.filter((c: CategoriaDocumento) => c.ativo);
+      const nextRoots = nextCategories
+        .filter((c: CategoriaDocumento) => c.categoria_pai_id === null)
         .sort((a: CategoriaDocumento, b: CategoriaDocumento) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
 
       setEmpresa(empresaData);
       setCats(categoriaData.categorias);
 
       const wantedId = preferredCategoryId
-        ?? (selectedCategoryId && nextFolders.some((c: CategoriaDocumento) => c.id === selectedCategoryId)
+        ?? (selectedCategoryId && nextCategories.some((c: CategoriaDocumento) => c.id === selectedCategoryId)
           ? selectedCategoryId
-          : nextFolders[0]?.id ?? null);
+          : nextRoots[0]?.id ?? null);
 
       setSelectedCategoryId(wantedId);
       if (wantedId) {
@@ -228,14 +262,29 @@ export function EmpresaDocumentacaoPage() {
 
       <section className="doc-folder-area">
         <div className="doc-folder-toolbar">
-          <div className="doc-folder-spacer" />
-          <button className="button secondary small" type="button" onClick={() => setModal('category')}>
-            <Plus size={13} /> Nova pasta
-          </button>
+          <div className="doc-folder-breadcrumb">
+            <Folder size={14} />
+            {selectedPath.length ? selectedPath.map((item, index) => (
+              <span className="doc-breadcrumb-item" key={item.id}>
+                {index > 0 && <ChevronRight size={12} />}
+                {item.nome}
+              </span>
+            )) : <span>Estrutura de pastas</span>}
+          </div>
+          <div className="doc-folder-toolbar-actions">
+            <button className="button secondary small" type="button" onClick={() => { setCategoryParentId(null); setModal('category'); }}>
+              <Plus size={13} /> Nova pasta
+            </button>
+            {selectedFolder && (
+              <button className="button primary small" type="button" onClick={() => { setCategoryParentId(selectedFolder.id); setModal('category'); }}>
+                <FolderPlus size={13} /> Nova subpasta
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="doc-folder-frame panel">
-          <div className="doc-folder-tabs" role="tablist" aria-label="Pastas da documentação">
+          <div className="doc-folder-tabs" role="tablist" aria-label="Pastas principais da documentação">
             {folders.map((folder) => {
               const selected = selectedCategoryId === folder.id;
               return (
@@ -257,6 +306,27 @@ export function EmpresaDocumentacaoPage() {
               <div className="doc-folder-empty-inline">Nenhuma pasta criada.</div>
             )}
           </div>
+
+          {selectedFolder && selectedSubfolders.length > 0 && (
+            <div className="doc-subfolder-strip">
+              <div className="doc-subfolder-label"><FolderPlus size={13} /> Subpastas</div>
+              <div className="doc-subfolder-list">
+                {selectedSubfolders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    type="button"
+                    className={`doc-subfolder ${selectedCategoryId === folder.id ? 'selected' : ''}`}
+                    onClick={() => void selectFolder(folder.id)}
+                    title={folder.descricao || folder.nome}
+                  >
+                    <Folder size={15} />
+                    <span>{folder.nome}</span>
+                    <small>{folder.documentos_count ?? 0}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="doc-folder-actions-row">
             <div className="doc-folder-selection-text">
@@ -370,16 +440,17 @@ export function EmpresaDocumentacaoPage() {
 
       <div className="doc-explorer-note panel">
         <Folder size={16} />
-        <div><strong>Estrutura da documentação</strong><span>Crie quantas pastas principais precisar. As pastas podem ser renomeadas e arquivadas, preservando o histórico e os documentos já registrados.</span></div>
+        <div><strong>Estrutura da documentação</strong><span>Crie pastas e subpastas por empresa. Cada nível mantém seus próprios documentos, nomes e histórico, sem misturar os arquivos.</span></div>
       </div>
 
       {modal === 'category' && (
-        <Modal title="Criar nova pasta" onClose={() => setModal(null)}>
+        <Modal title={categoryParentId ? `Criar subpasta · ${selectedFolder?.nome || 'Pasta atual'}` : 'Criar nova pasta'} onClose={() => setModal(null)}>
           <CategoryForm
-            existingNames={folders.map((folder) => folder.nome)}
+            existingNames={activeCategories.filter((category) => (category.categoria_pai_id ?? null) === categoryParentId).map((category) => category.nome)}
+            parentId={categoryParentId}
             onCancel={() => setModal(null)}
             onSave={async (data) => {
-              const created = await criarCategoria(empresaId, data);
+              const created = await criarCategoria(empresaId, { ...data, categoria_pai_id: categoryParentId });
               setModal(null);
               await load(created.id);
             }}
@@ -391,7 +462,10 @@ export function EmpresaDocumentacaoPage() {
         <Modal title={`Editar pasta · ${categoryTarget.nome}`} onClose={() => setModal(null)}>
           <CategoryEditForm
             category={categoryTarget}
-            existingNames={folders.filter((folder) => folder.id !== categoryTarget.id).map((folder) => folder.nome)}
+            existingNames={activeCategories.filter((category) =>
+              (category.categoria_pai_id ?? null) === (categoryTarget.categoria_pai_id ?? null)
+              && category.id !== categoryTarget.id
+            ).map((category) => category.nome)}
             onCancel={() => setModal(null)}
             onSave={async (data) => {
               await atualizarCategoria(categoryTarget.id, data);
@@ -474,10 +548,11 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function CategoryForm({ onCancel, onSave, existingNames }: {
+function CategoryForm({ onCancel, onSave, existingNames, parentId }: {
   onCancel: () => void;
   onSave: (data: { nome: string; descricao?: string; categoria_pai_id?: number | null }) => Promise<void>;
   existingNames: string[];
+  parentId: number | null;
 }) {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -488,7 +563,7 @@ function CategoryForm({ onCancel, onSave, existingNames }: {
     if (!nome.trim() || duplicated || saving) return;
     setSaving(true);
     try {
-      await onSave({ nome: nome.trim(), descricao: descricao.trim() || undefined, categoria_pai_id: null });
+      await onSave({ nome: nome.trim(), descricao: descricao.trim() || undefined, categoria_pai_id: parentId });
     } finally {
       setSaving(false);
     }

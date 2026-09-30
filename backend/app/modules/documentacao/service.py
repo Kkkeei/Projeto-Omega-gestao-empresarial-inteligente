@@ -103,8 +103,7 @@ def listar_categorias(empresa_id: int):
               FROM categorias_documentos c
              WHERE c.empresa_id=?
                AND c.ativo=1
-               AND c.categoria_pai_id IS NULL
-             ORDER BY c.ordem, UPPER(c.nome)
+             ORDER BY COALESCE(c.categoria_pai_id, 0), c.ordem, UPPER(c.nome)
             """,
             (empresa_id,),
         ).fetchall()
@@ -152,20 +151,21 @@ def atualizar_categoria(categoria_id: int, nome: str, descricao: str | None, use
             raise LookupError("Pasta não encontrada.")
         if not categoria["ativo"]:
             raise LookupError("A pasta está arquivada.")
-        if categoria["categoria_pai_id"] is not None:
-            raise ValueError("Somente pastas principais podem ser editadas nesta tela.")
 
         existente = conexao.execute(
             """
             SELECT id FROM categorias_documentos
-             WHERE empresa_id=? AND categoria_pai_id IS NULL
-               AND ativo=1 AND UPPER(nome)=UPPER(?) AND id<>?
+             WHERE empresa_id=?
+               AND categoria_pai_id IS ?
+               AND ativo=1
+               AND UPPER(nome)=UPPER(?)
+               AND id<>?
              LIMIT 1
             """,
-            (categoria["empresa_id"], nome, categoria_id),
+            (categoria["empresa_id"], categoria["categoria_pai_id"], nome, categoria_id),
         ).fetchone()
         if existente:
-            raise ValueError("Já existe outra pasta com esse nome.")
+            raise ValueError("Já existe outra pasta com esse nome neste nível.")
 
         conexao.execute(
             """
@@ -208,26 +208,58 @@ def arquivar_categoria(categoria_id: int, user_id: int | None = None):
             raise LookupError("Pasta não encontrada.")
         if not categoria["ativo"]:
             return dict(categoria)
-        documentos = conexao.execute("SELECT id,nome FROM documentos WHERE categoria_id=? AND ativo=1", (categoria_id,)).fetchall()
-        conexao.execute("UPDATE categorias_documentos SET ativo=0,arquivado_em=CURRENT_TIMESTAMP WHERE id=?", (categoria_id,))
-        conexao.execute("UPDATE documentos SET ativo=0,atualizado_em=CURRENT_TIMESTAMP WHERE categoria_id=? AND ativo=1", (categoria_id,))
-        conexao.execute(
-            "INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)",
-            ("CATEGORIA_DOCUMENTO", categoria_id, "ARQUIVAR", json.dumps(dict(categoria), ensure_ascii=False),
-             json.dumps({"usuario_id": user_id, "documentos_arquivados": len(documentos)}, ensure_ascii=False), "DOCUMENTACAO"),
-        )
-        for doc in documentos:
+
+        # Arquiva toda a árvore abaixo da pasta selecionada para não deixar
+        # subpastas órfãs na interface. O histórico permanece preservado.
+        ids: list[int] = [categoria_id]
+        cursor = 0
+        while cursor < len(ids):
+            current = ids[cursor]
+            children = conexao.execute(
+                "SELECT id FROM categorias_documentos WHERE categoria_pai_id=? AND ativo=1",
+                (current,),
+            ).fetchall()
+            ids.extend(int(row["id"]) for row in children if int(row["id"]) not in ids)
+            cursor += 1
+
+        total_documentos = 0
+        for current_id in ids:
+            documentos = conexao.execute(
+                "SELECT id,nome FROM documentos WHERE categoria_id=? AND ativo=1",
+                (current_id,),
+            ).fetchall()
+            total_documentos += len(documentos)
             conexao.execute(
-                "INSERT INTO auditorias (entidade,entidade_id,acao,dados_novos,origem) VALUES (?,?,?,?,?)",
-                ("DOCUMENTO", doc["id"], "ARQUIVADO_PELA_PASTA", json.dumps({"categoria_id": categoria_id, "usuario_id": user_id}, ensure_ascii=False), "DOCUMENTACAO"),
+                "UPDATE categorias_documentos SET ativo=0,arquivado_em=CURRENT_TIMESTAMP WHERE id=?",
+                (current_id,),
             )
+            conexao.execute(
+                "UPDATE documentos SET ativo=0,atualizado_em=CURRENT_TIMESTAMP WHERE categoria_id=? AND ativo=1",
+                (current_id,),
+            )
+            conexao.execute(
+                "INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)",
+                (
+                    "CATEGORIA_DOCUMENTO",
+                    current_id,
+                    "ARQUIVAR",
+                    json.dumps(dict(conexao.execute("SELECT * FROM categorias_documentos WHERE id=?", (current_id,)).fetchone()), ensure_ascii=False),
+                    json.dumps({"usuario_id": user_id, "raiz_id": categoria_id}, ensure_ascii=False),
+                    "DOCUMENTACAO",
+                ),
+            )
+            for doc in documentos:
+                conexao.execute(
+                    "INSERT INTO auditorias (entidade,entidade_id,acao,dados_novos,origem) VALUES (?,?,?,?,?)",
+                    ("DOCUMENTO", doc["id"], "ARQUIVADO_PELA_PASTA", json.dumps({"categoria_id": current_id, "raiz_id": categoria_id, "usuario_id": user_id}, ensure_ascii=False), "DOCUMENTACAO"),
+                )
         conexao.commit()
         result = dict(conexao.execute("SELECT * FROM categorias_documentos WHERE id=?", (categoria_id,)).fetchone())
-        result["documentos_arquivados"] = len(documentos)
+        result["documentos_arquivados"] = total_documentos
+        result["subpastas_arquivadas"] = max(0, len(ids) - 1)
         return result
     finally:
         conexao.close()
-
 
 def arquivar_documento(documento_id: int, user_id: int | None = None):
     conexao = conectar_banco()

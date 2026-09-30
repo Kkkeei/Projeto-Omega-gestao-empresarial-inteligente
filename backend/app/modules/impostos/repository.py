@@ -180,8 +180,14 @@ def listar_empresas_impostos(q: str | None, regime: str | None, situacao: str | 
         params: list[Any] = []
         if q:
             termo = q.strip().lower()
-            where.append("(LOWER(e.razao_social) LIKE ? OR LOWER(COALESCE(e.nome_fantasia,'')) LIKE ? OR e.cnpj LIKE ?)")
-            params.extend([f"%{termo}%", f"%{termo}%", f"%{q.strip()}%"])
+            cnpj_digits = "".join(ch for ch in q.strip() if ch.isdigit())
+            where.append(
+                "(LOWER(e.razao_social) LIKE ? "
+                "OR LOWER(COALESCE(e.nome_fantasia,'')) LIKE ? "
+                "OR e.cnpj LIKE ? "
+                "OR REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj,'.',''),'/',''),'-',''),' ','') LIKE ?)"
+            )
+            params.extend([f"%{termo}%", f"%{termo}%", f"%{q.strip()}%", f"%{cnpj_digits}%"])
         if regime and regime.upper() != "TODOS":
             where.append("UPPER(COALESCE(e.regime_tributario,''))=?")
             params.append(regime.upper())
@@ -244,11 +250,10 @@ def listar_empresas_impostos(q: str | None, regime: str | None, situacao: str | 
             },
             "empresas_configuradas": sum(1 for e in lista if e["tributos_vinculados"] > 0),
             "impostos_pendentes": sum(e["impostos_pendentes"] for e in lista),
-            "impostos_pagos": sum(1 for e in lista for _ in []),
+            "impostos_pagos": sum(e["impostos_pagos"] for e in lista),
             "valor_a_pagar": round(sum(e["valor_a_pagar"] for e in lista),2),
             "competencia": {"ano":ano,"mes":mes,"label":competencia_label(ano,mes)},
         }
-        indicadores["impostos_pagos"] = 0
         return {"empresas": lista, "indicadores": indicadores, "competencia": indicadores["competencia"]}
     finally:
         conn.close()
@@ -314,7 +319,7 @@ def obter_empresa_impostos(empresa_id: int, ano: int, mes: int) -> dict[str, Any
             "informados": sum(1 for x in tributos if x["status_mensal"] != "PENDENTE"),
             "atrasados": sum(1 for x in tributos if x["status_exibicao"] == "EM_ATRASO"),
             "vencendo": sum(1 for x in tributos if x["status_exibicao"] == "A_VENCER"),
-            "sem_valor": sum(1 for x in tributos if x["status_exibicao"] in {"SEM_APURACAO","CREDOR","SEM_MOVIMENTACAO"} or float(x.get("valor") or 0)==0),
+            "sem_valor": sum(1 for x in tributos if x["status_exibicao"] in {"SEM_APURACAO","CREDOR","SEM_MOVIMENTACAO"} or (x["status_mensal"] != "PENDENTE" and float(x.get("valor") or 0)==0)),
             "valor_a_pagar": round(sum(float(x.get("valor") or 0) for x in tributos if x["status_exibicao"] in {"A_PAGAR","A_VENCER","EM_ATRASO"}),2),
         }
         grupos = {e:[x for x in tributos if (x.get("esfera") or "").lower()==e.lower()] for e in ESFERAS}
@@ -330,7 +335,9 @@ def listar_configuracoes_empresa(empresa_id: int) -> list[dict[str,Any]]:
             SELECT ei.*,t.nome,t.sigla,t.esfera,t.ativo AS tributo_ativo
               FROM empresa_impostos ei JOIN tributos t ON t.id=ei.tributo_id
              WHERE ei.empresa_id=?
-             ORDER BY ei.status DESC, CASE t.esfera WHEN 'Federal' THEN 1 WHEN 'Estadual' THEN 2 WHEN 'Municipal' THEN 3 ELSE 4 END, t.nome
+             ORDER BY CASE WHEN ei.status='ATIVO' THEN 0 ELSE 1 END,
+                      CASE t.esfera WHEN 'Federal' THEN 1 WHEN 'Estadual' THEN 2 WHEN 'Municipal' THEN 3 ELSE 4 END,
+                      t.nome COLLATE NOCASE
         """,(empresa_id,)).fetchall()
         return [dict(r) for r in rows]
     finally:
@@ -382,6 +389,13 @@ def atualizar_vinculo(vinculo_id:int,data:dict[str,Any]) -> dict[str,Any]:
         fim=data.get("vigencia_fim")
         if status=="INATIVO" and not fim: raise ValueError("Informe a competência de encerramento ao inativar o imposto.")
         if fim and inicio and fim[:7] < inicio[:7]: raise ValueError("A competência final não pode ser anterior à inicial.")
+        overlap=conn.execute("""
+            SELECT id FROM empresa_impostos
+             WHERE id<>? AND empresa_id=? AND tributo_id=?
+               AND NOT (COALESCE(vigencia_fim,'9999-12-01') < ? OR COALESCE(?, '9999-12-01') < COALESCE(vigencia_inicio,'0000-01-01'))
+             LIMIT 1
+        """,(vinculo_id,atual["empresa_id"],atual["tributo_id"],inicio,fim)).fetchone()
+        if overlap: raise ValueError("Este imposto já possui outro vínculo no período informado.")
         conn.execute("UPDATE empresa_impostos SET vigencia_inicio=?,vigencia_fim=?,status=?,obrigatorio=?,observacao=?,atualizado_em=CURRENT_TIMESTAMP WHERE id=?",(inicio,fim if status=="INATIVO" else None,status,int(bool(data.get("obrigatorio",atual["obrigatorio"]))),data.get("observacao"),vinculo_id))
         conn.commit()
         return dict(conn.execute("SELECT ei.*,t.nome,t.sigla,t.esfera FROM empresa_impostos ei JOIN tributos t ON t.id=ei.tributo_id WHERE ei.id=?",(vinculo_id,)).fetchone())
@@ -393,14 +407,17 @@ def atualizar_vinculo(vinculo_id:int,data:dict[str,Any]) -> dict[str,Any]:
 def obter_mensal(empresa_id:int,tributo_id:int,ano:int,mes:int) -> dict[str,Any] | None:
     conn=conectar_banco()
     try:
+        comp=competencia_iso(ano,mes)
         row=conn.execute("""
             SELECT im.*,t.nome,t.sigla,t.esfera,t.categoria,t.periodicidade,t.ativo AS tributo_ativo,
                    ei.vigencia_inicio,ei.vigencia_fim,ei.status AS vinculo_status
               FROM impostos_mensais im JOIN tributos t ON t.id=im.tributo_id
               LEFT JOIN empresa_impostos ei ON ei.empresa_id=im.empresa_id AND ei.tributo_id=im.tributo_id
+                 AND (ei.vigencia_inicio IS NULL OR substr(ei.vigencia_inicio,1,7) <= substr(?,1,7))
+                 AND (ei.vigencia_fim IS NULL OR substr(ei.vigencia_fim,1,7) >= substr(?,1,7))
              WHERE im.empresa_id=? AND im.tributo_id=? AND im.competencia_ano=? AND im.competencia_mes=?
              ORDER BY ei.id DESC LIMIT 1
-        """,(empresa_id,tributo_id,ano,mes)).fetchone()
+        """,(comp,comp,empresa_id,tributo_id,ano,mes)).fetchone()
         if not row: return None
         d=dict(row); d["status_exibicao"],d["dias_para_vencimento"]=_status_exibicao({"status_mensal":d["status"],"data_vencimento":d["data_vencimento"]})
         return d
@@ -425,8 +442,15 @@ def obter_detalhe_imposto(empresa_id:int,tributo_id:int,ano:int,mes:int)->dict[s
         if not mensal:
             mensal=garantir_mensal(empresa_id,tributo_id,ano,mes)
             mensal=obter_mensal(empresa_id,tributo_id,ano,mes)
-        docs=conn.execute("SELECT * FROM documentos_impostos WHERE imposto_mensal_id=? ORDER BY id DESC",(mensal["id"],)).fetchall()
-        eventos=conn.execute("SELECT * FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? ORDER BY COALESCE(agendado_para,criado_em)",(mensal["id"],)).fetchall()
+        docs=conn.execute("""
+            SELECT d.*, COALESCE(u.nome, 'Usuário do sistema') AS usuario_upload_nome
+              FROM documentos_impostos d
+              LEFT JOIN usuarios u ON u.id=d.usuario_upload_id
+             WHERE d.imposto_mensal_id=?
+               AND COALESCE(d.status_documento,'CONFIRMADO')='CONFIRMADO'
+             ORDER BY d.id DESC
+        """,(mensal["id"],)).fetchall()
+        eventos=conn.execute("SELECT * FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico='CLIENTE' ORDER BY COALESCE(agendado_para,criado_em)",(mensal["id"],)).fetchall()
         hist=conn.execute("SELECT * FROM impostos_historico WHERE imposto_mensal_id=? ORDER BY criado_em DESC LIMIT 30",(mensal["id"],)).fetchall()
         return {"empresa":dict(empresa),"tributo":dict(tributo),"competencia":{"ano":ano,"mes":mes,"label":competencia_label(ano,mes)},"mensal":mensal,"documentos":[dict(x) for x in docs],"notificacoes":[dict(x) for x in eventos],"historico":[dict(x) for x in hist]}
     finally: conn.close()
@@ -467,12 +491,29 @@ def listar_historico_mensal(imposto_mensal_id:int)->list[dict[str,Any]]:
     finally: conn.close()
 
 
+def remover_documentos_rascunho(imposto_mensal_id:int)->list[dict[str,Any]]:
+    conn=conectar_banco()
+    try:
+        rows=[dict(x) for x in conn.execute(
+            "SELECT id,caminho_arquivo FROM documentos_impostos WHERE imposto_mensal_id=? AND status_documento='RASCUNHO'",
+            (imposto_mensal_id,),
+        ).fetchall()]
+        if rows:
+            conn.execute(
+                "DELETE FROM documentos_impostos WHERE imposto_mensal_id=? AND status_documento='RASCUNHO'",
+                (imposto_mensal_id,),
+            )
+            conn.commit()
+        return rows
+    finally: conn.close()
+
+
 def adicionar_documento(imposto_mensal_id:int,data:dict[str,Any])->dict[str,Any]:
     conn=conectar_banco()
     try:
         cur=conn.execute("""INSERT INTO documentos_impostos
-          (imposto_mensal_id,nome_arquivo,caminho_arquivo,extensao,mime_type,tamanho,hash_arquivo,observacao,competencia_extraida,valor_extraido,vencimento_extraido,codigo_receita,cnpj_extraido,data_pagamento_extraida,periodo_apuracao_inicio,periodo_apuracao_fim,mensagem_cliente,status_documento)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(imposto_mensal_id,data["nome_arquivo"],data["caminho_arquivo"],data.get("extensao"),data.get("mime_type"),data.get("tamanho"),data.get("hash_arquivo"),data.get("observacao"),data.get("competencia_extraida"),data.get("valor_extraido"),data.get("vencimento_extraido"),data.get("codigo_receita"),data.get("cnpj_extraido"),data.get("data_pagamento_extraida"),data.get("periodo_apuracao_inicio"),data.get("periodo_apuracao_fim"),data.get("mensagem_cliente"),data.get("status_documento","CONFIRMADO")))
+          (imposto_mensal_id,nome_arquivo,caminho_arquivo,extensao,mime_type,tamanho,hash_arquivo,observacao,competencia_extraida,valor_extraido,vencimento_extraido,codigo_receita,cnpj_extraido,data_pagamento_extraida,periodo_apuracao_inicio,periodo_apuracao_fim,mensagem_cliente,enviado_em,usuario_upload_id,status_documento)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",(imposto_mensal_id,data["nome_arquivo"],data["caminho_arquivo"],data.get("extensao"),data.get("mime_type"),data.get("tamanho"),data.get("hash_arquivo"),data.get("observacao"),data.get("competencia_extraida"),data.get("valor_extraido"),data.get("vencimento_extraido"),data.get("codigo_receita"),data.get("cnpj_extraido"),data.get("data_pagamento_extraida"),data.get("periodo_apuracao_inicio"),data.get("periodo_apuracao_fim"),data.get("mensagem_cliente"),data.get("enviado_em"),data.get("usuario_upload_id"),data.get("status_documento","CONFIRMADO")))
         conn.commit(); return dict(conn.execute("SELECT * FROM documentos_impostos WHERE id=?",(cur.lastrowid,)).fetchone())
     except Exception:
         conn.rollback(); raise
@@ -484,7 +525,7 @@ def atualizar_documento(documento_id:int,data:dict[str,Any])->dict[str,Any]:
     try:
         row=conn.execute("SELECT * FROM documentos_impostos WHERE id=?",(documento_id,)).fetchone()
         if not row: raise LookupError("Documento não encontrado.")
-        allowed=["competencia_extraida","valor_extraido","vencimento_extraido","codigo_receita","cnpj_extraido","data_pagamento_extraida","periodo_apuracao_inicio","periodo_apuracao_fim","mensagem_cliente","observacao","status_documento"]
+        allowed=["competencia_extraida","valor_extraido","vencimento_extraido","codigo_receita","cnpj_extraido","data_pagamento_extraida","periodo_apuracao_inicio","periodo_apuracao_fim","mensagem_cliente","observacao","enviado_em","usuario_upload_id","status_documento"]
         sets=[]; params=[]
         for key in allowed:
             if key in data:
@@ -493,6 +534,24 @@ def atualizar_documento(documento_id:int,data:dict[str,Any])->dict[str,Any]:
             conn.execute("UPDATE documentos_impostos SET "+",".join(sets)+" WHERE id=?",params+[documento_id]); conn.commit()
         return dict(conn.execute("SELECT * FROM documentos_impostos WHERE id=?",(documento_id,)).fetchone())
     finally: conn.close()
+
+
+def notificacao_existe(imposto_mensal_id: int, publico: str, tipo: str, agendado_para: str | None) -> bool:
+    conn = conectar_banco()
+    try:
+        if tipo == 'GUIA_ENVIADA':
+            row = conn.execute(
+                "SELECT 1 FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico=? AND tipo=? LIMIT 1",
+                (imposto_mensal_id, publico, tipo),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT 1 FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico=? AND tipo=? AND COALESCE(agendado_para,'')=COALESCE(?, '') LIMIT 1",
+                (imposto_mensal_id, publico, tipo, agendado_para),
+            ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
 
 
 def registrar_notificacao(empresa_id:int,imposto_mensal_id:int,tipo:str,titulo:str,mensagem:str,publico:str,agendado_para:str|None,status:str="PROGRAMADA"):

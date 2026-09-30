@@ -1,0 +1,555 @@
+from __future__ import annotations
+
+from datetime import date
+import os
+from pathlib import Path
+from typing import Any
+
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError, async_playwright
+
+from app.db.database import STORAGE_BASE
+from .declaracao_service import periodo_12_meses_por_empresa
+from .repository import (
+    criar_declaracao,
+    listar_faturamentos_periodo,
+    obter_empresa,
+    salvar_config_banco_brasil,
+)
+
+BANCO_BRASIL_URL = "https://www45.bb.com.br/fmc/frm/fw0711677_1.jsp"
+BANCO_BRASIL_DIR = STORAGE_BASE / "declaracoes_faturamento" / "banco_brasil"
+BB_HEADLESS = os.getenv("OMEGA_BB_HEADLESS", "true").strip().lower() in {"1", "true", "sim", "yes"}
+BB_BROWSER = os.getenv("OMEGA_BB_BROWSER", "firefox").strip().lower()
+
+
+def _mes_anterior(ano: int, mes: int) -> tuple[int, int]:
+    return (ano - 1, 12) if mes == 1 else (ano, mes - 1)
+
+
+def _adicionar_meses(ano: int, mes: int, quantidade: int) -> tuple[int, int]:
+    total = ano * 12 + (mes - 1) + quantidade
+    return total // 12, (total % 12) + 1
+
+
+def _iterar_periodos(ano_inicio: int, mes_inicio: int, ano_fim: int, mes_fim: int) -> list[tuple[int, int]]:
+    atual = (ano_inicio, mes_inicio)
+    fim = (ano_fim, mes_fim)
+    result: list[tuple[int, int]] = []
+    while atual <= fim:
+        result.append(atual)
+        atual = (atual[0] + 1, 1) if atual[1] == 12 else (atual[0], atual[1] + 1)
+    return result
+
+
+def _periodo_12_meses_dinamico(empresa_id: int) -> tuple[int, int, int, int, bool]:
+    return periodo_12_meses_por_empresa(empresa_id)
+
+
+def obter_periodo_banco_brasil(empresa_id: int) -> dict[str, Any]:
+    empresa = obter_empresa(empresa_id)
+    if not empresa:
+        raise LookupError("Empresa não encontrada.")
+
+    inicio_ano, inicio_mes, fim_ano, fim_mes, controle_informado = _periodo_12_meses_dinamico(empresa_id)
+    registros = listar_faturamentos_periodo(
+        empresa_id,
+        inicio_ano,
+        inicio_mes,
+        fim_ano,
+        fim_mes,
+    )
+    # O detalhamento do BB é opcional quando a empresa ainda não possui
+    # 12 meses completos de existência. Nessa situação, o formulário pode
+    # ser salvo com a tabela detalhada zerada, sem bloquear a declaração.
+    abertura = _parse_data_abertura(empresa.get("data_abertura"))
+    if abertura:
+        meses_ativos = _meses_entre_inclusivos(abertura, (fim_ano, fim_mes))
+        detalhamento_disponivel = meses_ativos >= 12
+    else:
+        # Sem data de abertura, usamos a própria série de faturamento como
+        # referência conservadora para decidir se existe uma janela de 12 meses.
+        if registros:
+            primeiro = min((int(r["competencia_ano"]), int(r["competencia_mes"])) for r in registros)
+            meses_ativos = _meses_entre_inclusivos(primeiro, (fim_ano, fim_mes))
+            detalhamento_disponivel = meses_ativos >= 12
+        else:
+            detalhamento_disponivel = False
+
+    return {
+        "periodo_inicio": f"{inicio_ano:04d}-{inicio_mes:02d}",
+        "periodo_fim": f"{fim_ano:04d}-{fim_mes:02d}",
+        "ultimo_faturamento_informado": _periodo_label(fim_ano, fim_mes) if controle_informado else None,
+        "controle_informado": controle_informado,
+        "competencia_controle": _periodo_label(fim_ano, fim_mes),
+        "meses_com_dados": len(registros),
+        "meses_sem_dados": max(0, 12 - len(registros)),
+        "detalhamento_disponivel": detalhamento_disponivel,
+    }
+
+
+def _periodo_label(ano: int, mes: int) -> str:
+    return f"{mes:02d}/{ano}"
+
+
+def _mes_label(ano: int, mes: int) -> str:
+    return f"{mes:02d}/{ano}"
+
+
+def _formatar_local_bb(municipio: str | None, uf: str | None) -> str:
+    cidade = str(municipio or "").strip()
+    estado = str(uf or "").strip().upper()
+    if cidade:
+        partes_minusculas = {"da", "de", "do", "das", "dos", "e"}
+        partes = []
+        for indice, palavra in enumerate(cidade.split()):
+            p = palavra.lower()
+            if indice > 0 and p in partes_minusculas:
+                partes.append(p)
+            else:
+                partes.append(p.capitalize())
+        cidade = " ".join(partes)
+    if cidade and estado:
+        return f"{cidade} - {estado}"
+    return cidade or estado
+
+
+def _moeda_bb(valor: float) -> str:
+    texto = f"{float(valor or 0):,.2f}"
+    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _percentual_bb(valor: float | None) -> str:
+    if valor is None:
+        return ""
+    if abs(float(valor) - round(float(valor))) < 0.0001:
+        return str(int(round(float(valor))))
+    return f"{float(valor):.2f}".replace(".", ",")
+
+
+def _regime_index(regime: str | None) -> int | None:
+    texto = (regime or "").strip().lower()
+    if "simples" in texto:
+        return 0
+    if "real" in texto:
+        return 1
+    if "presumido" in texto:
+        return 2
+    if "arbitrado" in texto:
+        return 3
+    if "isento" in texto or "imune" in texto:
+        return 4
+    return None
+
+
+def _parse_data_abertura(valor: str | None) -> tuple[int, int] | None:
+    if not valor:
+        return None
+    try:
+        ano, mes = map(int, str(valor)[:7].split("-"))
+        if 1 <= mes <= 12:
+            return ano, mes
+    except Exception:
+        return None
+    return None
+
+
+def _meses_entre_inclusivos(inicio: tuple[int, int], fim: tuple[int, int]) -> int:
+    return (fim[0] - inicio[0]) * 12 + (fim[1] - inicio[1]) + 1
+
+
+async def _launch_bb_browser(playwright):
+    """Abre o navegador para o formulário legado do Banco do Brasil.
+
+    O site é antigo e apresenta comportamento diferente entre engines.
+    Preferimos Firefox (que é o navegador em que o formulário é atualmente
+    validado pelo usuário), mas permitimos selecionar/reverter para Chromium
+    pela variável OMEGA_BB_BROWSER.
+    """
+    candidatos = []
+    if BB_BROWSER == "chromium":
+        candidatos = [("chromium", playwright.chromium)]
+    elif BB_BROWSER == "firefox":
+        candidatos = [("firefox", playwright.firefox), ("chromium", playwright.chromium)]
+    else:
+        candidatos = [("firefox", playwright.firefox), ("chromium", playwright.chromium)]
+
+    ultimo_erro = None
+    for nome, engine in candidatos:
+        try:
+            browser = await engine.launch(headless=BB_HEADLESS)
+            return nome, browser
+        except Exception as exc:
+            ultimo_erro = exc
+
+    raise RuntimeError(f"Não foi possível iniciar um navegador para o Banco do Brasil: {ultimo_erro}")
+
+
+async def _fill_and_print_bb(
+    *,
+    empresa: dict[str, Any],
+    periodos: list[tuple[int, int]],
+    valores: dict[tuple[int, int], float],
+    percentual_a_vista: float,
+    percentual_a_prazo: float,
+    percentual_cartao: float | None,
+    percentual_cheque: float | None,
+    percentual_boleto: float | None,
+    prazo_medio_dias: int | None,
+    destino: Path,
+) -> float:
+    async with async_playwright() as p:
+        browser_name, browser = await _launch_bb_browser(p)
+        try:
+            context = await browser.new_context(
+                viewport={"width": 1365, "height": 1000},
+                locale="pt-BR",
+                ignore_https_errors=True,
+                user_agent=(
+                    "Mozilla/5.0 (X11; Linux x86_64; rv:146.0) "
+                    "Gecko/20100101 Firefox/146.0"
+                    if browser_name == "firefox"
+                    else "Mozilla/5.0 (X11; Linux x86_64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/140.0.0.0 Safari/537.36"
+                ),
+            )
+            page = await context.new_page()
+            await page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
+            await page.goto(BANCO_BRASIL_URL, wait_until="domcontentloaded", timeout=60000)
+            await page.wait_for_timeout(2500)
+
+            # O formulário do BB é uma página legada/JSP e pode ser renderizado
+            # dentro de um frame/iframe. Em algumas máquinas o frame principal não
+            # contém diretamente os <input>, por isso mapear somente page.locator(...)
+            # retorna zero campos mesmo com o formulário visível no navegador.
+            async def localizar_frame_formulario():
+                ultimo_mapa = []
+                for _ in range(30):
+                    candidatos = []
+                    for frame in page.frames:
+                        try:
+                            todos = frame.locator("input")
+                            total = await todos.count()
+
+                            editaveis = frame.locator(
+                                'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"])'
+                                ':not([type="submit"]):not([type="button"]):not([type="reset"])'
+                            )
+                            quantidade = await editaveis.count()
+
+                            candidatos.append({
+                                "url": frame.url,
+                                "total_inputs": total,
+                                "editaveis": quantidade,
+                            })
+
+                            # O formulário oficial possui dezenas de inputs.
+                            # Não presumimos que todos estejam em um único frame:
+                            # aceitamos o maior candidato visível e só falhamos se
+                            # realmente não houver campos editáveis após a carga.
+                            if quantidade >= 46:
+                                return frame, candidatos
+                        except Exception:
+                            continue
+                    ultimo_mapa = candidatos
+                    await page.wait_for_timeout(500)
+
+                try:
+                    titulo = await page.title()
+                except Exception:
+                    titulo = ""
+                try:
+                    texto = (await page.locator("body").inner_text())[:500]
+                except Exception:
+                    texto = ""
+                raise RuntimeError(
+                    "Não foi possível mapear o formulário do Banco do Brasil. "
+                    f"Navegador: {browser_name}. URL: {page.url!r}. Título: {titulo!r}. "
+                    f"Texto inicial: {texto!r}. Frames: {ultimo_mapa}"
+                )
+
+            form_frame, frame_mapa = await localizar_frame_formulario()
+
+            inputs = form_frame.locator("input")
+            text_inputs = []
+            count = await inputs.count()
+            for index in range(count):
+                item = inputs.nth(index)
+                tipo = (await item.get_attribute("type") or "text").lower()
+                if tipo in {"hidden", "radio", "checkbox", "submit", "button", "reset", "image", "file"}:
+                    continue
+                text_inputs.append(item)
+
+            if len(text_inputs) < 46:
+                debug_path = BANCO_BRASIL_DIR / str(empresa.get("id") or "debug") / "banco_brasil_debug.png"
+                debug_path.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    await page.screenshot(path=str(debug_path), full_page=True)
+                except Exception:
+                    pass
+                raise RuntimeError(
+                    "Não foi possível mapear o formulário do Banco do Brasil. "
+                    f"Navegador: {browser_name}. Foram encontrados {len(text_inputs)} campos editáveis no frame "
+                    f"{form_frame.url!r}; esperados pelo menos 46. "
+                    f"Mapa de frames: {frame_mapa}. Debug: {debug_path}"
+                )
+
+            async def set_input_value(item, value: str, verify: bool = False) -> None:
+                # Primeiro usamos a API de alto nível do Playwright para o formulário
+                # legado receber os mesmos eventos de um usuário real.
+                try:
+                    await item.fill(value)
+                    await item.press("Tab")
+                except Exception:
+                    await item.evaluate(
+                        """(el, value) => {
+                            const proto = Object.getPrototypeOf(el);
+                            const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+                            if (descriptor && descriptor.set) descriptor.set.call(el, value);
+                            else el.value = value;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                            el.dispatchEvent(new Event('blur', { bubbles: true }));
+                        }""",
+                        value,
+                    )
+                if verify:
+                    atual = await item.input_value()
+                    if atual.strip() != value.strip():
+                        await item.evaluate(
+                            """(el, value) => {
+                                const proto = Object.getPrototypeOf(el);
+                                const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+                                if (descriptor && descriptor.set) descriptor.set.call(el, value);
+                                else el.value = value;
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                                el.dispatchEvent(new Event('change', { bubbles: true }));
+                                el.blur();
+                            }""",
+                            value,
+                        )
+                        atual = await item.input_value()
+                    if atual.strip() != value.strip():
+                        raise RuntimeError(f"Não foi possível preencher o campo do Banco do Brasil com o valor {value!r}.")
+
+            async def click_dom(element) -> None:
+                await element.evaluate("el => el.click()")
+
+            razao_social = (empresa.get("razao_social") or "").strip()
+            cnpj_digits = "".join(ch for ch in str(empresa.get("cnpj") or "") if ch.isdigit())
+            cnpj_formatado = cnpj_digits
+            if len(cnpj_digits) == 14:
+                cnpj_formatado = f"{cnpj_digits[:2]}.{cnpj_digits[2:5]}.{cnpj_digits[5:8]}/{cnpj_digits[8:12]}-{cnpj_digits[12:]}"
+
+            total_bruto = sum(valores.get(periodo, 0.0) for periodo in periodos)
+            abertura = _parse_data_abertura(empresa.get("data_abertura"))
+            periodos_ativos = [p for p in periodos if abertura is None or p >= abertura]
+            registros_ativos = [valores[p] for p in periodos_ativos if p in valores]
+
+            # Para empresas com menos de 12 meses de atividade, o próprio BB orienta
+            # anualizar a média mensal dos meses em funcionamento. Para empresas com
+            # 12 meses ou mais, o total é a soma do período declarado.
+            detalhamento_disponivel = True
+            if abertura:
+                detalhamento_disponivel = len(periodos_ativos) >= 12
+            elif periodos_ativos:
+                primeiro_periodo_informado = min(valores)
+                detalhamento_disponivel = (
+                    _meses_entre_inclusivos(primeiro_periodo_informado, periodos[-1]) >= 12
+                )
+
+            # O site do Banco do Brasil orienta anualizar o total para empresas
+            # com menos de 12 meses de existência. Mantemos essa regra no campo
+            # de faturamento bruto. Já o detalhamento mensal, por ser opcional
+            # nesse cenário, pode permanecer zerado.
+            if abertura and len(periodos_ativos) < 12 and registros_ativos:
+                total_bruto = (sum(registros_ativos) / len(registros_ativos)) * 12
+
+            # Campos oficiais do formulário BB: Razão Social, CNPJ e Faturamento Bruto.
+            # O campo de faturamento bruto é o terceiro campo de texto da página oficial.
+            await set_input_value(text_inputs[0], razao_social)
+            await set_input_value(text_inputs[1], cnpj_formatado)
+            valor_bruto_bb = _moeda_bb(total_bruto)
+            await set_input_value(text_inputs[2], valor_bruto_bb, verify=True)
+
+
+            cash_tot = 0.0
+            credit_tot = 0.0
+            for row_index, (ano, mes) in enumerate(periodos):
+                base = 3 + row_index * 3
+                # Sempre mantemos as 12 linhas visíveis. Quando o mês ainda não
+                # possui lançamento (inclusive antes da abertura da empresa),
+                # o detalhamento recebe R$ 0,00 em vez de bloquear ou deixar
+                # a tabela incompleta.
+                valor = float(valores.get((ano, mes), 0) or 0) if detalhamento_disponivel else 0.0
+                a_vista = round(valor * percentual_a_vista / 100, 2)
+                a_prazo = round(valor - a_vista, 2)
+                cash_tot += a_vista
+                credit_tot += a_prazo
+                await set_input_value(text_inputs[base], _mes_label(ano, mes))
+                await set_input_value(text_inputs[base + 1], _moeda_bb(a_vista))
+                await set_input_value(text_inputs[base + 2], _moeda_bb(a_prazo))
+
+            total_base = 3 + len(periodos) * 3
+            await set_input_value(text_inputs[total_base], _moeda_bb(cash_tot))
+            await set_input_value(text_inputs[total_base + 1], _moeda_bb(credit_tot))
+            await text_inputs[total_base].press("Tab")
+
+            # Os campos de composição do faturamento a prazo são opcionais e
+            # permanecem vazios para acelerar o fluxo.
+            for offset in range(4):
+                await set_input_value(text_inputs[total_base + 2 + offset], "")
+
+            local = _formatar_local_bb(empresa.get("municipio"), empresa.get("uf"))
+            local_data = f"{local} {date.today().strftime('%d/%m/%Y')}" if local else date.today().strftime('%d/%m/%Y')
+            await set_input_value(text_inputs[total_base + 6], local_data, verify=True)
+
+
+            regime_index = _regime_index(empresa.get("regime_tributario"))
+            radios = form_frame.locator('input[type="radio"]')
+            if regime_index is not None and await radios.count() > regime_index:
+                await click_dom(radios.nth(regime_index))
+
+            # O botão Salvar é um controle legado do SISBB e pode ser um input
+            # de imagem/controle sem texto visível para o Playwright. Procuramos
+            # por value/name/alt/title e, por último, por texto no elemento.
+            save_button = form_frame.locator(
+                'input[value*="Salvar" i], input[name*="Salvar" i], input[alt*="Salvar" i], '
+                'input[title*="Salvar" i], input[src*="salvar" i], button:has-text("Salvar"), a:has-text("Salvar")'
+            ).last
+            if await save_button.count() == 0:
+                save_button = form_frame.locator("input, button, a").filter(has_text="Salvar").last
+            if await save_button.count() == 0:
+                raise RuntimeError("Não foi localizado o botão 'Salvar' no formulário do Banco do Brasil.")
+
+            async def accept_dialog(dialog):
+                await dialog.accept()
+
+            page.on("dialog", accept_dialog)
+            try:
+                await save_button.click(timeout=10000)
+            except PlaywrightTimeoutError:
+                # Fallback para o DOM legado do BB.
+                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                await click_dom(save_button)
+            await page.wait_for_timeout(1200)
+
+            # Firefox/Playwright não oferece page.pdf(). Como o formulário legado do
+            # Banco do Brasil funciona melhor nessa engine, capturamos a página final
+            # exatamente como foi renderizada e montamos um PDF A4 com a imagem.
+            await page.emulate_media(media="print")
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            screenshot_tmp = destino.with_name(destino.stem + "_render.png")
+            await page.screenshot(path=str(screenshot_tmp), full_page=True)
+
+            try:
+                from PIL import Image
+                from reportlab.lib.pagesizes import A4
+                from reportlab.lib.utils import ImageReader
+                from reportlab.pdfgen import canvas
+
+                imagem = Image.open(screenshot_tmp).convert("RGB")
+                largura_px, altura_px = imagem.size
+                largura_pt, altura_pt = A4
+                escala = largura_pt / float(largura_px)
+                altura_render = altura_px * escala
+
+                documento_pdf = canvas.Canvas(str(destino), pagesize=A4)
+                # Quando o conteúdo exceder uma folha A4, dividimos verticalmente
+                # para preservar legibilidade em vez de reduzir tudo demais.
+                pagina_pt_h = altura_pt
+                pagina_px_h = max(1, int(pagina_pt_h / escala))
+                for inicio_px in range(0, altura_px, pagina_px_h):
+                    fim_px = min(altura_px, inicio_px + pagina_px_h)
+                    recorte = imagem.crop((0, inicio_px, largura_px, fim_px))
+                    recorte_tmp = screenshot_tmp.with_name(
+                        screenshot_tmp.stem + f"_{inicio_px}.png"
+                    )
+                    recorte.save(recorte_tmp, format="PNG")
+                    recorte_h_pt = (fim_px - inicio_px) * escala
+                    documento_pdf.drawImage(
+                        ImageReader(str(recorte_tmp)),
+                        0,
+                        altura_pt - recorte_h_pt,
+                        width=largura_pt,
+                        height=recorte_h_pt,
+                        preserveAspectRatio=True,
+                        mask="auto",
+                    )
+                    documento_pdf.showPage()
+                    try:
+                        recorte_tmp.unlink()
+                    except OSError:
+                        pass
+                documento_pdf.save()
+            finally:
+                try:
+                    screenshot_tmp.unlink()
+                except OSError:
+                    pass
+
+            await context.close()
+            return total_bruto
+        finally:
+            await browser.close()
+
+
+async def gerar_declaracao_banco_brasil(
+    *,
+    empresa_id: int,
+    usuario_id: int,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    empresa = obter_empresa(empresa_id)
+    if not empresa:
+        raise LookupError("Empresa não encontrada.")
+
+    inicio_ano, inicio_mes, fim_ano, fim_mes, controle_informado = _periodo_12_meses_dinamico(empresa_id)
+    periodos = _iterar_periodos(inicio_ano, inicio_mes, fim_ano, fim_mes)
+    registros = listar_faturamentos_periodo(
+        empresa_id,
+        inicio_ano,
+        inicio_mes,
+        fim_ano,
+        fim_mes,
+    )
+    valores = {
+        (int(item["competencia_ano"]), int(item["competencia_mes"])): float(item["valor"] or 0)
+        for item in registros
+    }
+
+    # O detalhamento do Banco do Brasil sempre mantém 12 competências.
+    # Quando uma competência não possui lançamento, ela permanece na tabela com
+    # valor R$ 0,00; isso não bloqueia a geração da declaração.
+    percentual_a_vista = float(config.get("percentual_a_vista", 20))
+    percentual_a_prazo = float(config.get("percentual_a_prazo", 80))
+    if abs((percentual_a_vista + percentual_a_prazo) - 100) > 0.01:
+        raise ValueError("Percentual à vista + percentual a prazo deve totalizar 100%.")
+
+    config_salva = salvar_config_banco_brasil(empresa_id, config)
+
+    nome_seguro = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in str(empresa["razao_social"])).strip("_")
+    destino = BANCO_BRASIL_DIR / str(empresa_id) / f"Declaracao_Banco_do_Brasil_{nome_seguro}_{inicio_ano}{inicio_mes:02d}_{fim_ano}{fim_mes:02d}.pdf"
+    valor_declarado = await _fill_and_print_bb(
+        empresa=empresa,
+        periodos=periodos,
+        valores=valores,
+        percentual_a_vista=percentual_a_vista,
+        percentual_a_prazo=percentual_a_prazo,
+        percentual_cartao=config_salva.get("percentual_cartao"),
+        percentual_cheque=config_salva.get("percentual_cheque"),
+        percentual_boleto=config_salva.get("percentual_boleto"),
+        prazo_medio_dias=config_salva.get("prazo_medio_dias"),
+        destino=destino,
+    )
+
+    return criar_declaracao(
+        empresa_id=empresa_id,
+        tipo="Banco do Brasil",
+        periodo_inicio=f"{inicio_ano:04d}-{inicio_mes:02d}",
+        periodo_fim=f"{fim_ano:04d}-{fim_mes:02d}",
+        valor_total=float(valor_declarado),
+        nome_arquivo=destino.name,
+        caminho_arquivo=str(destino.resolve().relative_to(STORAGE_BASE.parent.resolve())) if destino.resolve().is_relative_to(STORAGE_BASE.parent.resolve()) else str(destino.resolve()),
+        usuario_id=usuario_id,
+    )

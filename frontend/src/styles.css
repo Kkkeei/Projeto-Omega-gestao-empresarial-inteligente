@@ -79,3 +79,134 @@
 
 /* Documentação — arrastar e soltar arquivos */
 .doc-drop-zone{margin:10px 12px 12px;min-height:112px;border:1.5px dashed #c8d6e8;border-radius:10px;background:#f8fbff;color:#667085;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease,transform .15s ease}.doc-drop-zone:hover{border-color:#7fa7d8;background:#f4f9ff}.doc-drop-zone.drag-active{border-color:#2f73d6;background:#eaf3ff;box-shadow:0 0 0 3px rgba(47,115,214,.10);transform:translateY(-1px)}.doc-drop-zone.with-documents{min-height:78px}.doc-drop-icon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:#eef4ff;color:#2f73d6}.doc-drop-zone strong{font-size:10px;color:#344054}.doc-drop-zone span{font-size:8px}.doc-drop-zone small{font-size:7px;color:#98a2b3}.doc-modal-drop{position:relative;min-height:112px;border:1.5px dashed #c8d6e8;border-radius:10px;background:#f8fbff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;color:#667085;cursor:pointer;overflow:hidden;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}.doc-modal-drop:hover,.doc-modal-drop.drag-active{border-color:#2f73d6;background:#eaf3ff;box-shadow:0 0 0 3px rgba(47,115,214,.08)}.doc-modal-drop>svg{color:#2f73d6}.doc-modal-drop strong{font-size:10px;color:#344054;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.doc-modal-drop span{font-size:8px}.doc-modal-drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.doc-drop-zone:focus-visible,.doc-modal-drop:focus-visible{outline:2px solid #2f73d6;outline-offset:2px}
+
+/* Documentação — abas de pastas compactas e legíveis */
+.doc-folder-toolbar{
+  min-height:34px;
+  margin-bottom:8px;
+  gap:12px;
+}
+.doc-folder-breadcrumb{
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:#7c899b;
+  font-size:10px;
+  font-weight:700;
+  overflow:hidden;
+}
+.doc-folder-breadcrumb > svg{flex:0 0 auto;color:#2f73d6}
+.doc-breadcrumb-item{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.doc-breadcrumb-item:last-child{color:#344054}
+.doc-folder-toolbar-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.doc-folder-toolbar-actions .button.small{height:31px;padding:0 10px;font-size:10px}
+
+.doc-folder-frame.panel{overflow:hidden}
+.doc-folder-tabs{
+  min-height:39px;
+  padding:4px 7px 0;
+  gap:4px;
+  align-items:flex-end;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+.doc-folder-tab{
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+  max-width:240px;
+  height:34px;
+  padding:0 11px;
+  gap:7px;
+  border-radius:8px 8px 0 0;
+  box-shadow:none;
+}
+.doc-folder-tab.selected{height:37px;box-shadow:0 1px 4px rgba(16,24,40,.08)}
+.doc-folder-tab svg{width:16px;height:16px}
+.doc-folder-tab span{font-size:12px;font-weight:750;line-height:1;max-width:170px}
+.doc-folder-tab small{
+  min-width:20px;
+  height:18px;
+  padding:0 5px;
+  font-size:9px;
+}
+
+.doc-subfolder-strip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+  padding:7px 10px 8px;
+  border-top:1px solid #edf0f4;
+  background:#fbfcfe;
+  overflow:hidden;
+}
+.doc-subfolder-label{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  color:#7c899b;
+  font-size:9px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.doc-subfolder-list{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  overflow-x:auto;
+  min-width:0;
+  padding-bottom:1px;
+  scrollbar-width:thin;
+}
+.doc-subfolder{
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+  max-width:210px;
+  height:30px;
+  padding:0 9px;
+  border:1px solid #dfe5ed;
+  border-radius:7px;
+  background:#fff;
+  color:#536174;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:10px;
+  font-weight:750;
+  transition:background .12s ease,border-color .12s ease,color .12s ease,box-shadow .12s ease;
+}
+.doc-subfolder:hover{background:#f4f8fd;border-color:#c7d6e8;color:#344054}
+.doc-subfolder.selected{background:#eef5ff;border-color:#8fb1db;color:#1f5f9f;box-shadow:0 1px 3px rgba(47,115,214,.10)}
+.doc-subfolder svg{width:15px;height:15px;color:#2f73d6;flex:0 0 auto}
+.doc-subfolder span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-subfolder small{min-width:18px;height:17px;padding:0 4px;border-radius:9px;background:#f0f3f7;color:#667085;display:grid;place-items:center;font-size:8px;font-weight:800}
+.doc-subfolder.selected small{background:#dfeeff;color:#2f73d6}
+
+.doc-folder-actions-row{min-height:38px;padding:0 9px}
+.doc-folder-selection-text{gap:7px}
+.doc-folder-selection-text strong{font-size:10px}
+.doc-folder-selection-text span{font-size:9px}
+
+@media(max-width:700px){
+  .doc-folder-toolbar{align-items:flex-start;flex-direction:column;gap:7px}
+  .doc-folder-toolbar-actions{width:100%}
+  .doc-folder-toolbar-actions .button{flex:0 0 auto}
+  .doc-folder-tab{max-width:200px;padding:0 9px}
+  .doc-folder-tab span{font-size:11px;max-width:130px}
+  .doc-subfolder-strip{align-items:flex-start;flex-direction:column;gap:5px}
+  .doc-subfolder-list{width:100%}
+}

@@ -10,6 +10,8 @@ import {
   registrarImposto,
   registrarSituacao,
   reenviarNotificacao,
+  visualizarDocumento,
+  obterPreviewDocumento,
   type DocumentoImposto,
   type ImpostoDetalhe,
   type NotificacaoEvento,
@@ -26,6 +28,19 @@ function dataBr(v?: string | null) {
   if (!v) return '—';
   const p = v.slice(0, 10).split('-');
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '—';
+}
+
+function statusLabel(v: string) {
+  return ({
+    PAGO: 'Pago',
+    A_VENCER: 'A vencer',
+    A_PAGAR: 'A pagar',
+    EM_ATRASO: 'Em atraso',
+    PENDENTE: 'Aguardando informação',
+    CREDOR: 'Credor',
+    SEM_MOVIMENTACAO: 'Sem movimentação',
+    SEM_APURACAO: 'Sem apuração',
+  } as Record<string, string>)[v] || v;
 }
 
 function Modal({
@@ -52,11 +67,13 @@ function Modal({
 function Field({
   label,
   value,
+  displayValue,
   edit,
   onChange,
 }: {
   label: string;
   value: string;
+  displayValue?: string;
   edit: boolean;
   onChange: (value: string) => void;
 }) {
@@ -66,7 +83,7 @@ function Field({
       {edit ? (
         <input value={value === '—' ? '' : value} onChange={(event) => onChange(event.target.value)} />
       ) : (
-        <strong>{value}</strong>
+        <strong>{displayValue ?? value}</strong>
       )}
     </label>
   );
@@ -117,15 +134,36 @@ function ConfirmModal({
   onBack,
   onConfirm,
   busy,
+  onReplace,
+  tributoNome,
 }: {
   draft: any;
   setDraft: (value: any) => void;
   onBack: () => void;
   onConfirm: () => void;
+  onReplace: () => void;
   busy: boolean;
+  tributoNome: string;
 }) {
   const ex = draft.extracao || {};
   const [edit, setEdit] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  useEffect(() => {
+    let active = true;
+    let objectUrl = '';
+    const carregarPreview = async () => {
+      if (!draft?.documento?.id) return;
+      try {
+        objectUrl = await obterPreviewDocumento(draft.documento.id);
+        if (active) setPreviewUrl(objectUrl);
+      } catch {}
+    };
+    void carregarPreview();
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [draft?.documento?.id]);
   const valor = ex.valor_extraido == null ? '' : String(ex.valor_extraido);
   const valorDisplay = valor === '' ? '—' : dinheiro(Number(valor));
 
@@ -156,13 +194,20 @@ function ConfirmModal({
 
       <div className="imp-confirm-grid">
         <div className="imp-file-preview">
-          <FileText size={38} />
+          {previewUrl && draft.documento?.mime_type?.startsWith('image/') ? (
+            <img src={previewUrl} alt="Pré-visualização da guia" className="imp-document-preview-image" />
+          ) : previewUrl && draft.documento?.mime_type === 'application/pdf' ? (
+            <iframe src={previewUrl} title="Pré-visualização da guia" className="imp-document-preview-frame" />
+          ) : (
+            <FileText size={38} />
+          )}
           <strong>{draft.documento?.nome_arquivo || 'Documento'}</strong>
-          <small>{draft.documento?.tamanho ? `${Math.round(draft.documento.tamanho / 1024)} KB` : ''}</small>
+          <small>{draft.documento?.tamanho ? `${Math.round(draft.documento.tamanho / 1024)} KB` : ''}{draft.documento?.enviado_em ? ` · Enviado em ${new Date(draft.documento.enviado_em).toLocaleString('pt-BR')}` : ''}</small>
           {draft.documento?.id ? (
-            <button className="imp-link-button" onClick={() => void baixarDocumento(draft.documento.id)}>
-              Visualizar / baixar
-            </button>
+            <div className="imp-preview-actions">
+              <button className="imp-link-button" onClick={() => void visualizarDocumento(draft.documento.id)}>Visualizar</button>
+              <button className="imp-link-button" onClick={onReplace}>Substituir arquivo</button>
+            </div>
           ) : null}
         </div>
 
@@ -184,6 +229,7 @@ function ConfirmModal({
             <Field
               label="Vencimento"
               value={ex.vencimento_extraido || '—'}
+              displayValue={ex.vencimento_extraido ? dataBr(ex.vencimento_extraido) : '—'}
               edit={edit}
               onChange={(value) => updateExtracao('vencimento_extraido', value)}
             />
@@ -208,8 +254,23 @@ function ConfirmModal({
             <Field
               label="Data do pagamento"
               value={ex.data_pagamento_extraida || '—'}
+              displayValue={ex.data_pagamento_extraida ? dataBr(ex.data_pagamento_extraida) : '—'}
               edit={edit}
               onChange={(value) => updateExtracao('data_pagamento_extraida', value)}
+            />
+            <Field
+              label="Início da apuração"
+              value={ex.periodo_apuracao_inicio || '—'}
+              displayValue={ex.periodo_apuracao_inicio ? dataBr(ex.periodo_apuracao_inicio) : '—'}
+              edit={edit}
+              onChange={(value) => updateExtracao('periodo_apuracao_inicio', value)}
+            />
+            <Field
+              label="Fim da apuração"
+              value={ex.periodo_apuracao_fim || '—'}
+              displayValue={ex.periodo_apuracao_fim ? dataBr(ex.periodo_apuracao_fim) : '—'}
+              edit={edit}
+              onChange={(value) => updateExtracao('periodo_apuracao_fim', value)}
             />
           </div>
         </div>
@@ -220,7 +281,7 @@ function ConfirmModal({
             rows={6}
             value={
               draft.mensagem_cliente ||
-              `Prezado cliente,\n\nSegue em anexo a guia referente à competência ${ex.competencia_extraida || ''}, com vencimento em ${
+              `Prezado cliente,\n\nSegue em anexo a guia de ${tributoNome} referente à competência ${ex.competencia_extraida || ''}, com vencimento em ${
                 ex.vencimento_extraido ? dataBr(ex.vencimento_extraido) : ''
               }, no valor de ${ex.valor_extraido != null ? dinheiro(Number(ex.valor_extraido)) : 'R$ 0,00'}.\n\nQualquer dúvida estamos à disposição.\n\nAtenciosamente,\nEquipe Contábil`
             }
@@ -266,6 +327,7 @@ export function ImpostoMensalPage() {
   const [editPag, setEditPag] = useState('');
   const [editDoc, setEditDoc] = useState('');
   const [editObs, setEditObs] = useState('');
+  const [baseObs, setBaseObs] = useState('');
   const [reload, setReload] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -288,6 +350,30 @@ export function ImpostoMensalPage() {
   const mensal = data?.mensal;
   const doc = data?.documentos?.[0] as DocumentoImposto | undefined;
   const titulo = data?.tributo.nome || 'Imposto';
+  useEffect(() => { if (mensal) setBaseObs(mensal.observacao || ''); }, [mensal?.id, mensal?.observacao]);
+
+  async function saveBaseObservation() {
+    setBusy(true);
+    try {
+      await registrarImposto(empresa, {
+        tributo_id: tributo,
+        competencia_ano: ano,
+        competencia_mes: mes,
+        status: mensal?.status || 'PENDENTE',
+        valor: mensal?.valor ?? null,
+        data_vencimento: mensal?.data_vencimento || null,
+        data_pagamento: mensal?.data_pagamento || null,
+        numero_documento: mensal?.numero_documento || null,
+        observacao: baseObs || null,
+      });
+      setReload((value) => value + 1);
+      setNotice('Observação salva.');
+    } catch (errorValue) {
+      setNotice(errorValue instanceof Error ? errorValue.message : 'Não foi possível salvar a observação.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function saveSituation(tipo: 'CREDOR' | 'SEM_MOVIMENTACAO') {
     setBusy(true);
@@ -332,6 +418,14 @@ export function ImpostoMensalPage() {
       setBusy(false);
     }
   }
+
+  const replaceFile = () => {
+    setConfirmOpen(false);
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = '';
+    setModo('GUIA');
+    setModal(true);
+  };
 
   async function confirm() {
     if (!draft?.documento?.id) return;
@@ -424,7 +518,7 @@ export function ImpostoMensalPage() {
           <span className="eyebrow">IMPOSTO · {data.competencia.label}</span>
           <h2>{titulo}</h2>
           <div className="imp-tax-detail-status">
-            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
+            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
             <span><CalendarDays size={13} /> {data.competencia.label}</span>
           </div>
         </div>
@@ -455,6 +549,7 @@ export function ImpostoMensalPage() {
       )}
 
       {mensal.status === 'PENDENTE' && !doc ? (
+        <>
         <div className="imp-tax-empty-grid">
           <div
             className="panel imp-upload-empty"
@@ -486,6 +581,15 @@ export function ImpostoMensalPage() {
             </dl>
           </div>
         </div>
+        <div className="panel imp-base-observation">
+          <label className="imp-modal-label">Observações (opcional)
+            <textarea rows={4} value={baseObs} onChange={(event) => setBaseObs(event.target.value)} placeholder="Informe aqui o motivo da ausência de pagamento, se foi credor ou qualquer outra observação..." />
+          </label>
+          <div className="modal-actions imp-base-observation-actions">
+            <button className="button secondary" disabled={busy || baseObs === (mensal.observacao || '')} onClick={() => void saveBaseObservation()}>Salvar observação</button>
+          </div>
+        </div>
+        </>
       ) : (
         <div className="imp-tax-registered-grid">
           <div className="panel">
@@ -493,7 +597,7 @@ export function ImpostoMensalPage() {
               <div>
                 <span className="eyebrow">REGISTRO MENSAL</span>
                 <h3>{titulo} — {data.competencia.label}</h3>
-                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
+                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
               </div>
               <div className="imp-big-money">{dinheiro(mensal.valor)}</div>
             </div>
@@ -527,7 +631,7 @@ export function ImpostoMensalPage() {
               <FileText size={24} />
               <div>
                 <strong>Documento da guia</strong>
-                <span>{doc.nome_arquivo} · {dataBr(doc.criado_em)}</span>
+                <span>{doc.nome_arquivo} · {doc.enviado_em ? `Enviado em ${new Date(doc.enviado_em).toLocaleString('pt-BR')}` : (doc.criado_em ? new Date(doc.criado_em).toLocaleString('pt-BR') : 'Data não informada')} · {doc.usuario_upload_nome || 'Usuário do sistema'}</span>
               </div>
             </div>
             <button className="button secondary" onClick={() => void baixarDocumento(doc.id)}>
@@ -544,6 +648,7 @@ export function ImpostoMensalPage() {
                 <div><span>Vencimento</span><strong>{dataBr(doc.vencimento_extraido)}</strong></div>
                 <div><span>Código de receita</span><strong>{doc.codigo_receita || '—'}</strong></div>
                 <div><span>CNPJ</span><strong>{doc.cnpj_extraido || '—'}</strong></div>
+                <div><span>Data do pagamento</span><strong>{dataBr(doc.data_pagamento_extraida)}</strong></div>
                 <div>
                   <span>Período de apuração</span>
                   <strong>
@@ -679,7 +784,19 @@ export function ImpostoMensalPage() {
       )}
 
       {confirmOpen && draft && (
-        <ConfirmModal draft={draft} setDraft={setDraft} onBack={() => setConfirmOpen(false)} onConfirm={() => void confirm()} busy={busy} />
+        <ConfirmModal
+          draft={draft}
+          setDraft={setDraft}
+          onBack={() => {
+            setConfirmOpen(false);
+            setModo('GUIA');
+            setModal(true);
+          }}
+          onConfirm={() => void confirm()}
+          onReplace={replaceFile}
+          busy={busy}
+          tributoNome={titulo}
+        />
       )}
     </div>
   );
