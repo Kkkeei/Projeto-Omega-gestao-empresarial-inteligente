@@ -9,7 +9,7 @@ function regimeClass(regime?:string|null){const v=(regime||'').toLowerCase();if(
 
 export function DocumentacaoPage(){
  const [items,setItems]=useState<EmpresaDocumento[]>([]),[q,setQ]=useState(''),[regime,setRegime]=useState('TODOS'),[status,setStatus]=useState('TODOS'),[loading,setLoading]=useState(true),[err,setErr]=useState('');
- async function load(){setLoading(true);setErr('');try{const p=new URLSearchParams({page:'1',page_size:'200'});const r=await listarEmpresasDocumentacao(p);setItems(r.empresas)}catch(e){setErr(e instanceof Error?e.message:'Erro ao carregar documentação.')}finally{setLoading(false)}}
+ async function load(){setLoading(true);setErr('');try{const p=new URLSearchParams({page:'1',page_size:'500'});const r=await listarEmpresasDocumentacao(p);setItems(r.empresas)}catch(e){setErr(e instanceof Error?e.message:'Erro ao carregar documentação.')}finally{setLoading(false)}}
  useEffect(()=>{void load()},[]);
  const filtered=useMemo(()=>items.filter(e=>{const s=q.toLowerCase().trim();const mq=!s||`${e.razao_social} ${e.nome_fantasia||''} ${e.cnpj}`.toLowerCase().includes(s);const mr=regime==='TODOS'||(e.regime_tributario||'').toUpperCase()===regime;const ms=status==='TODOS'||(status==='ATIVA'?Boolean(e.ativo):!e.ativo);return mq&&mr&&ms}).sort((a,b)=>a.razao_social.localeCompare(b.razao_social,'pt-BR')),[items,q,regime,status]);
  const counts={todos:items.length,simples:items.filter(e=>(e.regime_tributario||'').toUpperCase()==='SIMPLES NACIONAL').length,presumido:items.filter(e=>(e.regime_tributario||'').toUpperCase()==='LUCRO PRESUMIDO').length,real:items.filter(e=>(e.regime_tributario||'').toUpperCase()==='LUCRO REAL').length};

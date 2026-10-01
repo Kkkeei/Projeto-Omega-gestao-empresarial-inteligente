@@ -180,14 +180,8 @@ def listar_empresas_impostos(q: str | None, regime: str | None, situacao: str | 
         params: list[Any] = []
         if q:
             termo = q.strip().lower()
-            cnpj_digits = "".join(ch for ch in q.strip() if ch.isdigit())
-            where.append(
-                "(LOWER(e.razao_social) LIKE ? "
-                "OR LOWER(COALESCE(e.nome_fantasia,'')) LIKE ? "
-                "OR e.cnpj LIKE ? "
-                "OR REPLACE(REPLACE(REPLACE(REPLACE(e.cnpj,'.',''),'/',''),'-',''),' ','') LIKE ?)"
-            )
-            params.extend([f"%{termo}%", f"%{termo}%", f"%{q.strip()}%", f"%{cnpj_digits}%"])
+            where.append("(LOWER(e.razao_social) LIKE ? OR LOWER(COALESCE(e.nome_fantasia,'')) LIKE ? OR e.cnpj LIKE ?)")
+            params.extend([f"%{termo}%", f"%{termo}%", f"%{q.strip()}%"])
         if regime and regime.upper() != "TODOS":
             where.append("UPPER(COALESCE(e.regime_tributario,''))=?")
             params.append(regime.upper())

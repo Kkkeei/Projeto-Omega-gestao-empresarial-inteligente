@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from app.api.v1.auth.routes import current_user
-from app.modules.documentacao.schemas import CategoriaCreate, CategoriaMover, CategoriaUpdate
+from app.modules.documentacao.schemas import CategoriaCreate, CategoriaUpdate
 from app.modules.documentacao import service
 
 router = APIRouter(prefix="/api/v1/documentacao", tags=["Documentação"])
@@ -16,7 +16,7 @@ def _user(user=Depends(current_user)):
 
 
 @router.get("/empresas")
-def empresas(q: str | None = Query(default=None), regime: str | None = Query(default=None), ativo: bool | None = Query(default=None), page: int = Query(default=1, ge=1), page_size: int = Query(default=200, ge=1, le=200), _user=Depends(_user)):
+def empresas(q: str | None = Query(default=None), regime: str | None = Query(default=None), ativo: bool | None = Query(default=None), page: int = Query(default=1, ge=1), page_size: int = Query(default=500, ge=1, le=500), _user=Depends(_user)):
     return service.listar_empresas_documentacao(q, regime, ativo, page, page_size)
 
 
@@ -42,16 +42,6 @@ def categoria_criar(empresa_id: int, data: CategoriaCreate, _user=Depends(_user)
 def categoria_atualizar(categoria_id: int, data: CategoriaUpdate, _user=Depends(_user)):
     try:
         return service.atualizar_categoria(categoria_id, data.nome, data.descricao, _user["id"])
-    except LookupError as exc:
-        raise HTTPException(404, str(exc))
-    except ValueError as exc:
-        raise HTTPException(400, str(exc))
-
-
-@router.patch("/categorias/{categoria_id}/mover")
-def categoria_mover(categoria_id: int, data: CategoriaMover, _user=Depends(_user)):
-    try:
-        return service.mover_categoria(categoria_id, data.categoria_pai_id, _user["id"])
     except LookupError as exc:
         raise HTTPException(404, str(exc))
     except ValueError as exc:
@@ -125,7 +115,7 @@ async def nova_versao(documento_id: int, observacao: str | None = Form(default=N
         raise HTTPException(400, str(exc))
 
 
-def _file_response(versao_id: int, inline: bool):
+def _file_response(versao_id: int, inline: bool, user_id: int | None = None):
     try:
         row = service.arquivo_versao(versao_id)
     except LookupError as exc:
@@ -136,14 +126,15 @@ def _file_response(versao_id: int, inline: bool):
         raise HTTPException(404, "Arquivo físico não encontrado.")
     media = row.get("mime_type") or "application/octet-stream"
     disposition = "inline" if inline else "attachment"
+    service.registrar_acesso_arquivo(versao_id, user_id, "VISUALIZAR" if inline else "DOWNLOAD")
     return FileResponse(path, media_type=media, filename=row.get("nome_arquivo") or path.name, content_disposition_type=disposition)
 
 
 @router.get("/versoes/{versao_id}/visualizar")
 def visualizar(versao_id: int, _user=Depends(_user)):
-    return _file_response(versao_id, True)
+    return _file_response(versao_id, True, _user["id"])
 
 
 @router.get("/versoes/{versao_id}/download")
 def baixar(versao_id: int, _user=Depends(_user)):
-    return _file_response(versao_id, False)
+    return _file_response(versao_id, False, _user["id"])

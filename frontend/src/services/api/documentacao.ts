@@ -1,7 +1,7 @@
 import {API_URL,apiFetch} from './client';
 
 export type EmpresaDocumento={id:number;razao_social:string;nome_fantasia?:string|null;cnpj:string;regime_tributario?:string|null;ativo:number;municipio?:string|null;uf?:string|null;documentos_count:number};
-export type CategoriaDocumento={id:number;empresa_id:number;categoria_pai_id:number|null;nome:string;descricao?:string|null;ordem:number;ativo:number;documentos_count:number};
+export type CategoriaDocumento={id:number;empresa_id:number;categoria_pai_id:number|null;nome:string;descricao?:string|null;ordem:number;ativo:number;documentos_count:number;subpastas_count:number};
 export type Documento={id:number;empresa_id:number;categoria_id:number|null;tipo:string;nome:string;descricao?:string|null;categoria_nome?:string|null;versoes_count:number;ultima_versao?:number|null;ultima_versao_id?:number|null;nome_arquivo?:string|null;criado_em:string;atualizado_em:string};
 export type Versao={id:number;documento_id:number;versao:number;nome_arquivo?:string|null;caminho_arquivo:string;extensao?:string|null;tamanho?:number|null;hash_arquivo?:string|null;mime_type?:string|null;observacao?:string|null;usuario_upload_id?:number|null;usuario_nome?:string|null;usuario_email?:string|null;criado_em:string};
 
@@ -9,7 +9,6 @@ export async function listarEmpresasDocumentacao(params:URLSearchParams=new URLS
 export async function listarCategorias(empresaId:number){return apiFetch<{categorias:CategoriaDocumento[]}>(`/api/v1/documentacao/empresas/${empresaId}/categorias`)}
 export async function criarCategoria(empresaId:number,data:{nome:string;descricao?:string;categoria_pai_id?:number|null}){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/empresas/${empresaId}/categorias`,{method:'POST',body:JSON.stringify(data)})}
 export async function atualizarCategoria(categoriaId:number,data:{nome:string;descricao?:string}){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/categorias/${categoriaId}`,{method:'PUT',body:JSON.stringify(data)})}
-export async function moverCategoria(categoriaId:number,categoriaPaiId:number|null){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/categorias/${categoriaId}/mover`,{method:'PATCH',body:JSON.stringify({categoria_pai_id:categoriaPaiId})})}
 export async function arquivarCategoria(id:number){return apiFetch<CategoriaDocumento>(`/api/v1/documentacao/categorias/${id}`,{method:'DELETE'})}
 export async function arquivarDocumento(id:number){return apiFetch<Documento>(`/api/v1/documentacao/documentos/${id}`,{method:'DELETE'})}
 export async function listarDocumentos(empresaId:number,categoriaId?:number){const q=categoriaId?`?categoria_id=${categoriaId}`:'';return apiFetch<{documentos:Documento[]}>(`/api/v1/documentacao/empresas/${empresaId}/documentos${q}`)}

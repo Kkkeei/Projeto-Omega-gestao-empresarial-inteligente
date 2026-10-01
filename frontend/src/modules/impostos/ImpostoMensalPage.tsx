@@ -30,19 +30,6 @@ function dataBr(v?: string | null) {
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '—';
 }
 
-function statusLabel(v: string) {
-  return ({
-    PAGO: 'Pago',
-    A_VENCER: 'A vencer',
-    A_PAGAR: 'A pagar',
-    EM_ATRASO: 'Em atraso',
-    PENDENTE: 'Aguardando informação',
-    CREDOR: 'Credor',
-    SEM_MOVIMENTACAO: 'Sem movimentação',
-    SEM_APURACAO: 'Sem apuração',
-  } as Record<string, string>)[v] || v;
-}
-
 function Modal({
   children,
   onClose,
@@ -67,13 +54,11 @@ function Modal({
 function Field({
   label,
   value,
-  displayValue,
   edit,
   onChange,
 }: {
   label: string;
   value: string;
-  displayValue?: string;
   edit: boolean;
   onChange: (value: string) => void;
 }) {
@@ -83,7 +68,7 @@ function Field({
       {edit ? (
         <input value={value === '—' ? '' : value} onChange={(event) => onChange(event.target.value)} />
       ) : (
-        <strong>{displayValue ?? value}</strong>
+        <strong>{value}</strong>
       )}
     </label>
   );
@@ -135,7 +120,6 @@ function ConfirmModal({
   onConfirm,
   busy,
   onReplace,
-  tributoNome,
 }: {
   draft: any;
   setDraft: (value: any) => void;
@@ -143,7 +127,6 @@ function ConfirmModal({
   onConfirm: () => void;
   onReplace: () => void;
   busy: boolean;
-  tributoNome: string;
 }) {
   const ex = draft.extracao || {};
   const [edit, setEdit] = useState(false);
@@ -229,7 +212,6 @@ function ConfirmModal({
             <Field
               label="Vencimento"
               value={ex.vencimento_extraido || '—'}
-              displayValue={ex.vencimento_extraido ? dataBr(ex.vencimento_extraido) : '—'}
               edit={edit}
               onChange={(value) => updateExtracao('vencimento_extraido', value)}
             />
@@ -254,23 +236,8 @@ function ConfirmModal({
             <Field
               label="Data do pagamento"
               value={ex.data_pagamento_extraida || '—'}
-              displayValue={ex.data_pagamento_extraida ? dataBr(ex.data_pagamento_extraida) : '—'}
               edit={edit}
               onChange={(value) => updateExtracao('data_pagamento_extraida', value)}
-            />
-            <Field
-              label="Início da apuração"
-              value={ex.periodo_apuracao_inicio || '—'}
-              displayValue={ex.periodo_apuracao_inicio ? dataBr(ex.periodo_apuracao_inicio) : '—'}
-              edit={edit}
-              onChange={(value) => updateExtracao('periodo_apuracao_inicio', value)}
-            />
-            <Field
-              label="Fim da apuração"
-              value={ex.periodo_apuracao_fim || '—'}
-              displayValue={ex.periodo_apuracao_fim ? dataBr(ex.periodo_apuracao_fim) : '—'}
-              edit={edit}
-              onChange={(value) => updateExtracao('periodo_apuracao_fim', value)}
             />
           </div>
         </div>
@@ -281,7 +248,7 @@ function ConfirmModal({
             rows={6}
             value={
               draft.mensagem_cliente ||
-              `Prezado cliente,\n\nSegue em anexo a guia de ${tributoNome} referente à competência ${ex.competencia_extraida || ''}, com vencimento em ${
+              `Prezado cliente,\n\nSegue em anexo a guia referente à competência ${ex.competencia_extraida || ''}, com vencimento em ${
                 ex.vencimento_extraido ? dataBr(ex.vencimento_extraido) : ''
               }, no valor de ${ex.valor_extraido != null ? dinheiro(Number(ex.valor_extraido)) : 'R$ 0,00'}.\n\nQualquer dúvida estamos à disposição.\n\nAtenciosamente,\nEquipe Contábil`
             }
@@ -518,7 +485,7 @@ export function ImpostoMensalPage() {
           <span className="eyebrow">IMPOSTO · {data.competencia.label}</span>
           <h2>{titulo}</h2>
           <div className="imp-tax-detail-status">
-            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
+            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
             <span><CalendarDays size={13} /> {data.competencia.label}</span>
           </div>
         </div>
@@ -597,7 +564,7 @@ export function ImpostoMensalPage() {
               <div>
                 <span className="eyebrow">REGISTRO MENSAL</span>
                 <h3>{titulo} — {data.competencia.label}</h3>
-                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
+                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
               </div>
               <div className="imp-big-money">{dinheiro(mensal.valor)}</div>
             </div>
@@ -784,19 +751,7 @@ export function ImpostoMensalPage() {
       )}
 
       {confirmOpen && draft && (
-        <ConfirmModal
-          draft={draft}
-          setDraft={setDraft}
-          onBack={() => {
-            setConfirmOpen(false);
-            setModo('GUIA');
-            setModal(true);
-          }}
-          onConfirm={() => void confirm()}
-          onReplace={replaceFile}
-          busy={busy}
-          tributoNome={titulo}
-        />
+        <ConfirmModal draft={draft} setDraft={setDraft} onBack={() => setConfirmOpen(false)} onConfirm={() => void confirm()} onReplace={replaceFile} busy={busy} />
       )}
     </div>
   );
