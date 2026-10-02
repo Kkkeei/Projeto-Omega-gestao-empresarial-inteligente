@@ -53,27 +53,28 @@ def _configs() -> dict[str, dict]:
     return out
 
 
-def programar_notificacoes(empresa_id: int, imposto_mensal_id: int, tributo_nome: str, competencia_label: str, vencimento: str | None, valor: float | None) -> list[dict]:
-    if not vencimento:
-        return []
-    try:
-        venc = date.fromisoformat(vencimento[:10])
-    except ValueError:
-        return []
+def programar_notificacoes(empresa_id: int, imposto_mensal_id: int, tributo_nome: str, competencia_label: str, vencimento: str | None, valor: float | None, status: str | None = None) -> list[dict]:
+    venc = None
+    if vencimento:
+        try:
+            venc = date.fromisoformat(vencimento[:10])
+        except ValueError:
+            venc = None
     configs = _configs()
     eventos = []
+    pago = str(status or "").upper() == "PAGO"
     for publico, cfg in configs.items():
         prefixo = "cliente" if publico == "CLIENTE" else "contabilidade"
         if int(cfg.get("guia_enviada", 0)):
             agendado = datetime.now().isoformat(timespec="minutes")
             if not repository.notificacao_existe(imposto_mensal_id, publico, "GUIA_ENVIADA", agendado):
                 eventos.append(repository.registrar_notificacao(empresa_id, imposto_mensal_id, "GUIA_ENVIADA", "Guia registrada", f"A guia de {tributo_nome} da competência {competencia_label} foi registrada.", publico, agendado, "PROGRAMADA"))
-        if int(cfg.get("antes_vencimento", 0)):
+        if venc is not None and (not pago) and int(cfg.get("antes_vencimento", 0)):
             dia = venc - timedelta(days=int(cfg.get("dias_antes", 5)))
             agendado = dia.isoformat()
             if not repository.notificacao_existe(imposto_mensal_id, publico, "ANTES_VENCIMENTO", agendado):
                 eventos.append(repository.registrar_notificacao(empresa_id, imposto_mensal_id, "ANTES_VENCIMENTO", "Próximo do vencimento", f"A guia de {tributo_nome} vence em {venc.strftime('%d/%m/%Y')}.", publico, agendado, "PROGRAMADA"))
-        if int(cfg.get("dia_vencimento", 0)):
+        if venc is not None and (not pago) and int(cfg.get("dia_vencimento", 0)):
             agendado = venc.isoformat()
             if not repository.notificacao_existe(imposto_mensal_id, publico, "VENCIMENTO", agendado):
                 eventos.append(repository.registrar_notificacao(empresa_id, imposto_mensal_id, "VENCIMENTO", "Vencimento", f"A guia de {tributo_nome} vence hoje ({venc.strftime('%d/%m/%Y')}).", publico, agendado, "PROGRAMADA"))

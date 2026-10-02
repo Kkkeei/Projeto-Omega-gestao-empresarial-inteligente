@@ -1,5 +1,7 @@
 # ÔMEGA — Plataforma de Gestão Empresarial
 
+V2 criada a partir dos documentos de requisitos e da base real `dados/CADASTRO.xlsx`.
+
 ## Subir backend com Uvicorn
 
 ```bash

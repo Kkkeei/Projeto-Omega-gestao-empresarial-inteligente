@@ -171,7 +171,15 @@ def preparar_guia(empresa_id:int,tributo_id:int,ano:int,mes:int,arquivo,storage_
 def confirmar_guia(empresa_id:int,tributo_id:int,data:dict)->dict:
     doc_id=data["documento_id"]
     mensal=repository.obter_mensal(empresa_id,tributo_id,data["competencia_ano"],data["competencia_mes"])
-    if not mensal: mensal=repository.garantir_mensal(empresa_id,tributo_id,data["competencia_ano"],data["competencia_mes"])
+    if not mensal:
+        mensal=repository.garantir_mensal(empresa_id,tributo_id,data["competencia_ano"],data["competencia_mes"])
+    documento=repository.obter_documento(doc_id)
+    if not documento:
+        raise LookupError("Documento da guia não encontrado.")
+    if int(documento.get("imposto_mensal_id") or 0) != int(mensal.get("id") or 0):
+        raise ValueError("O documento não pertence à competência deste imposto.")
+    if str(documento.get("status_documento") or "").upper() != "RASCUNHO":
+        raise ValueError("A guia já foi confirmada ou não está disponível para confirmação.")
     venc=data.get("vencimento"); pag=data.get("data_pagamento")
     status="PAGO" if pag else "A_PAGAR"
     msg=data.get("mensagem_cliente")
@@ -188,5 +196,5 @@ def confirmar_guia(empresa_id:int,tributo_id:int,data:dict)->dict:
     # Obtém nome para a mensagem sem depender da camada HTTP.
     detal=repository.obter_mensal(empresa_id,tributo_id,data["competencia_ano"],data["competencia_mes"])
     tributo_nome=detal.get("nome","Imposto") if detal else "Imposto"
-    programar_notificacoes(empresa_id,mens["id"],tributo_nome,repository.competencia_label(data["competencia_ano"],data["competencia_mes"]),venc,data.get("valor"))
+    programar_notificacoes(empresa_id,mens["id"],tributo_nome,repository.competencia_label(data["competencia_ano"],data["competencia_mes"]),venc,data.get("valor"),mens.get("status"))
     return repository.obter_detalhe_imposto(empresa_id,tributo_id,data["competencia_ano"],data["competencia_mes"])

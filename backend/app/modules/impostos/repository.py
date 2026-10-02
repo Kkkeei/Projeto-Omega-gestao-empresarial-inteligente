@@ -10,7 +10,7 @@ from app.db.database import conectar_banco
 
 MESES = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
 ESFERAS = ("Federal", "Estadual", "Municipal")
-STATUS_FINAIS = {"PAGO", "CREDOR", "SEM_MOVIMENTACAO", "SEM_APURACAO"}
+STATUS_VALIDOS = {"PENDENTE", "A_PAGAR", "A_VENCER", "EM_ATRASO", "PAGO", "CREDOR", "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO"}
 
 
 def competencia_iso(ano: int, mes: int) -> str:
@@ -192,9 +192,10 @@ def listar_empresas_impostos(q: str | None, regime: str | None, situacao: str | 
                    ei.tributo_id,t.nome AS tributo_nome,t.esfera,
                    im.id AS imposto_mensal_id,im.status AS status_mensal,im.valor,im.data_vencimento
               FROM empresas e
-              LEFT JOIN empresa_impostos ei ON ei.empresa_id=e.id AND ei.status='ATIVO'
+              LEFT JOIN empresa_impostos ei ON ei.empresa_id=e.id
                  AND (ei.vigencia_inicio IS NULL OR substr(ei.vigencia_inicio,1,7) <= substr(?,1,7))
                  AND (ei.vigencia_fim IS NULL OR substr(ei.vigencia_fim,1,7) >= substr(?,1,7))
+                 AND (ei.status='ATIVO' OR ei.vigencia_fim IS NOT NULL)
               LEFT JOIN tributos t ON t.id=ei.tributo_id
               LEFT JOIN impostos_mensais im ON im.empresa_id=e.id AND im.tributo_id=ei.tributo_id
                  AND im.competencia_ano=? AND im.competencia_mes=?
@@ -445,12 +446,22 @@ def obter_detalhe_imposto(empresa_id:int,tributo_id:int,ano:int,mes:int)->dict[s
              ORDER BY d.id DESC
         """,(mensal["id"],)).fetchall()
         eventos=conn.execute("SELECT * FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico='CLIENTE' ORDER BY COALESCE(agendado_para,criado_em)",(mensal["id"],)).fetchall()
-        hist=conn.execute("SELECT * FROM impostos_historico WHERE imposto_mensal_id=? ORDER BY criado_em DESC LIMIT 30",(mensal["id"],)).fetchall()
+        hist=conn.execute("SELECT * FROM impostos_historico WHERE imposto_mensal_id=? ORDER BY id DESC LIMIT 30",(mensal["id"],)).fetchall()
         return {"empresa":dict(empresa),"tributo":dict(tributo),"competencia":{"ano":ano,"mes":mes,"label":competencia_label(ano,mes)},"mensal":mensal,"documentos":[dict(x) for x in docs],"notificacoes":[dict(x) for x in eventos],"historico":[dict(x) for x in hist]}
     finally: conn.close()
 
 
 def salvar_mensal(empresa_id:int,data:dict[str,Any],acao:str="ATUALIZACAO") -> dict[str,Any]:
+    status = str(data.get("status", "PENDENTE") or "PENDENTE").upper()
+    if status == "SEM_MOVIMENTO":
+        status = "SEM_MOVIMENTACAO"
+    if status not in STATUS_VALIDOS:
+        raise ValueError("Situação tributária inválida.")
+    data = {**data, "status": status}
+    if status == "PAGO" and not data.get("data_pagamento"):
+        raise ValueError("Um imposto pago precisa possuir a data de pagamento.")
+    if status != "PAGO" and data.get("data_pagamento"):
+        raise ValueError("A data de pagamento só pode existir quando a situação estiver como Pago.")
     conn=conectar_banco()
     try:
         comp = competencia_iso(int(data["competencia_ano"]), int(data["competencia_mes"]))
@@ -479,9 +490,18 @@ def salvar_mensal(empresa_id:int,data:dict[str,Any],acao:str="ATUALIZACAO") -> d
     finally: conn.close()
 
 
+def obter_documento(documento_id: int) -> dict[str, Any] | None:
+    conn = conectar_banco()
+    try:
+        row = conn.execute("SELECT * FROM documentos_impostos WHERE id=?", (documento_id,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def listar_historico_mensal(imposto_mensal_id:int)->list[dict[str,Any]]:
     conn=conectar_banco()
-    try: return [dict(x) for x in conn.execute("SELECT * FROM impostos_historico WHERE imposto_mensal_id=? ORDER BY criado_em DESC",(imposto_mensal_id,)).fetchall()]
+    try: return [dict(x) for x in conn.execute("SELECT * FROM impostos_historico WHERE imposto_mensal_id=? ORDER BY id DESC",(imposto_mensal_id,)).fetchall()]
     finally: conn.close()
 
 

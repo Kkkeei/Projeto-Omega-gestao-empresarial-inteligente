@@ -30,6 +30,19 @@ function dataBr(v?: string | null) {
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '—';
 }
 
+function statusLabel(v: string) {
+  return ({
+    PAGO: 'Pago',
+    A_VENCER: 'A vencer',
+    A_PAGAR: 'A pagar',
+    EM_ATRASO: 'Em atraso',
+    PENDENTE: 'Aguardando informação',
+    CREDOR: 'Credor',
+    SEM_MOVIMENTACAO: 'Sem movimentação',
+    SEM_APURACAO: 'Sem apuração',
+  } as Record<string, string>)[v] || v;
+}
+
 function Modal({
   children,
   onClose,
@@ -239,6 +252,18 @@ function ConfirmModal({
               edit={edit}
               onChange={(value) => updateExtracao('data_pagamento_extraida', value)}
             />
+            <Field
+              label="Início da apuração"
+              value={ex.periodo_apuracao_inicio || '—'}
+              edit={edit}
+              onChange={(value) => updateExtracao('periodo_apuracao_inicio', value)}
+            />
+            <Field
+              label="Fim da apuração"
+              value={ex.periodo_apuracao_fim || '—'}
+              edit={edit}
+              onChange={(value) => updateExtracao('periodo_apuracao_fim', value)}
+            />
           </div>
         </div>
 
@@ -315,7 +340,8 @@ export function ImpostoMensalPage() {
   }, [empresa, tributo, ano, mes, reload]);
 
   const mensal = data?.mensal;
-  const doc = data?.documentos?.[0] as DocumentoImposto | undefined;
+  const documentos = (data?.documentos || []) as DocumentoImposto[];
+  const doc = documentos[0];
   const titulo = data?.tributo.nome || 'Imposto';
   useEffect(() => { if (mensal) setBaseObs(mensal.observacao || ''); }, [mensal?.id, mensal?.observacao]);
 
@@ -437,6 +463,13 @@ export function ImpostoMensalPage() {
     }
   }
 
+  function openRegisterModal() {
+    setFile(null);
+    setModo('GUIA');
+    setDraft({observacao: mensal?.observacao || ''});
+    setModal(true);
+  }
+
   if (loading && !data) return <div className="page"><Loading /></div>;
   if (error && !data) return <div className="page"><ErrorState message={error} onRetry={() => void load()} /></div>;
   if (!data || !mensal) return null;
@@ -485,7 +518,7 @@ export function ImpostoMensalPage() {
           <span className="eyebrow">IMPOSTO · {data.competencia.label}</span>
           <h2>{titulo}</h2>
           <div className="imp-tax-detail-status">
-            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
+            <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
             <span><CalendarDays size={13} /> {data.competencia.label}</span>
           </div>
         </div>
@@ -494,9 +527,14 @@ export function ImpostoMensalPage() {
             <History size={13} /> Atualizar
           </button>
           {mensal.status_exibicao !== 'PENDENTE' && (
-            <button className="button secondary" onClick={abrirEdicao}>
-              <Edit3 size={13} /> Editar registro
-            </button>
+            <>
+              <button className="button secondary" onClick={abrirEdicao}>
+                <Edit3 size={13} /> Editar registro
+              </button>
+              <button className="button secondary" onClick={openRegisterModal}>
+                <UploadCloud size={13} /> Alterar registro
+              </button>
+            </>
           )}
           {['A_VENCER', 'EM_ATRASO'].includes(mensal.status_exibicao) && (
             <button className="button primary" onClick={() => void pay()}>
@@ -520,7 +558,7 @@ export function ImpostoMensalPage() {
         <div className="imp-tax-empty-grid">
           <div
             className="panel imp-upload-empty"
-            onClick={() => setModal(true)}
+            onClick={openRegisterModal}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault();
@@ -564,7 +602,7 @@ export function ImpostoMensalPage() {
               <div>
                 <span className="eyebrow">REGISTRO MENSAL</span>
                 <h3>{titulo} — {data.competencia.label}</h3>
-                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{mensal.status_exibicao}</span>
+                <span className={`imp-tax-status ${mensal.status_exibicao.toLowerCase()}`}>{statusLabel(mensal.status_exibicao)}</span>
               </div>
               <div className="imp-big-money">{dinheiro(mensal.valor)}</div>
             </div>
@@ -601,10 +639,32 @@ export function ImpostoMensalPage() {
                 <span>{doc.nome_arquivo} · {doc.enviado_em ? `Enviado em ${new Date(doc.enviado_em).toLocaleString('pt-BR')}` : (doc.criado_em ? new Date(doc.criado_em).toLocaleString('pt-BR') : 'Data não informada')} · {doc.usuario_upload_nome || 'Usuário do sistema'}</span>
               </div>
             </div>
-            <button className="button secondary" onClick={() => void baixarDocumento(doc.id)}>
-              <Download size={13} /> Baixar
-            </button>
+            <div className="imp-preview-actions">
+              <button className="button secondary" onClick={() => void visualizarDocumento(doc.id)}>Visualizar</button>
+              <button className="button secondary" onClick={() => void baixarDocumento(doc.id)}>
+                <Download size={13} /> Baixar
+              </button>
+            </div>
           </div>
+          {documentos.length > 1 && (
+            <div className="panel imp-document-history">
+              <h3>Versões / documentos anteriores</h3>
+              <div className="imp-document-list">
+                {documentos.slice(1).map((documento) => (
+                  <div className="imp-document-list-item" key={documento.id}>
+                    <div>
+                      <strong>{documento.nome_arquivo}</strong>
+                      <span>{documento.criado_em ? new Date(documento.criado_em).toLocaleString('pt-BR') : 'Data não informada'} · {documento.usuario_upload_nome || 'Usuário do sistema'}</span>
+                    </div>
+                    <div className="imp-preview-actions">
+                      <button className="imp-link-button" onClick={() => void visualizarDocumento(documento.id)}>Visualizar</button>
+                      <button className="imp-link-button" onClick={() => void baixarDocumento(documento.id)}>Baixar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="imp-tax-registered-grid imp-after-document">
             <div className="panel imp-document-info">
@@ -661,7 +721,7 @@ export function ImpostoMensalPage() {
           <div className="imp-dialog-head">
             <div>
               <span className="eyebrow">REGISTRO MENSAL</span>
-              <h3>Adicionar guia de pagamento — {titulo}</h3>
+              <h3>{mensal.status_exibicao === 'PENDENTE' ? 'Adicionar guia de pagamento' : 'Alterar registro mensal'} — {titulo}</h3>
             </div>
             <button className="icon-button" onClick={() => setModal(false)} aria-label="Fechar">
               <X size={14} />
@@ -751,7 +811,7 @@ export function ImpostoMensalPage() {
       )}
 
       {confirmOpen && draft && (
-        <ConfirmModal draft={draft} setDraft={setDraft} onBack={() => setConfirmOpen(false)} onConfirm={() => void confirm()} onReplace={replaceFile} busy={busy} />
+        <ConfirmModal draft={draft} setDraft={setDraft} onBack={() => { setConfirmOpen(false); setModal(true); }} onConfirm={() => void confirm()} onReplace={replaceFile} busy={busy} />
       )}
     </div>
   );

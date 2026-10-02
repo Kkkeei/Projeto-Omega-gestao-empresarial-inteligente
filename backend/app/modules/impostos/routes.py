@@ -81,9 +81,15 @@ def registrar_situacao(empresa_id:int,data:RegistroSituacaoCreate, tipo:str=Quer
 def marcar_pago(empresa_id:int,tributo_id:int,ano:int=Query(...),mes:int=Query(...)):
     try:
         mensal=repository.obter_mensal(empresa_id,tributo_id,ano,mes)
-        if not mensal: raise LookupError("Registro mensal não encontrado.")
+        if not mensal:
+            raise LookupError("Registro mensal não encontrado.")
+        if str(mensal.get("status") or "").upper() not in {"A_VENCER", "EM_ATRASO"}:
+            raise ValueError("O imposto só pode ser marcado como pago quando estiver a vencer ou em atraso.")
         return repository.salvar_mensal(empresa_id,{"tributo_id":tributo_id,"competencia_ano":ano,"competencia_mes":mes,"status":"PAGO","valor":mensal.get("valor"),"data_vencimento":mensal.get("data_vencimento"),"data_pagamento":__import__('datetime').date.today().isoformat(),"numero_documento":mensal.get("numero_documento"),"observacao":mensal.get("observacao")},"MARCAR_PAGO")
-    except LookupError as exc: raise HTTPException(404,str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400,str(exc)) from exc
 
 
 @router.get("/empresas/{empresa_id}/tributos/{tributo_id}")
