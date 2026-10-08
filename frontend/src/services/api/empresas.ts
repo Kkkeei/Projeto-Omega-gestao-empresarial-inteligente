@@ -1,0 +1,14 @@
+import { apiFetch } from './client';
+import type { Empresa, Historico, Certidao, Pendencia } from '../../types';
+export type EmpresaPayload = Partial<Omit<Empresa,'id'|'ativo'|'criado_em'|'atualizado_em'>> & {cnpj:string;razao_social:string};
+export const listarEmpresas=(q='')=>apiFetch<{total:number;empresas:Empresa[]}>(`/api/v1/empresas${q?`?q=${encodeURIComponent(q)}`:''}`);
+export const buscarEmpresa=(id:number)=>apiFetch<Empresa>(`/api/v1/empresas/${id}`);
+export const cadastrarEmpresa=(p:EmpresaPayload)=>apiFetch<Empresa>('/api/v1/empresas',{method:'POST',body:JSON.stringify(p)});
+export const atualizarEmpresa=(id:number,p:Partial<EmpresaPayload>)=>apiFetch<Empresa>(`/api/v1/empresas/${id}`,{method:'PUT',body:JSON.stringify(p)});
+export const inativarEmpresa=(id:number,data_saida:string,observacao='')=>apiFetch<Empresa>(`/api/v1/empresas/${id}/inativar`,{method:'POST',body:JSON.stringify({data_saida,observacao})});
+export const alterarRegime=(id:number,regime_tributario:string,mes_inicio:number,ano_inicio:number,observacao='')=>apiFetch<Empresa>(`/api/v1/empresas/${id}/regime`,{method:'POST',body:JSON.stringify({regime_tributario,mes_inicio,ano_inicio,observacao})});
+export const consultarCnpj=(cnpj:string)=>apiFetch<Record<string,any>>(`/api/v1/empresas/cnpj/${encodeURIComponent(cnpj)}/consulta`);
+export const sincronizarEmpresa=(id:number)=>apiFetch<{empresa:Empresa;alteracoes:Record<string,unknown>;origem:string}>(`/api/v1/empresas/${id}/sync`,{method:'POST'});
+export const historicoEmpresa=(id:number)=>apiFetch<{total:number;historico:Historico[]}>(`/api/v1/empresas/${id}/historico`);
+export const certidoesEmpresa=(id:number)=>apiFetch<{total:number;certidoes:Certidao[]}>(`/api/v1/empresas/${id}/certidoes`);
+export const pendenciasEmpresa=(id:number)=>apiFetch<{total:number;pendencias:Pendencia[]}>(`/api/v1/empresas/${id}/pendencias`);
