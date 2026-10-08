@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState,type FormEvent} from 'react';
 import {AlertTriangle,ArrowLeft,CheckCircle2,Clock3,Download,Eye,EyeOff,KeyRound,LockKeyhole,Plus,RefreshCw,Search,ShieldCheck,Smartphone,TestTube2,Trash2,Upload,Wifi,X} from 'lucide-react';
 import {useAuth} from '../../auth/AuthContext';
 import {listarEmpresasParaSelecao} from '../../services/api/certidoes';
-import {baixarA1,baixarSenhaA1,bridgeCertificates,bridgeSignTest,cadastrarA1,cadastrarA3,cadastrarPFA1,cadastrarPFA3,desativarCertificado,detalheCertificado,eventosCertificado,listarCertificados,obterSenhaA1,resumoCertificados,solicitarSubstituicao,testarCertificado,type BridgeCertificate,type Certificado,type CertificadoEvento} from '../../services/api/certificados';
+import {baixarA1,baixarSenhaA1,bridgeCertificates,bridgeDiagnostics,bridgeSignTest,cadastrarA1,cadastrarA3,cadastrarPFA1,cadastrarPFA3,desativarCertificado,detalheCertificado,eventosCertificado,listarCertificados,obterSenhaA1,resumoCertificados,solicitarSubstituicao,testarCertificado,type BridgeCertificate,type Certificado,type CertificadoEvento} from '../../services/api/certificados';
 import type {Empresa} from '../../types';
 
 function fmtDate(v?:string|null){if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('pt-BR');}
@@ -105,8 +105,16 @@ export function CertificadosPage(){
   }
 
   async function detectBridge(){
-    setBridgeLoading(true);setError('');
-    try{const r=await bridgeCertificates();setBridgeCerts(r.certificates);if(!r.certificates.length)setError('O Bridge respondeu, mas nenhum certificado A3 foi encontrado no dispositivo.')}
+    setBridgeLoading(true);setError('');setMessage('');
+    try{
+      const diag=await bridgeDiagnostics();
+      if(!diag.pcsc){throw new Error(diag.reader_error||'Nenhum leitor PC/SC foi encontrado. Conecte o leitor e confira o driver do cartão.')}
+      if(!diag.pkcs11_configured){throw new Error(diag.hint||'O leitor foi encontrado, mas o middleware PKCS#11 do cartão não foi localizado. Instale o SafeSign/SafeNet ou configure a DLL PKCS#11.')}
+      const r=await bridgeCertificates();
+      setBridgeCerts(r.certificates);
+      if(!r.certificates.length)setError('Leitor e middleware encontrados, mas nenhum certificado A3 foi encontrado no cartão/token.');
+      else setMessage(`${r.certificates.length} certificado(s) A3 encontrado(s) no dispositivo.`);
+    }
     catch(e){setError(e instanceof Error?e.message:'Não foi possível comunicar com o OMEGA Bridge.');setBridgeCerts([])}
     finally{setBridgeLoading(false)}
   }

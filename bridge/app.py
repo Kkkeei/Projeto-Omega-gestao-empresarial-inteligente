@@ -4,6 +4,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import platform
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -22,6 +24,32 @@ ALLOWED_ORIGINS = {
     ).split(",") if item.strip()
 }
 PKCS11_MODULE = os.getenv("OMEGA_PKCS11_MODULE", "").strip()
+
+
+def _pkcs11_candidates() -> list[str]:
+    """Return likely PKCS#11 modules, prioritizing an explicit configuration."""
+    if PKCS11_MODULE:
+        return [PKCS11_MODULE]
+    if platform.system().lower() == "windows":
+        return [
+            r"C:\Windows\System32\aetpkss1.dll",
+            r"C:\Windows\SysWOW64\aetpkss1.dll",
+            r"C:\Windows\System32\eTPKCS11.dll",
+            r"C:\Windows\SysWOW64\eTPKCS11.dll",
+        ]
+    return [
+        "/usr/lib/libaetpkss.so",
+        "/usr/lib/x86_64-linux-gnu/libaetpkss.so",
+        "/usr/lib/libeTPkcs11.so",
+        "/usr/lib/x86_64-linux-gnu/libeTPkcs11.so",
+    ]
+
+
+def _resolve_pkcs11_module() -> str | None:
+    for candidate in _pkcs11_candidates():
+        if Path(candidate).is_file():
+            return candidate
+    return None
 
 app = FastAPI(title="OMEGA Bridge", version=APP_VERSION)
 app.add_middleware(
@@ -59,11 +87,14 @@ def _readers():
 
 
 def _pkcs11():
-    if not PKCS11_MODULE:
-        raise HTTPException(503, "OMEGA_PKCS11_MODULE não configurado.")
+    module_path = _resolve_pkcs11_module()
+    if not module_path:
+        if PKCS11_MODULE:
+            raise HTTPException(503, f"Biblioteca PKCS#11 não encontrada: {PKCS11_MODULE}")
+        raise HTTPException(503, "Biblioteca PKCS#11 não encontrada. Instale o gerenciador do cartão (SafeSign/SafeNet) ou configure OMEGA_PKCS11_MODULE.")
     try:
         import pkcs11
-        return pkcs11, pkcs11.lib(PKCS11_MODULE)
+        return pkcs11, pkcs11.lib(module_path)
     except ImportError as exc:
         raise HTTPException(503, "python-pkcs11 não está instalado no Bridge.") from exc
     except Exception as exc:
@@ -102,7 +133,8 @@ def health():
         "bridge": "OMEGA Bridge",
         "version": APP_VERSION,
         "pcsc": _pcsc_available(),
-        "pkcs11_configured": bool(PKCS11_MODULE),
+        "pkcs11_configured": bool(_resolve_pkcs11_module()),
+        "pkcs11_module": _resolve_pkcs11_module(),
     }
 
 
@@ -113,6 +145,28 @@ def _pcsc_available():
         return True
     except Exception:
         return False
+
+
+@app.get("/diagnostics")
+def diagnostics(request: Request, authorization: str | None = Header(default=None)):
+    _check_origin(request.headers.get("origin"))
+    _check_token(authorization)
+    reader_names: list[str] = []
+    reader_error = None
+    try:
+        reader_names = _readers()
+    except HTTPException as exc:
+        reader_error = str(exc.detail)
+    module = _resolve_pkcs11_module()
+    return {
+        "platform": platform.platform(),
+        "pcsc": bool(reader_names),
+        "readers": reader_names,
+        "reader_error": reader_error,
+        "pkcs11_configured": bool(module),
+        "pkcs11_module": module,
+        "hint": "No Windows, cartão VALID com SafeSign normalmente usa C:\\Windows\\System32\\aetpkss1.dll; se o middleware for SafeNet, use eTPKCS11.dll." if platform.system().lower() == "windows" else None,
+    }
 
 
 @app.get("/readers")

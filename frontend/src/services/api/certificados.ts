@@ -59,7 +59,8 @@ export const baixarA1=async(id:number,filename:string,origem:'PJ'|'PF'='PJ')=>{
   document.body.appendChild(a); a.click(); a.remove(); window.setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 
-export type BridgeStatus={status:string;bridge:string;version:string;pcsc:boolean;pkcs11_configured:boolean};
+export type BridgeStatus={status:string;bridge:string;version:string;pcsc:boolean;pkcs11_configured:boolean;pkcs11_module?:string|null};
+export type BridgeDiagnostics={platform:string;pcsc:boolean;readers:string[];reader_error?:string|null;pkcs11_configured:boolean;pkcs11_module?:string|null;hint?:string|null};
 export type BridgeCertificate={slot:string;token_label:string;label?:string;id:string;subject:string;issuer:string;serial:string;thumbprint_sha256:string;valid_from:string;valid_to:string;documento_titular?:string|null;titular_tipo?:'PJ'|'PF'|'NAO_IDENTIFICADO'};
 export async function bridgeStatus(){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
@@ -67,6 +68,13 @@ export async function bridgeStatus(){
   const r=await fetch(`${base}/health`,{headers:token?{Authorization:`Bearer ${token}`}:{},});
   if(!r.ok) throw new Error(`Bridge HTTP ${r.status}`);
   return await r.json() as BridgeStatus;
+}
+export async function bridgeDiagnostics(){
+  const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
+  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'';
+  const r=await fetch(`${base}/diagnostics`,{headers:{Authorization:`Bearer ${token}`}});
+  if(!r.ok){let msg=`Bridge HTTP ${r.status}`;try{const j=await r.json();msg=j.detail||msg}catch{}throw new Error(msg)}
+  return await r.json() as BridgeDiagnostics;
 }
 export async function bridgeCertificates(){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
