@@ -124,7 +124,7 @@ def _file_response(versao_id: int, inline: bool, user_id: int | None = None):
         raise HTTPException(404, str(exc))
     storage_root = STORAGE_BASE.resolve()
     project_root = BASE_DIR.parent.resolve()
-    raw_path = Path(str(row.get("caminho_arquivo") or ""))
+    raw_path = Path(str(row.get("caminho_arquivo") or "").replace("\\", "/"))
     if raw_path.is_absolute():
         path = raw_path.resolve()
     else:
@@ -137,9 +137,9 @@ def _file_response(versao_id: int, inline: bool, user_id: int | None = None):
     except ValueError:
         raise HTTPException(404, "Arquivo fora do armazenamento permitido.")
     media = row.get("mime_type") or "application/octet-stream"
-    safe_inline = inline and media in {"application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp"}
+    safe_inline = inline and media in {"application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp", "text/plain", "text/csv"}
     disposition = "inline" if safe_inline else "attachment"
-    service.registrar_acesso_arquivo(versao_id, user_id, "VISUALIZAR" if inline else "DOWNLOAD")
+    service.registrar_acesso_arquivo(versao_id, user_id, "VISUALIZAR" if safe_inline else "DOWNLOAD")
     return FileResponse(path, media_type=media, filename=row.get("nome_arquivo") or path.name, content_disposition_type=disposition)
 
 

@@ -21,6 +21,8 @@ export const listarCertificados=async(empresaId?:number,tipo?:string)=>{
   const pf=await apiFetch<{total:number;certificados:Certificado[]}>('/api/v1/certificados/pf');
   return {total:pj.total+pf.total,certificados:[...pj.certificados,...pf.certificados]};
 };
+export type PessoaFisica={id:number;cpf:string;nome:string;email?:string|null;telefone?:string|null;ativo:number;certificados_count:number;certificado_id?:number|null;criado_em:string;atualizado_em:string};
+export const listarPessoasFisicas=()=>apiFetch<{pessoas:PessoaFisica[]}>('/api/v1/certificados/pf/pessoas');
 export const resumoCertificados=()=>apiFetch<{empresas_ativas:number;pessoas_fisicas_ativas:number;certificados_ativos:number;vencem_30_dias:number;vencem_7_dias:number;vencidos:number;empresas_sem_certificado:number;pessoas_fisicas_sem_certificado:number}>('/api/v1/certificados/resumo');
 export const detalheCertificado=(id:number,origem:'PJ'|'PF'='PJ')=>apiFetch<Certificado>(origem==='PF'?`/api/v1/certificados/pf/${id}`:`/api/v1/certificados/${id}`);
 export const eventosCertificado=(id:number,origem:'PJ'|'PF'='PJ')=>apiFetch<{total:number;eventos:CertificadoEvento[]}>(origem==='PF'?`/api/v1/certificados/pf/${id}/eventos`:`/api/v1/certificados/${id}/eventos`);
@@ -61,24 +63,24 @@ export const baixarA1=async(id:number,filename:string,origem:'PJ'|'PF'='PJ')=>{
 
 export type BridgeStatus={status:string;bridge:string;version:string;pcsc:boolean;pkcs11_configured:boolean;pkcs11_module?:string|null};
 export type BridgeDiagnostics={platform:string;pcsc:boolean;readers:string[];reader_error?:string|null;pkcs11_configured:boolean;pkcs11_module?:string|null;hint?:string|null};
-export type BridgeCertificate={slot:string;token_label:string;label?:string;id:string;subject:string;issuer:string;serial:string;thumbprint_sha256:string;valid_from:string;valid_to:string;documento_titular?:string|null;titular_tipo?:'PJ'|'PF'|'NAO_IDENTIFICADO'};
+export type BridgeCertificate={slot:string;token_label:string;label?:string;id:string;subject:string;nome_titular?:string;issuer:string;serial:string;thumbprint_sha256:string;valid_from:string;valid_to:string;documento_titular?:string|null;titular_tipo?:'PJ'|'PF'|'NAO_IDENTIFICADO'};
 export async function bridgeStatus(){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
-  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'';
+  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'omega-local-a3-bridge-v1';
   const r=await fetch(`${base}/health`,{headers:token?{Authorization:`Bearer ${token}`}:{},});
   if(!r.ok) throw new Error(`Bridge HTTP ${r.status}`);
   return await r.json() as BridgeStatus;
 }
 export async function bridgeDiagnostics(){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
-  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'';
+  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'omega-local-a3-bridge-v1';
   const r=await fetch(`${base}/diagnostics`,{headers:{Authorization:`Bearer ${token}`}});
   if(!r.ok){let msg=`Bridge HTTP ${r.status}`;try{const j=await r.json();msg=j.detail||msg}catch{}throw new Error(msg)}
   return await r.json() as BridgeDiagnostics;
 }
 export async function bridgeCertificates(){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
-  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'';
+  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'omega-local-a3-bridge-v1';
   const r=await fetch(`${base}/certificates`,{headers:{Authorization:`Bearer ${token}`}});
   if(!r.ok){let msg=`Bridge HTTP ${r.status}`;try{const j=await r.json();msg=j.detail||msg}catch{}throw new Error(msg)}
   return await r.json() as {total:number;certificates:BridgeCertificate[]};
@@ -86,7 +88,7 @@ export async function bridgeCertificates(){
 
 export async function bridgeSignTest(thumbprint:string,pin:string){
   const base=(import.meta.env.VITE_OMEGA_BRIDGE_URL||'http://127.0.0.1:8765').replace(/\/$/,'');
-  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'';
+  const token=import.meta.env.VITE_OMEGA_BRIDGE_TOKEN||'omega-local-a3-bridge-v1';
   const challenge=new Uint8Array(32); crypto.getRandomValues(challenge);
   let binary=''; challenge.forEach(b=>binary+=String.fromCharCode(b));
   const data_b64=btoa(binary);

@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import os
 import subprocess
+import shutil
+import tempfile
+import uuid
 import re
 import time
 from datetime import datetime
@@ -17,6 +20,8 @@ from typing import Any
 import pyperclip
 
 pyautogui = None
+_CHROME_PROCESS: subprocess.Popen | None = None
+_CHROME_PROFILE_DIR: Path | None = None
 
 def _get_pyautogui():
     global pyautogui
@@ -34,12 +39,25 @@ URL_SEFAZ_NARRATIVA = (
 CERTIFICADO_PADRAO = os.getenv("SEFAZ_CERTIFICADO_NOME", "OMEGA CONTABILIDADE")
 
 def _fechar_chrome_completo() -> None:
+    """Fecha somente a instância do Chrome aberta por esta automação."""
+    global _CHROME_PROCESS, _CHROME_PROFILE_DIR
     if os.getenv("OMEGA_CLOSE_CHROME_HARD", "true").strip().lower() not in {"1", "true", "sim", "yes"}:
         return
-    try:
-        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe", "/T"], capture_output=True, text=True, timeout=15)
-    except Exception:
-        pass
+    proc = _CHROME_PROCESS
+    profile = _CHROME_PROFILE_DIR
+    _CHROME_PROCESS = None
+    _CHROME_PROFILE_DIR = None
+    if proc is not None and proc.poll() is None and os.name == "nt":
+        try:
+            subprocess.run(["taskkill", "/F", "/PID", str(proc.pid), "/T"], capture_output=True, text=True, timeout=15)
+        except Exception:
+            pass
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
+    if profile is not None:
+        shutil.rmtree(profile, ignore_errors=True)
 
 STORAGE_BASE = Path(__file__).resolve().parents[3] / "storage" / "automacoes" / "sefaz_narrativa"
 
@@ -97,6 +115,38 @@ def _salvar_texto_debug(texto: str, cnpj: str) -> str | None:
     return str(caminho.resolve().relative_to(STORAGE_BASE.parent.parent.resolve()))
 
 
+def _abrir_chrome() -> None:
+    """Abre Chrome em um perfil isolado; a sequência PyAutoGUI permanece a mesma."""
+    global _CHROME_PROCESS, _CHROME_PROFILE_DIR
+    pg = _get_pyautogui()
+    if os.name == "nt":
+        candidatos = [
+            shutil.which("chrome.exe"),
+            os.path.join(os.environ.get("PROGRAMFILES", ""), "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        ]
+        chrome = next((c for c in candidatos if c and os.path.isfile(c)), None)
+        if chrome:
+            profile = Path(tempfile.gettempdir()) / f"omega_sefaz_chrome_{os.getpid()}_{uuid.uuid4().hex}"
+            profile.mkdir(parents=True, exist_ok=True)
+            try:
+                _CHROME_PROCESS = subprocess.Popen(
+                    [chrome, f"--user-data-dir={profile}", "--new-window", "--no-first-run", "--disable-session-crashed-bubble"],
+                    creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+                )
+                _CHROME_PROFILE_DIR = profile
+                time.sleep(float(os.getenv("SEFAZ_CHROME_START_WAIT", "4")))
+                return
+            except Exception:
+                shutil.rmtree(profile, ignore_errors=True)
+    pg.press('win')
+    time.sleep(1)
+    pg.write('chrome', interval=0.1)
+    time.sleep(1)
+    pg.press('enter')
+    time.sleep(float(os.getenv("SEFAZ_CHROME_START_WAIT", "4")))
+
 def _executar_automacao_interna(cnpj: str, certificado_nome: str | None = None) -> dict[str, Any]:
     """Executa o fluxo original e sempre fecha o Chrome ao final."""
     cnpj = re.sub(r"\D", "", cnpj or "")
@@ -110,14 +160,7 @@ def _executar_automacao_interna(cnpj: str, certificado_nome: str | None = None) 
     pg = _get_pyautogui()
 
     # --- FLUXO ORIGINAL: PRESERVADO ---
-    pg.press('win')
-    time.sleep(1)
-
-    pg.write('chrome', interval=0.1)
-    time.sleep(1)
-    pg.press('enter')
-
-    time.sleep(4)
+    _abrir_chrome()
 
     pg.hotkey('ctrl', 'l')
     time.sleep(0.5)

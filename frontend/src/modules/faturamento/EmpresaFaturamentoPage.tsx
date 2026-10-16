@@ -663,7 +663,7 @@ export function EmpresaFaturamentoPage() {
         defaultYear={ano}
         defaultMonth={selectedMes}
         initial={informarInicial}
-        existingFaturamentos={data.faturamentos}
+        existingFaturamentos={data.faturamentos.map((f) => ({ ...f, informado: true }))}
         onSaved={async (message) => {
           setSuccess(message);
           await load(ano);

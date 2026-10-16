@@ -35,3 +35,7 @@ Com o Bridge iniciado:
 ## Segurança
 
 O Bridge não deve ser exposto publicamente. Ele escuta apenas em `127.0.0.1`. Use um token aleatório longo e restrinja as origens permitidas.
+
+## Instalação final no Windows (sem terminal no uso diário)
+
+Baixe `OMEGA_A3_BRIDGE_WINDOWS.zip` pela tela de Certificados, extraia e dê duplo clique em `INSTALAR_OMEGA_A3.bat`. O instalador configura o Bridge para iniciar automaticamente no logon do Windows.

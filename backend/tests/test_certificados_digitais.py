@@ -88,7 +88,7 @@ def test_a3_never_creates_private_key_storage():
     c = service.cadastrar_a3(
         1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
         "AC TESTE", "ABC123", "2026-01-01", "2027-01-01",
-        "SHA256withRSA", None, "Token Teste", "slot-1", 1
+        "SHA256withRSA", "a" * 64, "Token Teste", "slot-1", 1
     )
     assert c["tipo"] == "A3"
     assert c["meio_armazenamento"] == "TOKEN"
@@ -136,7 +136,7 @@ def test_a3_pin_is_not_recoverable():
     c = service.cadastrar_a3(
         1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
         "AC TESTE", "ABC123", "2026-01-01", "2027-01-01",
-        "SHA256withRSA", None, "Token Teste", "slot-1", 1
+        "SHA256withRSA", "a" * 64, "Token Teste", "slot-1", 1
     )
     with pytest.raises(ValueError, match="Somente certificados A1"):
         service.obter_senha_a1(c["id"], 1)
@@ -191,3 +191,38 @@ def test_pf_a3_does_not_store_pin_or_private_key():
     assert c["tipo"] == "A3"
     assert c["apto_para_uso"] is True
     assert c.get("storage_ref") is None
+
+
+def test_a3_requires_real_sha256_thumbprint():
+    with pytest.raises(ValueError, match="thumbprint SHA-256"):
+        service.cadastrar_a3(
+            1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
+            "AC TESTE", "ABC123", "2026-01-01", "2027-01-01",
+            "SHA256withRSA", None, "Token Teste", "slot-1", 1
+        )
+
+
+def test_pf_a3_requires_validity_from_bridge():
+    with pytest.raises(ValueError, match="validade"):
+        service.cadastrar_pf_a3(
+            "52998224725", "MARIA TESTE", "CARTAO", "AC TESTE", "ABC123",
+            "2026-01-01", None, "SHA256withRSA", "a" * 64,
+            "Token Teste", "slot-1", 1,
+        )
+
+
+def test_pf_a3_expired_certificate_is_saved_as_not_usable():
+    expired_at = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    cert = service.cadastrar_pf_a3(
+        "52998224725", "MARIA DA SILVA", "CARTAO", "AC TESTE", "SERIE-EXP",
+        "2024-01-01", expired_at, "SHA256withRSA", "c" * 64, "Leitor A3", "slot-exp", 1,
+    )
+    assert cert["status"] == "EXPIRADO"
+    assert cert["apto_para_uso"] is False
+
+
+def test_a3_date_only_validity_last_day_is_not_treated_as_midnight_expiry():
+    today = datetime.now(timezone.utc).date().isoformat()
+    parsed = service._parse_a3_validity(today)
+    assert parsed.date().isoformat() == today
+    assert parsed.hour == 23 and parsed.minute == 59 and parsed.second == 59

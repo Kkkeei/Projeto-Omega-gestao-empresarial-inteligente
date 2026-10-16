@@ -43,31 +43,39 @@ export function EmpresaDetailPage() {
   if (!e) return <Loading />;
 
   async function sincronizar() {
+    if (!e) return;
+    const empresaId = e.id;
     setSync(true); setErr("");
-    try { const r = await sincronizarEmpresa(e.id); setE(r.empresa); await load(); }
+    try { const r = await sincronizarEmpresa(empresaId); setE(r.empresa); await load(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Falha na sincronização."); }
     finally { setSync(false); }
   }
 
   async function salvar(payload: EmpresaEditPayload) {
+    if (!e) return;
+    const empresaId = e.id;
     setSaving(true); setErr("");
-    try { setE(await atualizarEmpresa(e.id, payload)); setEdit(false); await load(); }
+    try { setE(await atualizarEmpresa(empresaId, payload)); setEdit(false); await load(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Falha ao atualizar."); }
     finally { setSaving(false); }
   }
 
   async function inativar() {
+    if (!e) return;
+    const empresaId = e.id;
     const dataSaida = window.prompt("Informe a data de saída (AAAA-MM-DD):");
     if (!dataSaida) return;
     const observacao = window.prompt("Observação (opcional):") || "";
     setErr("");
-    try { setE(await inativarEmpresa(e.id, dataSaida, observacao)); await load(); }
+    try { setE(await inativarEmpresa(empresaId, dataSaida, observacao)); await load(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Falha ao inativar."); }
   }
 
   async function regime(novo: string, mes: number, ano: number, observacao: string) {
+    if (!e) return;
+    const empresaId = e.id;
     setRegimeSaving(true); setErr("");
-    try { setE(await alterarRegime(e.id, novo, mes, ano, observacao)); setRegimeOpen(false); await load(); }
+    try { setE(await alterarRegime(empresaId, novo, mes, ano, observacao)); setRegimeOpen(false); await load(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Falha ao alterar regime."); }
     finally { setRegimeSaving(false); }
   }

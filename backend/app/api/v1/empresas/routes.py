@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.schemas.empresas import EmpresaCreate, EmpresaUpdate, InativarEmpresa, AlterarRegime
+from app.api.v1.auth.routes import admin_user
 from app.services.empresas_service import *
 import asyncio
 import os
@@ -35,7 +36,7 @@ def atualizar(empresa_id:int,dados:EmpresaUpdate):
     except LookupError as e: raise HTTPException(404,str(e))
 
 @router.post("/{empresa_id}/inativar")
-def inativar(empresa_id:int,dados:InativarEmpresa):
+def inativar(empresa_id:int,dados:InativarEmpresa,_admin=Depends(admin_user)):
     try:return inativar_empresa(empresa_id,dados.data_saida,dados.observacao)
     except (LookupError,ValueError) as e: raise HTTPException(400,str(e))
 
@@ -68,7 +69,7 @@ async def sincronizar(empresa_id:int):
     except Exception as e: raise HTTPException(502,f"Falha na sincronização: {e}")
 
 @router.post("/sync-todas")
-async def sincronizar_todas():
+async def sincronizar_todas(_admin=Depends(admin_user)):
     """Sincroniza uma empresa por vez, com intervalo, para reduzir 429 de provedores externos."""
     itens = listar_empresas(ativo=True)
     resultados = []

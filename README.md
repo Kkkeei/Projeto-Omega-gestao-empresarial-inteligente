@@ -1,142 +1,310 @@
-# ÔMEGA — Plataforma de Gestão Empresarial
+# Plataforma ÔMEGA
 
-V2 criada a partir dos documentos de requisitos e da base real `dados/CADASTRO.xlsx`.
+Plataforma de gestão empresarial com backend em FastAPI, frontend React/Vite/TypeScript, automações, gestão de empresas, certidões, documentação, faturamento, impostos e gerenciamento de Certificados Digitais A1/A3.
 
-## Subir backend com Uvicorn
+> Esta entrega prioriza estabilidade e preservação do que já funciona. O módulo NFS-e permanece como próxima etapa, após a validação do A3 em hardware real.
+
+## Estado desta entrega
+
+| Área | Situação |
+|---|---|
+| Backend FastAPI | Validado |
+| Banco SQLite | Validado em ambiente de teste |
+| Certificado A1 | Núcleo validado |
+| Pessoa Física | Estrutura separada implementada |
+| Certificado A3 | Cadastro e integração Bridge preparados |
+| OMEGA A3 Bridge | Testes unitários/HTTP básicos validados |
+| Hardware A3 real | Requer teste no Windows do cliente |
+| Frontend | Código entregue; build depende de Node/npm |
+| NFS-e | Próxima etapa |
+
+## Testes realizados nesta entrega
+
+Backend:
+
+```bash
+PYTHONPATH=backend OMEGA_ENV=test pytest -q backend/tests -ra
+```
+
+Resultado registrado nesta entrega:
+
+```text
+43 passed
+```
+
+Compilação:
+
+```bash
+python3 -m compileall -q backend bridge
+```
+
+Bridge:
+
+```bash
+PYTHONPATH=bridge pytest -q bridge/test_app.py -ra
+```
+
+Resultado:
+
+```text
+3 passed
+```
+
+O relatório completo está em:
+
+```text
+docs/AUDITORIA_FINAL_2026-10-08.md
+```
+
+## Estrutura
+
+```text
+OMEGA/
+├── backend/                 API FastAPI, banco e serviços
+├── frontend/                Interface React/Vite/TypeScript
+├── bridge/                  OMEGA A3 Bridge local
+├── docs/                    Documentação técnica e operacional
+├── scripts/                 Scripts de QA e release
+├── dados/                   Arquivos auxiliares do projeto
+├── docker-compose.yml
+└── LICENSE
+```
+
+## Backend
+
+O backend utiliza:
+
+- FastAPI
+- SQLite
+- JWT
+- Pydantic
+- Playwright
+- pypdf
+- cryptography
+- automações de certidões
+
+Instalação:
 
 ```bash
 cd backend
-source /run/media/davi/PROJETOS/meu_venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# confirme o DATABASE_URL no .env
-alembic upgrade head
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Swagger: http://localhost:8000/docs
-Health: http://localhost:8000/health
-
-## Importar as empresas da CADASTRO.xlsx
-
-Com o PostgreSQL e o banco `omega` criados:
+Configuração:
 
 ```bash
-cd backend
-python scripts/importar_cadastro.py
+cp .env.example .env
 ```
 
-O importador usa o CNPJ como chave, não duplica registros e marca a origem como `IMPORTACAO_CADASTRO`.
+Para certificados A1, configure uma chave Fernet própria:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Coloque o resultado em `OMEGA_CERTIFICADO_MASTER_KEY`.
+
+Em produção, essa chave é obrigatória.
+
+Inicialização:
+
+```bash
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
 
 ## Frontend
 
+Requer Node.js e npm.
+
 ```bash
 cd frontend
-npm install
+npm ci
+npm run build
 npm run dev
 ```
 
-O frontend usa `VITE_API_URL` representa apenas a origem do backend, por exemplo `http://localhost:8000`; os serviços acrescentam `/api/v1`.
+O arquivo `.env.example` define a URL do backend e a integração local com o Bridge.
 
-## Desenvolvimento local — SQLite
+## Certificados Digitais
 
-Esta versão usa SQLite por simplicidade no desenvolvimento e na apresentação. Não é necessário instalar PostgreSQL.
+### A1
 
-### Backend
+Fluxo:
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```text
+PFX/P12
+  -> validação da senha
+  -> leitura X.509
+  -> identificação do titular
+  -> validação CNPJ/CPF
+  -> criptografia
+  -> armazenamento privado
 ```
 
-Banco criado automaticamente em `backend/omega.db`.
+O PFX e a senha não são retornados no payload normal da API.
 
-### Importar CADASTRO.xlsx
+### A3
 
-Com o backend instalado:
+O A3 não envia PFX nem chave privada para o servidor.
+
+Fluxo:
+
+```text
+Cartão/token
+      |
+      v
+Middleware do fabricante
+      |
+      v
+PC/SC + PKCS#11
+      |
+      v
+OMEGA A3 Bridge
+      |
+      v
+ÔMEGA
+```
+
+O PIN só deve ser informado durante a operação criptográfica e não deve ser armazenado.
+
+## OMEGA A3 Bridge no Windows
+
+O pacote do Bridge está disponível dentro do frontend em:
+
+```text
+frontend/public/OMEGA_A3_BRIDGE_WINDOWS.zip
+```
+
+A instalação simplificada usa:
+
+```text
+bridge/INSTALAR_OMEGA_A3.bat
+```
+
+Após a instalação, o Bridge inicia automaticamente no logon do Windows.
+
+Leia:
+
+```text
+docs/GUIA_A3_WINDOWS.md
+```
+
+## Banco e migrações
+
+A aplicação possui inicialização idempotente e rotinas de migração para bancos legados.
+
+Uma correção importante evita executar diretamente:
+
+```sql
+ALTER TABLE ... ADD COLUMN ... DEFAULT CURRENT_TIMESTAMP
+```
+
+O SQLite não aceita esse tipo de default não constante em `ADD COLUMN`. A migração adiciona a coluna de forma segura e preenche os valores existentes explicitamente.
+
+Para ambientes de produção, recomenda-se futuramente migrar para migrations versionadas.
+
+## QA rápido
+
+Execute na raiz:
 
 ```bash
-cd backend
-python scripts/importar_cadastro.py
+./scripts/qa_release.sh
 ```
+
+Esse script valida:
+
+1. compilação Python;
+2. suíte backend;
+3. suíte do Bridge.
+
+O frontend deve ser validado separadamente com Node/npm:
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+## Segurança
+
+Nunca versionar:
+
+- `.env` real;
+- banco operacional;
+- certificados reais;
+- PFX/P12 reais;
+- senha de certificado;
+- PIN de A3;
+- chave Fernet de produção;
+- tokens de produção.
+
+O `.gitignore` deve permanecer ativo para esses arquivos.
+
+## Limitações conhecidas
+
+### Hardware A3
+
+A assinatura com cartão/token físico precisa ser validada em um Windows que possua:
+
+- leitor compatível;
+- cartão ou token A3;
+- middleware correto;
+- biblioteca PKCS#11 correspondente.
+
+O ambiente usado para a auditoria não possuía esse hardware, portanto esse teste não foi falsamente marcado como concluído.
 
 ### Frontend
 
-```bash
-cd frontend
-npm install
-npm run dev
+O build não foi executado neste ambiente porque o comando `npm` não estava disponível. O código e as dependências estão presentes no projeto.
+
+### Permissões por empresa
+
+A estrutura atual de usuários não possui ainda uma ACL formal usuário-empresa. Antes de uma operação multiusuário com carteiras isoladas, deve ser implementada uma política explícita de vínculo e autorização por empresa.
+
+## Próxima etapa: NFS-e
+
+O NFS-e deve consumir uma camada de assinatura abstrata, sem conhecer detalhes de:
+
+- PFX;
+- armazenamento criptografado;
+- PKCS#11;
+- leitor;
+- token;
+- cartão;
+- PIN;
+- Bridge.
+
+Arquitetura prevista:
+
+```text
+NFS-e
+  |
+  v
+CertificateService / Signer
+  |------------------|
+  v                  v
+A1Signer           A3Signer
+  |                  |
+PFX protegido      OMEGA Bridge
 ```
 
-O frontend usa os dados de demonstração enquanto a integração com a API não estiver conectada.
+Isso evita duplicar a lógica de certificados dentro do módulo fiscal.
 
-## Proteção do banco de dados na instalação
+## Documentação
 
-O pacote distribuído é **source-only** e **não contém `backend/omega.db` nem backups SQLite**. Ao descompactar/atualizar o projeto em um servidor que já possui dados, o banco existente não é substituído pelo pacote.
+Principais documentos:
 
-O backend usa `backend/omega.db` como arquivo de dados. A rotina `criar_tabelas()` cria apenas tabelas/índices que ainda não existem e não executa `DROP`, `DELETE` ou substituição do banco.
+```text
+docs/AUDITORIA_FINAL_2026-10-08.md
+docs/GUIA_A3_WINDOWS.md
+docs/CERTIFICADOS_A1_A3.md
+docs/CERTIFICADOS_A1_A3_EXTENSOES_2026-10-07.md
+docs/INSTALACAO_OMEGA_A3_WINDOWS.md
+docs/ARQUITETURA.md
+```
 
-**Regra de implantação:** descompacte o projeto sobre a instalação existente e mantenha o `backend/omega.db` do servidor. Não copie um banco de demonstração por cima do banco operacional.
+## Licença
 
-O `.gitignore` também bloqueia `*.db`, `*.sqlite` e `*.sqlite3` para reduzir o risco de versionar ou distribuir dados reais.
-
-## Certidão Estadual — SEFAZ-PE
-
-A Plataforma ÔMEGA agora possui integração do módulo de Certidões com a Certidão de Regularidade Fiscal da SEFAZ Pernambuco/e-Fisco.
-
-Fluxo: Empresa → Certidões → Certidão Estadual → Consultar → Playwright/e-Fisco → PDF → análise → banco/histórico → visualização.
-
-No backend, instale as dependências com `pip install -r backend/requirements.txt` e o navegador com `playwright install chromium`.
-
-## Persistência permanente de certidões
-
-O módulo de certidões mantém um histórico fiscal permanente e append-only. Cada consulta gera um registro em `consultas_certidoes` e um snapshot imutável em `certidoes_historico`. PDFs são armazenados com nome único e hash SHA-256, sem sobrescrever versões anteriores.
-
-A base SQLite usa WAL + `synchronous=FULL` e, após cada consulta registrada, o sistema cria uma cópia consistente e não sobrescrita em `storage/backups/database/AAAA/MM/`. Consultas, snapshots e documentos de certidão não podem ser apagados por SQL; a exclusão de uma empresa que possua histórico de certidões também é bloqueada.
-
-## Proteção contra consultas simultâneas
-
-A Central de Certidões agora usa um lock distribuído persistido no SQLite (`automacao_locks`). Como as automações visuais utilizam PyAutoGUI e controlam a sessão gráfica do Windows, somente uma automação de certidão pode executar por vez no servidor.
-
-- Segunda tentativa recebe HTTP 409 com mensagem amigável.
-- O lock funciona entre usuários e entre processos/workers do FastAPI.
-- O lock é liberado automaticamente ao concluir ou falhar a automação.
-- Locks abandonados por encerramento inesperado expiram automaticamente após o TTL configurado (`OMEGA_AUTOMACAO_LOCK_TTL_MINUTES`, padrão 240 minutos).
-- Endpoint de status: `GET /api/v1/certidoes/automacao/status`.
-- A interface consulta o status periodicamente e desabilita os botões enquanto outra automação estiver em execução.
-
-Essa proteção é necessária porque PyAutoGUI opera no teclado/mouse da máquina inteira e duas automações simultâneas poderiam misturar janelas, teclas, cliques e certificados.
-
-## Autenticação V5
-
-A plataforma possui fluxo completo de acesso:
-
-- Entrar
-- Criar conta
-- Esqueci minha senha
-- Redefinir senha por token de uso único
-- Alterar senha autenticado
-- Logout
-- Perfis ADMIN e USUARIO
-- Administração de usuários
-- Revogação de sessões
-- Auditoria de autenticação
-
-Rotas públicas do frontend: `/login`, `/registrar`, `/esqueci-senha`, `/redefinir-senha`.
-
-
-## Diagnóstico do cadastro
-O endpoint público de criação de conta é `POST /api/v1/auth/registrar`. Em desenvolvimento, o Vite faz proxy de `/api` para `http://127.0.0.1:8000`, evitando inconsistências de `VITE_API_URL`.
-
-
-## Módulo Documentação
-
-Implementada a área Documentação conforme os requisitos e UML entregues: empresas em cards compactos, filtros por regime, pastas por tipo de documento (Societário, Pessoal (Sócio), Imposto de Renda), categorias dinâmicas, upload, download, visualização e histórico de versões. Os PDFs de especificação ficam em `docs/especificacoes_documentacao/`.
-
-
-## Documentação — estrutura atual
-
-A área Documentação segue uma estrutura inspirada no Explorador de Arquivos do Windows. Cada empresa possui somente três pastas visíveis e oficiais: **Pessoal (Sócio)**, **Societário** e **IRPF**. Categorias antigas ou extras são arquivadas e não aparecem na navegação.
+MIT. Consulte `LICENSE`.

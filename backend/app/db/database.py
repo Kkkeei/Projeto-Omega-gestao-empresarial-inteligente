@@ -684,6 +684,143 @@ def criar_tabelas() -> None:
         CREATE INDEX IF NOT EXISTS idx_certificado_pf_uso_certificado ON certificado_pf_uso(certificado_id);
         """)
 
+        # ================================================================
+        # NFS-e / ADN - documentos importados e cursor de distribuição
+        # ================================================================
+        cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS nfse_sync (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem TEXT NOT NULL CHECK(origem IN ('PJ','PF')),
+            entidade_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            ultimo_nsu INTEGER NOT NULL DEFAULT 0,
+            max_nsu INTEGER,
+            ultimo_sync TEXT,
+            proxima_consulta_em TEXT,
+            status TEXT NOT NULL DEFAULT 'PRONTO',
+            mensagem TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(origem, entidade_id, provider)
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_documentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem TEXT NOT NULL CHECK(origem IN ('PJ','PF')),
+            entidade_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            nsu INTEGER,
+            schema TEXT,
+            chave_acesso TEXT,
+            numero TEXT,
+            data_emissao TEXT,
+            valor REAL,
+            situacao TEXT NOT NULL DEFAULT 'IMPORTADA',
+            xml_path TEXT,
+            resposta_json TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(origem, entidade_id, provider, nsu)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_nfse_sync_entidade ON nfse_sync(origem, entidade_id);
+        CREATE INDEX IF NOT EXISTS idx_nfse_docs_entidade ON nfse_documentos(origem, entidade_id, data_emissao);
+        CREATE INDEX IF NOT EXISTS idx_nfse_docs_chave ON nfse_documentos(chave_acesso);
+
+        -- Configuração e trilha de auditoria do fluxo de NFS-e. As tabelas são
+        -- adicionadas de forma não destrutiva para bancos já existentes.
+        CREATE TABLE IF NOT EXISTS nfse_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem TEXT NOT NULL CHECK(origem IN ('PJ','PF')),
+            entidade_id INTEGER NOT NULL,
+            sincronizacao_automatica INTEGER NOT NULL DEFAULT 0,
+            frequencia_horas INTEGER NOT NULL DEFAULT 24,
+            horario TEXT NOT NULL DEFAULT '02:00',
+            proxima_execucao_em TEXT,
+            atualizado_por INTEGER,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(origem, entidade_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_sync_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem TEXT NOT NULL CHECK(origem IN ('PJ','PF')),
+            entidade_id INTEGER NOT NULL,
+            provider TEXT NOT NULL,
+            inicio TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            fim TEXT,
+            status TEXT NOT NULL DEFAULT 'EM_ANDAMENTO',
+            mensagem TEXT,
+            documentos_encontrados INTEGER NOT NULL DEFAULT 0,
+            documentos_importados INTEGER NOT NULL DEFAULT 0,
+            nsu_inicio INTEGER,
+            nsu_fim INTEGER,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_competencias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem TEXT NOT NULL CHECK(origem IN ('PJ','PF')),
+            entidade_id INTEGER NOT NULL,
+            competencia TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            conferencias_json TEXT NOT NULL DEFAULT '{}',
+            observacao TEXT,
+            fechado_por INTEGER,
+            fechado_em TEXT,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(origem, entidade_id, competencia)
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_eventos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nfse_id INTEGER NOT NULL,
+            tipo_evento TEXT NOT NULL,
+            descricao TEXT,
+            data_evento TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            origem TEXT NOT NULL DEFAULT 'SISTEMA',
+            dados_json TEXT,
+            usuario_id INTEGER,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (nfse_id) REFERENCES nfse_documentos(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_lancamentos_contabeis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nfse_id INTEGER NOT NULL UNIQUE,
+            data_lancamento TEXT,
+            conta_debito TEXT,
+            conta_credito TEXT,
+            historico TEXT,
+            valor REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'RASCUNHO',
+            observacao TEXT,
+            criado_por INTEGER,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (nfse_id) REFERENCES nfse_documentos(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS nfse_lotes_sincronizacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            competencia TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'NA_FILA',
+            total INTEGER NOT NULL DEFAULT 0,
+            processados INTEGER NOT NULL DEFAULT 0,
+            atual TEXT,
+            resultado_json TEXT NOT NULL DEFAULT '[]',
+            solicitado_por INTEGER,
+            iniciado_em TEXT,
+            finalizado_em TEXT,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_nfse_sync_hist_entidade ON nfse_sync_historico(origem, entidade_id, inicio);
+        CREATE INDEX IF NOT EXISTS idx_nfse_comp_entidade ON nfse_competencias(origem, entidade_id, competencia);
+        CREATE INDEX IF NOT EXISTS idx_nfse_eventos_documento ON nfse_eventos(nfse_id, data_evento);
+        """)
+
         # Migrations for Faturamento. Nunca remover dados existentes.
         colunas_faturamentos = {r[1] for r in conexao.execute("PRAGMA table_info(faturamentos)").fetchall()}
         if "data_faturamento" not in colunas_faturamentos:

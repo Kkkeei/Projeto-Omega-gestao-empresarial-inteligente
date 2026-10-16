@@ -1,0 +1,49 @@
+ATUALIZACAO DO MODULO NFS-e — 14/10/2026
+
+Este pacote contem somente arquivos-fonte relacionados ao painel NFS-e e suas integracoes. Ele NAO contem nem substitui backend/omega.db, arquivos .env, certificados, chaves ou documentos em storage/. Preserve esses itens no projeto atual.
+
+COMO APLICAR NO LINUX:
+1. Pare o backend e o frontend.
+2. Abra a pasta-raiz atual do OMEGA.V2 (a mesma que contem backend/ e frontend/).
+3. Faça uma copia de seguranca dos arquivos listados no pacote.
+4. Extraia o ZIP sobre a pasta-raiz e aceite substituir os arquivos de mesmo caminho.
+5. No backend, ative a .venv e rode:
+   cd backend
+   python -m py_compile app/modules/nfse/service.py app/modules/nfse/routes.py app/db/database.py main.py
+   pytest -q tests/test_nfse.py tests/test_health.py tests/test_api.py
+6. No frontend, com acesso ao npm registry:
+   cd ../frontend
+   npm ci
+   npm run build
+7. Reinicie o backend e frontend pelos comandos que voce ja usa.
+8. Teste primeiro em ambiente local, com uma copia de seguranca do banco. Nao copie um banco do pacote (nao existe banco neste ZIP) por cima do seu.
+
+O backend inicializa as tabelas extras com CREATE TABLE IF NOT EXISTS. Nao e necessario trocar o SQLite nem executar migracao destrutiva.
+
+RECURSOS INCLUIDOS:
+- Painel geral por competencia, pesquisa e filtros de status.
+- Visao de NFS-e prestadas e tomadas, totais, situacoes e origens.
+- Resumo fiscal/retencoes a partir dos campos encontrados nos XMLs.
+- Sincronizacao em lote com acompanhamento de progresso e historico.
+- Configuracao opcional de sincronizacao automatica (desligada por padrao).
+- Importacao de XML anexado a arquivo .eml salvo localmente; nao conecta a caixas de e-mail nem guarda senhas.
+- Exportacao Excel e download dos XMLs selecionados em ZIP.
+- Alertas, checklist de fechamento por competencia, eventos e rascunho de vinculo contabil.
+- Consulta oficial de eventos pelo ADN usando A1, ou o Bridge local para A3.
+- Atalho para Consulta Publica nacional para visualizar/baixar DANFSe pela chave.
+
+LIMITACOES IMPORTANTES:
+- A captura A3 necessita do OMEGA Bridge na maquina que tem o cartao/token. Rotinas agendadas no servidor nao usam diretamente o dispositivo fisico.
+- A importacao de e-mail processa apenas arquivos .eml que o usuario seleciona e anexos XML; nao consulta IMAP/Exchange automaticamente.
+- O atalho DANFSe abre o portal publico oficial e nao fabrica PDF local. O portal pode solicitar verificacao de seguranca.
+- A sincronizacao automatica fica desativada ate que seja ativada na configuracao do titular.
+- Os alertas de numeracao sao apenas possiveis lacunas; nao afirmam que uma nota ausente existe.
+- Os calculos exibidos sao somas dos dados extraidos do XML; nao substituem apuracao ou validacao tributaria profissional.
+- O vinculo contabil e salvo como RASCUNHO; nao grava automaticamente no livro/razao.
+- Build React/Vite deve ser executado no seu ambiente com dependencias instaladas. Nesta sessao, o build completo nao foi confirmado porque nao foi possivel terminar a instalacao das dependencias frontend.
+
+TESTES NESTA SESSAO:
+- py_compile dos modulos Python alterados: aprovado.
+- Testes NFS-e/API/saude: 38 passaram.
+- Suite completa: 85 passaram e 1 falhou no teste preexistente tests/test_brasilapi.py::test_brasilapi_resposta_json_invalida_gera_erro_controlado, em backend/app/services/brasilapi.py, fora do escopo NFS-e.
+- Sintaxe dos dois arquivos TypeScript/TSX alterados verificada por transpile: aprovada. O build de tipos completo continua pendente do npm ci + npm run build no computador local.

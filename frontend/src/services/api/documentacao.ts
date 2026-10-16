@@ -19,6 +19,37 @@ export function documentoVisualizarUrl(versaoId:number){return `${API_URL}/api/v
 export function documentoDownloadUrl(versaoId:number){return `${API_URL}/api/v1/documentacao/versoes/${versaoId}/download`}
 export async function baixarArquivo(versaoId:number){const token=localStorage.getItem('omega_access_token');const r=await fetch(documentoDownloadUrl(versaoId),{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!r.ok) throw new Error('Não foi possível baixar o arquivo.');return {blob:await r.blob(),name:r.headers.get('content-disposition')||'documento'};}
 
-async function arquivoBlob(versaoId:number){const token=localStorage.getItem('omega_access_token');const r=await fetch(documentoDownloadUrl(versaoId),{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!r.ok) throw new Error('Não foi possível acessar o arquivo.');return {blob:await r.blob(),contentDisposition:r.headers.get('content-disposition')||''};}
-export async function visualizarVersao(versaoId:number){const r=await arquivoBlob(versaoId);const url=URL.createObjectURL(r.blob);window.open(url,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(url),60000);}
+async function arquivoBlob(versaoId:number){
+ const token=localStorage.getItem('omega_access_token');
+ const r=await fetch(documentoDownloadUrl(versaoId),{headers:token?{Authorization:`Bearer ${token}`}:{}});
+ if(!r.ok) throw new Error('Não foi possível acessar o arquivo.');
+ return {blob:await r.blob(),contentDisposition:r.headers.get('content-disposition')||'',contentType:r.headers.get('content-type')||'application/octet-stream'};
+}
+
+const BROWSER_PREVIEW_TYPES = new Set(['application/pdf','image/png','image/jpeg','image/gif','image/webp','text/plain','text/csv']);
+
+export async function visualizarVersao(versaoId:number){
+ const r=await arquivoBlob(versaoId);
+ if(!BROWSER_PREVIEW_TYPES.has(r.contentType.split(';',1)[0].trim().toLowerCase())){
+   const url=URL.createObjectURL(r.blob);
+   const a=document.createElement('a');
+   a.href=url;
+   a.download=nomeArquivoDoHeader(r.contentDisposition)||`documento_${versaoId}`;
+   document.body.appendChild(a);
+   a.click();
+   a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+   return;
+ }
+ const url=URL.createObjectURL(r.blob);
+ window.open(url,'_blank','noopener,noreferrer');
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+function nomeArquivoDoHeader(value:string){
+ const utf8=value.match(/filename\*=UTF-8''([^;]+)/i);
+ if(utf8?.[1]){try{return decodeURIComponent(utf8[1]);}catch{}}
+ const ascii=value.match(/filename="?([^";]+)"?/i);
+ return ascii?.[1]||'';
+}
 export async function baixarVersao(versaoId:number,nome?:string){const r=await arquivoBlob(versaoId);const url=URL.createObjectURL(r.blob);const a=document.createElement('a');a.href=url;a.download=nome||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}

@@ -41,7 +41,19 @@ async def consultar_cnpj(cnpj: str) -> dict:
                     await asyncio.sleep(espera)
                     continue
                 response.raise_for_status()
-                return response.json()
+                try:
+                    payload = response.json()
+                except (ValueError, json.JSONDecodeError) as exc:
+                    raise BrasilAPIError(
+                        "BrasilAPI retornou uma resposta inválida (JSON malformado).",
+                        502,
+                    ) from exc
+                if not isinstance(payload, dict):
+                    raise BrasilAPIError(
+                        "BrasilAPI retornou uma resposta inválida (formato inesperado).",
+                        502,
+                    )
+                return payload
             except httpx.TimeoutException as exc:
                 ultimo_erro = exc
                 if tentativa >= MAX_RETRIES:

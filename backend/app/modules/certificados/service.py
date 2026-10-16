@@ -70,6 +70,28 @@ def _normalizar_documento(value: str | None) -> str:
     return re.sub(r"\D", "", value or "")
 
 
+def _parse_a3_validity(value: str) -> datetime:
+    """Parse validade retornada pelo Bridge sem perder hora/fuso.
+
+    Se o Bridge ou uma integração legada retornar apenas YYYY-MM-DD, considera
+    a validade até o fim daquele dia em UTC, e não desde meia-noite.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("O Bridge não informou a validade do certificado. Não é possível habilitar o A3 sem esse dado.")
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("Data de validade do A3 inválida. Detecte novamente o certificado no Bridge.") from exc
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        parsed = parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+
+
 def _subject_value(cert, oid) -> str | None:
     attrs = cert.subject.get_attributes_for_oid(oid)
     return attrs[0].value if attrs else None
@@ -300,21 +322,33 @@ def cadastrar_a3(empresa_id: int, meio: str, titular_tipo: str, documento: str |
         raise ValueError("Para A3, o meio deve ser CARTAO ou TOKEN.")
     titular_tipo = titular_tipo.upper()
     document = _normalizar_documento(documento)
-    apto = False
-    status = "NAO_VINCULADO"
-    if titular_tipo == "PJ":
-        ok, msg = _compatibilidade(empresa, document)
-        if not ok:
-            raise ValueError(msg)
-        apto = True
-        status = "ATIVO"
-    elif titular_tipo == "PF":
-        # O projeto ainda não possui relação formal de representação PF -> PJ.
-        # O certificado pode ser cadastrado como metadado, mas não fica apto a uso.
+    if titular_tipo != "PJ":
+        raise ValueError("O certificado cadastrado em uma empresa precisa identificar uma pessoa jurídica. Para PF, use o cadastro de Pessoa Física.")
+    ok, msg = _compatibilidade(empresa, document)
+    if not ok:
+        raise ValueError(msg)
+    thumbprint = (thumbprint_sha256 or "").strip().lower()
+    # Cadastro declarativo: o usuário informa que utiliza A3, sem acessar o cartão.
+    # Só fica apto para uso após vínculo técnico posterior com o Bridge.
+    if not thumbprint:
+        thumbprint_sha256 = None
+        data_emissao = None
+        data_validade = None
+        emissor = None
+        numero_serie = None
+        algoritmo = None
+        dispositivo_modelo = None
+        dispositivo_identificador = None
         apto = False
         status = "NAO_VINCULADO"
     else:
-        raise ValueError("Titular inválido. Informe PJ ou PF.")
+        if not re.fullmatch(r"[0-9a-f]{64}", thumbprint):
+            raise ValueError("Thumbprint SHA-256 inválido.")
+        dt_validade = _parse_a3_validity(data_validade)
+        expired = dt_validade < datetime.now(timezone.utc)
+        apto = not expired
+        status = "EXPIRADO" if expired else "ATIVO"
+        thumbprint_sha256 = thumbprint
     with conectar_banco() as conn:
         old = _check_replace(conn, empresa_id, "A3")
         if old:
@@ -559,6 +593,39 @@ def _get_or_create_pf(conn, cpf: str, nome: str, email: str | None = None, telef
     return int(cur.lastrowid)
 
 
+def listar_pessoas_fisicas():
+    """Lista pessoas físicas ativas, mesmo quando ainda não possuem certificado."""
+    with conectar_banco() as conn:
+        pessoas = conn.execute(
+            """SELECT p.id, p.cpf, p.nome, p.email, p.telefone, p.ativo,
+                      p.criado_em, p.atualizado_em,
+                      (SELECT COUNT(*) FROM certificados_pf c WHERE c.pessoa_id=p.id AND c.status <> 'INATIVO') certificados_count,
+                      (SELECT c.id FROM certificados_pf c WHERE c.pessoa_id=p.id AND c.status='ATIVO'
+                       ORDER BY CASE c.tipo WHEN 'A3' THEN 0 ELSE 1 END, c.data_validade DESC LIMIT 1) certificado_id
+                 FROM pessoas_fisicas p
+                WHERE p.ativo=1
+                ORDER BY p.nome"""
+        ).fetchall()
+        return [dict(r) for r in pessoas]
+
+
+def listar_pf_por_pessoa(pessoa_id: int, tipo: str | None = None):
+    with conectar_banco() as conn:
+        sql = """SELECT c.*,p.cpf,p.nome pessoa_nome,p.email pessoa_email,p.telefone pessoa_telefone
+               FROM certificados_pf c JOIN pessoas_fisicas p ON p.id=c.pessoa_id
+              WHERE p.ativo=1 AND c.pessoa_id=?"""
+        params: list[Any] = [pessoa_id]
+        if tipo:
+            sql += " AND c.tipo=?"
+            params.append(tipo)
+        sql += " ORDER BY CASE c.status WHEN 'ATIVO' THEN 0 WHEN 'NAO_VINCULADO' THEN 1 WHEN 'EXPIRADO' THEN 2 ELSE 3 END, c.data_validade DESC"
+        result=[]
+        for r in conn.execute(sql, params).fetchall():
+            item=_pf_public(dict(r))
+            item.update({"razao_social": r["pessoa_nome"], "cnpj": None, "cpf": r["cpf"], "pessoa_nome": r["pessoa_nome"]})
+            result.append(item)
+        return result
+
 def listar_pf():
     with conectar_banco() as conn:
         rows = conn.execute(
@@ -679,21 +746,25 @@ def cadastrar_pf_a3(cpf: str, nome: str, meio: str, emissor: str | None, numero_
     meio = meio.upper()
     if meio not in {"CARTAO", "TOKEN"}:
         raise ValueError("Para A3, o meio deve ser CARTAO ou TOKEN.")
+    thumbprint_sha256 = (thumbprint_sha256 or "").strip().lower()
+    if not thumbprint_sha256:
+        # Apenas marca o titular como usuário de A3; não consulta Bridge nem guarda PIN.
+        emissor = numero_serie = data_emissao = data_validade = algoritmo = None
+        dispositivo_modelo = dispositivo_identificador = None
+        status = "NAO_VINCULADO"
+        apto = False
+    else:
+        if not re.fullmatch(r"[0-9a-f]{64}", thumbprint_sha256):
+            raise ValueError("Thumbprint SHA-256 inválido.")
+        dt_validade = _parse_a3_validity(data_validade)
+        status = "EXPIRADO" if dt_validade < datetime.now(timezone.utc) else "ATIVO"
+        apto = status == "ATIVO"
     with conectar_banco() as conn:
         pessoa_id = _get_or_create_pf(conn, cpf, nome, email, telefone)
         old = _check_replace_pf(conn, pessoa_id, "A3")
         if old:
             conn.execute("UPDATE certificados_pf SET status='INATIVO',apto_para_uso=0,atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (old["id"],))
             _pf_evento(conn, old["id"], "SUBSTITUIDO", user_id, "Certificado PF A3 substituído por novo certificado.")
-        status = "ATIVO"
-        apto = True
-        if data_validade:
-            try:
-                dt = datetime.fromisoformat(data_validade.replace("Z", "+00:00"))
-                if dt.date() < datetime.now(timezone.utc).date():
-                    status, apto = "EXPIRADO", False
-            except Exception:
-                pass
         cur = conn.execute(
             """INSERT INTO certificados_pf
             (pessoa_id,tipo,meio_armazenamento,nome_titular,documento_titular,emissor,numero_serie,thumbprint_sha256,algoritmo,
@@ -703,7 +774,7 @@ def cadastrar_pf_a3(cpf: str, nome: str, meio: str, emissor: str | None, numero_
              dispositivo_modelo,dispositivo_identificador,user_id),
         )
         cert_id = int(cur.lastrowid)
-        _pf_evento(conn, cert_id, "CADASTRADO", user_id, "Identidade A3 de pessoa física cadastrada. A chave privada permanece no dispositivo.", {"meio": meio})
+        _pf_evento(conn, cert_id, "CADASTRADO", user_id, "Tipo A3 cadastrado; vínculo técnico com cartão/token pendente.", {"meio": meio, "apto_para_uso": apto})
         conn.commit()
     return obter_pf(cert_id)
 

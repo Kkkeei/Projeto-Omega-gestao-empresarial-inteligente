@@ -5,6 +5,8 @@ import shutil
 import time
 import asyncio
 import subprocess
+import tempfile
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,9 @@ from app.services.sefaz_pe_service import limpar_cnpj, formatar_cnpj
 PORTAL_URL = "https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cnpj"
 BASE_DIR = Path(__file__).resolve().parents[2]
 STORAGE_ROOT = BASE_DIR.parent / "storage" / "certidoes" / "federal"
+
+_CHROME_PROCESS: subprocess.Popen | None = None
+_CHROME_PROFILE_DIR: Path | None = None
 
 
 def _gui():
@@ -27,18 +32,25 @@ def _gui():
 
 
 def _fechar_chrome_completo() -> None:
-    """Fecha o Chrome ao final da automação no Windows.
-
-    O fluxo federal usa PyAutoGUI e pode reutilizar uma instância existente do
-    Chrome. Para impedir que a sessão gráfica fique presa, encerramos o processo
-    ao final. O comportamento é controlado por OMEGA_CLOSE_CHROME_HARD (default=true).
-    """
+    """Fecha somente a instância do Chrome aberta por esta automação."""
+    global _CHROME_PROCESS, _CHROME_PROFILE_DIR
     if os.getenv("OMEGA_CLOSE_CHROME_HARD", "true").strip().lower() not in {"1", "true", "sim", "yes"}:
         return
-    try:
-        subprocess.run(["taskkill", "/F", "/IM", "chrome.exe", "/T"], capture_output=True, text=True, timeout=15)
-    except Exception:
-        pass
+    proc = _CHROME_PROCESS
+    profile = _CHROME_PROFILE_DIR
+    _CHROME_PROCESS = None
+    _CHROME_PROFILE_DIR = None
+    if proc is not None and proc.poll() is None and os.name == "nt":
+        try:
+            subprocess.run(["taskkill", "/F", "/PID", str(proc.pid), "/T"], capture_output=True, text=True, timeout=15)
+        except Exception:
+            pass
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
+    if profile is not None:
+        shutil.rmtree(profile, ignore_errors=True)
 
 def _tipo_federal_id(conexao):
     row = conexao.execute(
@@ -105,13 +117,37 @@ def _copiar_clipboard() -> str:
 
 
 def _abrir_chrome() -> None:
+    """Abre Chrome em um perfil isolado para que seu processo possa ser encerrado com segurança."""
+    global _CHROME_PROCESS, _CHROME_PROFILE_DIR
     pyautogui, _ = _gui()
+    if os.name == "nt":
+        candidatos = [
+            shutil.which("chrome.exe"),
+            os.path.join(os.environ.get("PROGRAMFILES", ""), "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "Application", "chrome.exe"),
+        ]
+        chrome = next((c for c in candidatos if c and os.path.isfile(c)), None)
+        if chrome:
+            profile = Path(tempfile.gettempdir()) / f"omega_rfb_chrome_{os.getpid()}_{uuid.uuid4().hex}"
+            profile.mkdir(parents=True, exist_ok=True)
+            try:
+                _CHROME_PROCESS = subprocess.Popen(
+                    [chrome, f"--user-data-dir={profile}", "--new-window", "--no-first-run", "--disable-session-crashed-bubble"],
+                    creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+                )
+                _CHROME_PROFILE_DIR = profile
+                time.sleep(float(os.getenv("RFB_CHROME_START_WAIT", "4")))
+                return
+            except Exception:
+                shutil.rmtree(profile, ignore_errors=True)
+    # Fallback legado: caso o executável não seja localizado, abre como antes.
+    # Não existe, entretanto, tentativa de matar todos os chrome.exe no finally.
     pyautogui.press("win")
     time.sleep(0.8)
     pyautogui.write("chrome", interval=0.06)
     pyautogui.press("enter")
     time.sleep(float(os.getenv("RFB_CHROME_START_WAIT", "4")))
-
 
 def _abrir_portal() -> None:
     pyautogui, pyperclip = _gui()

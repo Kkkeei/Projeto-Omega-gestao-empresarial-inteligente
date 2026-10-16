@@ -35,7 +35,7 @@ export function EmpresaForm({ onCreated, onCancel }: Props) {
 
   async function save(event: React.FormEvent) {
     event.preventDefault(); setError(""); setLoading(true);
-    try { onCreated(await cadastrarEmpresa({ ...p, cnpj: clean(p.cnpj), capital_social: p.capital_social ? Number(p.capital_social) : undefined })); }
+    try { onCreated(await cadastrarEmpresa({ ...p, cnpj: clean(p.cnpj), razao_social: p.razao_social.trim(), capital_social: p.capital_social ? Number(p.capital_social) : undefined })); }
     catch (e) { setError(e instanceof Error ? e.message : "Erro ao cadastrar empresa."); }
     finally { setLoading(false); }
   }

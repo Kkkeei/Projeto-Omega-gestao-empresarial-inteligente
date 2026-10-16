@@ -29,6 +29,11 @@ def listar(empresa_id: int | None = None, tipo: str | None = None, _user=Depends
     return {"total": len(service.listar(empresa_id, tipo)), "certificados": service.listar(empresa_id, tipo)}
 
 
+@router.get("/pf/pessoas")
+def listar_pessoas_fisicas(_user=Depends(current_user)):
+    return {"pessoas": service.listar_pessoas_fisicas()}
+
+
 @router.get("/pf")
 def listar_pf(_user=Depends(current_user)):
     certificados = service.listar_pf()

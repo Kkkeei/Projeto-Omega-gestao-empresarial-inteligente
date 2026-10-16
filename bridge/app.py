@@ -5,6 +5,7 @@ import base64
 import hashlib
 import os
 import platform
+import re
 from pathlib import Path
 from typing import Any
 
@@ -105,6 +106,9 @@ def _cert_metadata(value: bytes) -> dict[str, Any]:
     cert = x509.load_der_x509_certificate(value)
     subject = cert.subject.rfc4514_string()
     issuer = cert.issuer.rfc4514_string()
+    common_names = cert.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
+    organizations = cert.subject.get_attributes_for_oid(x509.oid.NameOID.ORGANIZATION_NAME)
+    nome_titular = organizations[0].value if organizations else (common_names[0].value if common_names else subject)
     serial_attrs = cert.subject.get_attributes_for_oid(x509.oid.NameOID.SERIAL_NUMBER)
     serial_text = serial_attrs[0].value if serial_attrs else ""
     digits = "".join(ch for ch in serial_text if ch.isdigit())
@@ -116,6 +120,7 @@ def _cert_metadata(value: bytes) -> dict[str, Any]:
         titular_tipo = "PF" if cpf else "NAO_IDENTIFICADO"
     return {
         "subject": subject,
+        "nome_titular": nome_titular,
         "issuer": issuer,
         "serial": format(cert.serial_number, "x"),
         "thumbprint_sha256": cert.fingerprint(hashes.SHA256()).hex(),
@@ -204,6 +209,91 @@ def certificates_endpoint(
     except Exception as exc:
         raise HTTPException(503, f"Não foi possível enumerar certificados PKCS#11: {exc}") from exc
     return {"total": len(result), "certificates": result}
+
+
+class NfseFetchRequest(BaseModel):
+    url: str
+    certificate_thumbprint: str
+
+
+_ALLOWED_NFSE_HOSTS = {
+    item.strip().lower() for item in os.getenv(
+        "OMEGA_BRIDGE_ALLOWED_NFSE_HOSTS",
+        "adn.nfse.gov.br,adn.producaorestrita.nfse.gov.br,sefin.nfse.gov.br,sefin.producaorestrita.nfse.gov.br",
+    ).split(",") if item.strip()
+}
+
+
+def _check_nfse_url(url: str) -> None:
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or (parsed.hostname or "").lower() not in _ALLOWED_NFSE_HOSTS:
+        raise HTTPException(403, "Destino NFS-e não autorizado pelo OMEGA Bridge.")
+
+
+def _windows_nfse_fetch(url: str, thumbprint: str) -> dict[str, Any]:
+    if platform.system().lower() != "windows":
+        raise HTTPException(501, "A consulta NFS-e com certificado A3 pelo Bridge exige Windows com o cartão/middleware instalado.")
+    script = r'''
+$ErrorActionPreference = "Stop"
+$thumb = ($env:OMEGA_NFSE_THUMB -replace "\s", "").ToUpperInvariant()
+$url = $env:OMEGA_NFSE_URL
+$store = New-Object System.Security.Cryptography.X509Certificates.X509Store("My", "CurrentUser")
+$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+try {
+  $cert = $store.Certificates | Where-Object { ($_.Thumbprint -replace "\s", "").ToUpperInvariant() -eq $thumb } | Select-Object -First 1
+  if ($null -eq $cert) { throw "Certificado A3 não encontrado no repositório pessoal do Windows pelo thumbprint informado." }
+  if (-not $cert.HasPrivateKey) { throw "O certificado encontrado não disponibiliza chave privada para autenticação." }
+  $handler = New-Object System.Net.Http.HttpClientHandler
+  $handler.ClientCertificates.Add($cert)
+  $client = New-Object System.Net.Http.HttpClient($handler)
+  $client.Timeout = [TimeSpan]::FromSeconds(90)
+  $response = $client.GetAsync($url).GetAwaiter().GetResult()
+  $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+  $out = @{ status_code = [int]$response.StatusCode; content_type = [string]$response.Content.Headers.ContentType; body_b64 = [Convert]::ToBase64String($bytes) } | ConvertTo-Json -Compress
+  [Console]::Out.Write($out)
+  $client.Dispose()
+  $handler.Dispose()
+} finally {
+  $store.Close()
+}
+'''
+    env = os.environ.copy()
+    env["OMEGA_NFSE_URL"] = url
+    env["OMEGA_NFSE_THUMB"] = thumbprint
+    import subprocess
+    try:
+        proc = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+            env=env, capture_output=True, text=True, timeout=110, check=False,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(501, "PowerShell não está disponível neste Windows para a consulta NFS-e A3.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(504, "A consulta NFS-e pelo certificado A3 excedeu o tempo limite.") from exc
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "Falha ao consultar a API NFS-e com o certificado A3.").strip()[-1000:]
+        raise HTTPException(502, detail)
+    import json
+    try:
+        return json.loads(proc.stdout)
+    except Exception as exc:
+        raise HTTPException(502, "O Bridge recebeu uma resposta inválida do conector Windows de NFS-e.") from exc
+
+
+@app.post("/nfse/dfe")
+def nfse_dfe(
+    request: Request,
+    body: NfseFetchRequest,
+    authorization: str | None = Header(default=None),
+):
+    _check_origin(request.headers.get("origin"))
+    _check_token(authorization)
+    _check_nfse_url(body.url)
+    thumb = body.certificate_thumbprint.strip().lower().replace(" ", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", thumb):
+        raise HTTPException(400, "Thumbprint SHA-256 do certificado inválido.")
+    return _windows_nfse_fetch(body.url, thumb)
 
 
 class SignRequest(BaseModel):

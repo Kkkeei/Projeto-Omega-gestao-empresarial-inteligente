@@ -1,4 +1,4 @@
-import {apiFetch, API_URL} from './client';
+import {apiFetch, apiFetchBlob, API_URL} from './client';
 import type {Certidao,TipoCertidao,Empresa,CertidaoConsultaResultado} from '../../types';
 
 export const listarCertidoes=(empresaId?:number)=>apiFetch<{total:number;certidoes:Certidao[]}>(`/api/v1/certidoes${empresaId?`?empresa_id=${empresaId}`:''}`);

@@ -15,6 +15,7 @@ rsync -a "$PROJECT_DIR/" "$TMP_DIR/OMEGA/" \
   --exclude 'venv/' \
   --exclude 'node_modules/' \
   --exclude '__pycache__/' \
+  --exclude '.pytest_cache/' \
   --exclude '*.pyc' \
   --exclude '*.log' \
   --exclude '*.bak*' \

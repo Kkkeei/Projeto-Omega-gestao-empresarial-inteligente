@@ -203,6 +203,7 @@ export function FaturamentoPage(){
         observacao: informarEmpresa.observacao_competencia ?? null,
         data_faturamento: informarEmpresa.data_faturamento_competencia ?? null,
         periodicidade: informarEmpresa.periodicidade_competencia ?? 'Mensal',
+        informado: true,
       } : null}
       onSaved={async message=>{
         setSuccessMessage(message);
@@ -215,7 +216,7 @@ export function FaturamentoPage(){
     {declaracaoOpen&&<div className="fat-modal-backdrop" onMouseDown={()=>!busyDeclaration&&setDeclaracaoOpen(false)}>
       <div className="fat-modal declaration-modal" onMouseDown={e=>e.stopPropagation()}>
         <div className="fat-modal-header"><div><span className="fat-modal-icon"><FileText size={17}/></span><div><strong>Gerar declaração</strong><small>{empresaDeclaracao?empresaDeclaracao.razao_social:'Selecione a empresa e o período para gerar a declaração de faturamento.'}</small></div></div><button className="icon-button" onClick={()=>setDeclaracaoOpen(false)} disabled={busyDeclaration}><X size={15}/></button></div>
-        {!empresaDeclaracao&&<div className="fat-modal-section"><label>Empresa<select onChange={e=>setEmpresaDeclaracao(items.find(i=>String(i.id)===e.target.value)||null)} value={empresaDeclaracao?.id?String(empresaDeclaracao.id):''}><option value="">Selecione a empresa</option>{items.map(item=><option key={item.id} value={item.id}>{item.razao_social}</option>)}</select></label></div>}
+        {!empresaDeclaracao&&<div className="fat-modal-section"><label>Empresa<select onChange={e=>setEmpresaDeclaracao(items.find(i=>String(i.id)===e.target.value)||null)} value=''><option value="">Selecione a empresa</option>{items.map(item=><option key={item.id} value={item.id}>{item.razao_social}</option>)}</select></label></div>}
         {empresaDeclaracao&&modoDeclaracao==='inicio'&&<div className="fat-declaration-choice-grid">
           <button className="fat-declaration-choice active" onClick={()=>void gerar12()} disabled={busyDeclaration}><CalendarDays size={20}/><strong>Últimos 12 meses</strong><span>Gerar a declaração considerando as últimas 12 competências completas.</span></button>
           <button className="fat-declaration-choice" onClick={()=>setModoDeclaracao('anual')} disabled={busyDeclaration}><CalendarDays size={20}/><strong>Anual</strong><span>Gerar a declaração de um ano específico.</span></button>

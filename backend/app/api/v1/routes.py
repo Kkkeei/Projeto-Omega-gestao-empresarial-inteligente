@@ -10,6 +10,7 @@ from app.modules.faturamento.routes import router as faturamento_router
 from app.modules.impostos.routes import router as impostos_router
 from app.api.v1.automacoes.routes import router as automacoes_router
 from app.modules.certificados.routes import router as certificados_digitais_router
+from app.modules.nfse.routes import router as nfse_router
 
 router = APIRouter(dependencies=[Depends(current_user)])
 router.include_router(empresas_router)
@@ -21,3 +22,4 @@ router.include_router(faturamento_router)
 router.include_router(impostos_router)
 router.include_router(automacoes_router)
 router.include_router(certificados_digitais_router)
+router.include_router(nfse_router)

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import mimetypes
 import os
 import re
+from io import BytesIO
+from zipfile import ZipFile, BadZipFile, is_zipfile
 from pathlib import Path
 from typing import Any
 
@@ -415,33 +416,137 @@ def listar_documentos(empresa_id: int, categoria_id: int | None = None):
         conexao.close()
 
 
+DOCUMENT_MIME_BY_EXTENSION = {
+    ".pdf": "application/pdf",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
+    ".doc": "application/msword",
+    ".dot": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".docm": "application/vnd.ms-word.document.macroEnabled.12",
+    ".dotx": "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+    ".dotm": "application/vnd.ms-word.template.macroEnabled.12",
+    ".xls": "application/vnd.ms-excel",
+    ".xlt": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
+    ".xltx": "application/vnd.openxmlformats-officedocument.spreadsheetml.template",
+    ".xltm": "application/vnd.ms-excel.template.macroEnabled.12",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pot": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".pptm": "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+    ".potx": "application/vnd.openxmlformats-officedocument.presentationml.template",
+    ".potm": "application/vnd.ms-powerpoint.template.macroEnabled.12",
+    ".odt": "application/vnd.oasis.opendocument.text",
+    ".ods": "application/vnd.oasis.opendocument.spreadsheet",
+    ".odp": "application/vnd.oasis.opendocument.presentation",
+    ".odg": "application/vnd.oasis.opendocument.graphics",
+    ".odf": "application/vnd.oasis.opendocument.formula",
+    ".rtf": "application/rtf",
+    ".txt": "text/plain",
+    ".csv": "text/csv",
+    ".xml": "application/xml",
+    ".json": "application/json",
+    ".html": "text/html",
+    ".htm": "text/html",
+    ".md": "text/markdown",
+    ".log": "text/plain",
+    ".eml": "message/rfc822",
+    ".yaml": "application/yaml",
+    ".yml": "application/yaml",
+    ".zip": "application/zip",
+    ".rar": "application/vnd.rar",
+    ".7z": "application/x-7z-compressed",
+    ".msg": "application/vnd.ms-outlook",
+}
+
+OPEN_DOCUMENT_ARCHIVE_EXTENSIONS = {".odt", ".ods", ".odp", ".odg", ".odf"}
+ARCHIVE_OFFICE_EXTENSIONS = {
+    ".docx", ".docm", ".dotx", ".dotm",
+    ".xlsx", ".xlsm", ".xltx", ".xltm",
+    ".pptx", ".pptm", ".potx", ".potm",
+}
+LEGACY_OFFICE_EXTENSIONS = {
+    ".doc", ".dot", ".xls", ".xlt", ".ppt", ".pot", ".msg",
+}
+
+BLOCKED_EXECUTABLE_EXTENSIONS = {
+    ".exe", ".com", ".msi", ".dll", ".scr", ".bat", ".cmd", ".ps1",
+    ".psm1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".jar",
+    ".sh", ".bash", ".zsh", ".fish", ".py", ".pyw", ".pl", ".rb",
+    ".php", ".asp", ".aspx", ".jsp", ".cgi",
+}
+
+
 def _detect_server_mime(filename: str, data: bytes) -> str:
+    """Resolve MIME safely without depender do MIME enviado pelo navegador.
+
+    Formatos conhecidos recebem MIME específico e validação de assinatura.
+    Formatos documentais adicionais podem ser armazenados como octet-stream,
+    enquanto extensões executáveis/script são bloqueadas explicitamente.
+    """
     ext = Path(filename).suffix.lower()
-    magic = data[:16]
-    if ext == ".pdf":
-        if not data.startswith(b"%PDF-"):
-            raise ValueError("O arquivo informado como PDF não possui assinatura PDF válida.")
-        return "application/pdf"
-    if ext in {".jpg", ".jpeg"}:
-        if not data.startswith(b"\xff\xd8\xff"):
-            raise ValueError("O arquivo de imagem JPG não possui assinatura válida.")
-        return "image/jpeg"
-    if ext == ".png":
-        if not data.startswith(b"\x89PNG\r\n\x1a\n"):
-            raise ValueError("O arquivo PNG não possui assinatura válida.")
-        return "image/png"
-    if ext in {".docx", ".xlsx", ".pptx"}:
-        if not data.startswith(b"PK"):
-            raise ValueError("O arquivo Office não possui um pacote ZIP válido.")
-        return mimetypes.guess_type(filename)[0] or "application/zip"
-    if ext in {".doc", ".xls", ".ppt"}:
-        if not data.startswith(b"\xd0\xcf\x11\xe0"):
-            raise ValueError("O arquivo Office legado não possui assinatura válida.")
-        return mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    if ext in {".txt", ".csv"}:
-        # Texto não é servido inline pelo endpoint; portanto não representa conteúdo ativo.
-        return "text/plain" if ext == ".txt" else "text/csv"
-    raise ValueError("Tipo de arquivo não permitido. Use PDF, JPG, PNG, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT ou CSV.")
+    if ext in BLOCKED_EXECUTABLE_EXTENSIONS:
+        raise ValueError("Tipo de arquivo não permitido por segurança. Arquivos executáveis ou scripts não podem ser armazenados.")
+
+    mime = DOCUMENT_MIME_BY_EXTENSION.get(ext, "application/octet-stream")
+
+    if not data:
+        raise ValueError("O arquivo está vazio.")
+
+    if ext == ".pdf" and not data.startswith(b"%PDF-"):
+        raise ValueError("O arquivo informado como PDF não possui assinatura PDF válida.")
+    if ext in {".jpg", ".jpeg"} and not data.startswith(b"\xff\xd8\xff"):
+        raise ValueError("O arquivo de imagem JPG não possui assinatura válida.")
+    if ext == ".png" and not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("O arquivo PNG não possui assinatura válida.")
+    if ext == ".gif" and not data.startswith((b"GIF87a", b"GIF89a")):
+        raise ValueError("O arquivo GIF não possui assinatura válida.")
+    if ext == ".webp" and not (data.startswith(b"RIFF") and len(data) >= 12 and data[8:12] == b"WEBP"):
+        raise ValueError("O arquivo WEBP não possui assinatura válida.")
+    if ext == ".bmp" and not data.startswith(b"BM"):
+        raise ValueError("O arquivo BMP não possui assinatura válida.")
+    if ext in {".tif", ".tiff"} and not (data.startswith(b"II*\x00") or data.startswith(b"MM\x00*")):
+        raise ValueError("O arquivo TIFF não possui assinatura válida.")
+    if ext in ARCHIVE_OFFICE_EXTENSIONS | OPEN_DOCUMENT_ARCHIVE_EXTENSIONS:
+        if not is_zipfile(BytesIO(data)):
+            raise ValueError("O arquivo Office/OpenDocument não possui um pacote ZIP válido.")
+        # Verificações estruturais mínimas para formatos Open XML/OASIS.
+        try:
+            with ZipFile(BytesIO(data)) as zf:
+                names = set(zf.namelist())
+                if ext in {".docx", ".docm", ".dotx", ".dotm"} and not ("[Content_Types].xml" in names and any(n.startswith("word/") for n in names)):
+                    raise ValueError("O arquivo Word não possui a estrutura interna esperada.")
+                if ext in {".xlsx", ".xlsm", ".xltx", ".xltm"} and not ("[Content_Types].xml" in names and any(n.startswith("xl/") for n in names)):
+                    raise ValueError("O arquivo Excel não possui a estrutura interna esperada.")
+                if ext in {".pptx", ".pptm", ".potx", ".potm"} and not ("[Content_Types].xml" in names and any(n.startswith("ppt/") for n in names)):
+                    raise ValueError("O arquivo PowerPoint não possui a estrutura interna esperada.")
+                if ext in OPEN_DOCUMENT_ARCHIVE_EXTENSIONS and "mimetype" not in names and not any(n.startswith("META-INF/") for n in names):
+                    # Alguns produtores omitem o arquivo mimetype; o pacote ZIP continua válido.
+                    pass
+        except BadZipFile as exc:
+            raise ValueError("O arquivo Office/OpenDocument não possui um pacote ZIP válido.") from exc
+    if ext in LEGACY_OFFICE_EXTENSIONS and not data.startswith(b"\xd0\xcf\x11\xe0"):
+        raise ValueError("O arquivo Office legado não possui assinatura válida.")
+    if ext == ".rtf" and not data.lstrip().startswith(b"{\\rtf"):
+        raise ValueError("O arquivo RTF não possui assinatura válida.")
+    if ext in {".zip"} and not is_zipfile(BytesIO(data)):
+        raise ValueError("O arquivo ZIP não é um pacote válido.")
+    if ext in {".rar"} and not data.startswith(b"Rar!\x1a\x07"):
+        raise ValueError("O arquivo RAR não possui assinatura válida.")
+    if ext in {".7z"} and not data.startswith(b"7z\xbc\xaf\x27\x1c"):
+        raise ValueError("O arquivo 7Z não possui assinatura válida.")
+    if ext == ".msg" and not data.startswith(b"\xd0\xcf\x11\xe0"):
+        raise ValueError("O arquivo MSG não possui assinatura OLE válida.")
+
+    return mime
 
 
 def _write_file(upload: UploadFile, destino: Path) -> tuple[int, str, str]:
