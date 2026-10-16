@@ -16,3 +16,23 @@ backend/omega.db
 backend/omega.db-shm
 backend/omega.db-wal
 storage/
+
+# Arquivos temporários de extração
+.fr-*/
+**/.fr-*/
+
+# Cache e cobertura
+.coverage
+**/.coverage
+*.tsbuildinfo
+__pycache__/
+*.pyc
+
+# Backups automáticos
+*.bak
+*.backup_*
+
+# Ambientes virtuais
+.venv/
+venv/
+node_modules/
