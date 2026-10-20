@@ -357,7 +357,7 @@ def _mapping_value(item: dict[str, Any], *names: str) -> Any:
 
 _ADN_XML_PAYLOAD_KEYS = (
     "docZip", "doczip", "conteudo", "documento", "arquivoXml", "arquivo_xml",
-    "xml", "xmlGzip", "conteudoXml", "arquivoXML",
+    "xml", "xmlGzip", "conteudoXml", "arquivoXML", "xmlEvento", "eventoXml",
 )
 
 
@@ -943,6 +943,7 @@ def listar(origin: str | None = None, entity_id: int | None = None, limit: int =
 def detalhe(nfse_id: int) -> dict[str, Any]:
     with conectar_banco() as conn:
         row = conn.execute("SELECT * FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone()
+        events = conn.execute("SELECT tipo_evento, descricao, data_evento, origem FROM nfse_eventos WHERE nfse_id=? ORDER BY id DESC", (nfse_id,)).fetchall()
     if not row:
         raise LookupError("NFS-e não encontrada.")
     result = dict(row)
@@ -950,4 +951,311 @@ def detalhe(nfse_id: int) -> dict[str, Any]:
         path = STORAGE_BASE.parent / result["xml_path"]
         if path.is_file():
             result["xml"] = path.read_text(encoding="utf-8", errors="replace")
+    try:
+        metadata = json.loads(result.get("resposta_json") or "{}")
+    except (TypeError, json.JSONDecodeError):
+        metadata = {}
+    if isinstance(metadata, dict):
+        result.update(metadata.get("_omega_metadata") or {})
+    if result.get("xml"):
+        try:
+            index = _xml_text_index(ET.fromstring(result["xml"]))
+            if result.get("irrf") is None:
+                result["irrf"] = _parse_xml_money(_first_xml_text(index, ("vRetIRRF", "valorIRRF", "irrf")))
+        except ET.ParseError:
+            pass
+    result["eventos"] = [dict(event) for event in events]
+    if events and str(events[0]["tipo_evento"]).upper() in {"CANCELADA", "CANCELAMENTO", "CANCELAMENTO_REGISTRADO"}:
+        result["situacao"] = "CANCELADA"
     return result
+
+
+def painel(competencia: str) -> dict[str, Any]:
+    competencia = str(competencia or "").strip()
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", competencia):
+        raise ValueError("Competência inválida. Informe no formato AAAA-MM.")
+    with conectar_banco() as conn:
+        entities = [dict(r) for r in conn.execute("SELECT id entidade_id, 'PJ' origem, razao_social nome, cnpj documento FROM empresas WHERE ativo=1 ORDER BY razao_social").fetchall()]
+        entities += [dict(r) for r in conn.execute("SELECT id entidade_id, 'PF' origem, nome, cpf documento FROM pessoas_fisicas WHERE ativo=1 ORDER BY nome").fetchall()]
+        docs = conn.execute("SELECT origem,entidade_id,COUNT(*) quantidade,COALESCE(SUM(valor),0) valor_total FROM nfse_documentos WHERE substr(COALESCE(data_emissao,''),1,7)=? GROUP BY origem,entidade_id", (competencia,)).fetchall()
+    summaries = {(r["origem"], r["entidade_id"]): dict(r) for r in docs}
+    for entity in entities:
+        summary = summaries.get((entity["origem"], entity["entidade_id"]), {})
+        entity["quantidade"] = summary.get("quantidade", 0)
+        entity["valor_total"] = summary.get("valor_total", 0)
+    return {"competencia": competencia, "resumo": {"documentos": sum(e["quantidade"] for e in entities), "valor_total": sum(e["valor_total"] for e in entities), "titulares": len(entities)}, "empresas": entities}
+
+
+def salvar_config(origin: str, entity_id: int, sincronizacao_automatica: bool, frequencia_horas: int, horario: str, user_id: int | None = None) -> dict[str, Any]:
+    origin, entity_id = _subject(origin, entity_id)
+    if not 1 <= int(frequencia_horas) <= 720:
+        raise ValueError("A frequência deve estar entre 1 e 720 horas.")
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", str(horario or "")):
+        raise ValueError("Horário inválido. Use HH:MM.")
+    next_run = (datetime.now(timezone.utc) + timedelta(hours=int(frequencia_horas))).isoformat() if sincronizacao_automatica else None
+    with conectar_banco() as conn:
+        conn.execute("""INSERT INTO nfse_config(origem,entidade_id,sincronizacao_automatica,frequencia_horas,horario,proxima_execucao_em,atualizado_por,atualizado_em)
+          VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(origem,entidade_id) DO UPDATE SET
+          sincronizacao_automatica=excluded.sincronizacao_automatica,frequencia_horas=excluded.frequencia_horas,
+          horario=excluded.horario,proxima_execucao_em=excluded.proxima_execucao_em,atualizado_por=excluded.atualizado_por,atualizado_em=CURRENT_TIMESTAMP""",
+          (origin, entity_id, int(bool(sincronizacao_automatica)), int(frequencia_horas), horario, next_run, user_id))
+        conn.commit()
+        row = conn.execute("SELECT * FROM nfse_config WHERE origem=? AND entidade_id=?", (origin, entity_id)).fetchone()
+    result = dict(row)
+    result["sincronizacao_automatica"] = bool(result["sincronizacao_automatica"])
+    return result
+
+
+def _xml_metadata(xml_text: str, origin: str, entity_id: int, source: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as exc:
+        raise ValueError("O arquivo não contém um XML válido de NFS-e.") from exc
+    index = _xml_text_index(root)
+    doc = _parse_candidate_document({"xml": xml_text}, origin, entity_id)
+    doc.update({"provider": "UPLOAD_XML", "nsu": None, "raw": {}})
+    try:
+        entity_doc = _normalize_doc(_entity(origin, entity_id).get("documento"))
+    except LookupError:
+        entity_doc = ""
+    prest_doc = _normalize_doc(_first_xml_text(index, ("CNPJ", "CPF", "CNPJPrestador", "CPFPrestador")) or "")
+    return doc, {"direcao": "PRESTADA" if entity_doc and entity_doc == prest_doc else "TOMADA",
+                 "irrf": _parse_xml_money(_first_xml_text(index, ("vRetIRRF", "valorIRRF", "irrf"))),
+                 "origem_documento": source}
+
+
+def importar_xml_manual(origin: str, entity_id: int, filename: str, content: bytes, user_id: int | None = None) -> dict[str, Any]:
+    origin, entity_id = _subject(origin, entity_id)
+    if not content:
+        raise ValueError("O arquivo XML está vazio.")
+    if len(content) > 20 * 1024 * 1024:
+        raise ValueError("O XML excede o limite de 20 MB.")
+    try:
+        xml_text = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError("O XML deve estar codificado em UTF-8.") from exc
+    doc, metadata = _xml_metadata(xml_text, origin, entity_id, "Importação manual (XML)")
+    if not doc.get("chave_acesso") and not doc.get("numero"):
+        raise ValueError("O XML não contém chave de acesso nem número identificável de NFS-e.")
+    storage = STORAGE_BASE / "nfse" / origin.lower() / str(entity_id)
+    storage.mkdir(parents=True, exist_ok=True)
+    safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename or "nfse.xml").name)
+    digest = __import__("hashlib").sha256((doc.get("chave_acesso") or xml_text).encode()).hexdigest()[:24]
+    path = storage / f"manual-{digest}.xml"
+    path.write_text(xml_text, encoding="utf-8")
+    relative = str(path.relative_to(STORAGE_BASE.parent))
+    raw = json.dumps({"filename": safe_name, "_omega_metadata": metadata}, ensure_ascii=False)
+    with conectar_banco() as conn:
+        duplicate = conn.execute("SELECT id FROM nfse_documentos WHERE origem=? AND entidade_id=? AND provider='UPLOAD_XML' AND chave_acesso=?", (origin, entity_id, doc.get("chave_acesso"))).fetchone() if doc.get("chave_acesso") else None
+        if duplicate:
+            path.unlink(missing_ok=True)
+            return {"ok": True, "duplicado": True, "id": int(duplicate["id"]), "mensagem": "Esta NFS-e já foi importada."}
+        cur = conn.execute("""INSERT INTO nfse_documentos(origem,entidade_id,provider,nsu,schema,chave_acesso,numero,data_emissao,valor,situacao,xml_path,resposta_json,criado_em,atualizado_em)
+          VALUES(?,?,'UPLOAD_XML',NULL,?,?,?,?,?,'IMPORTADA',?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""",
+          (origin, entity_id, doc.get("schema"), doc.get("chave_acesso"), doc.get("numero"), doc.get("data_emissao"), doc.get("valor"), relative, raw))
+        nfse_id = int(cur.lastrowid)
+        conn.execute("INSERT INTO nfse_eventos(nfse_id,tipo_evento,descricao,origem,dados_json,usuario_id) VALUES(?,?,?,?,?,?)",
+                     (nfse_id, "IMPORTADA", f"XML importado: {safe_name}", "UPLOAD_XML", raw, user_id))
+        conn.commit()
+    return {"ok": True, "duplicado": False, "id": nfse_id, "mensagem": "NFS-e importada com sucesso."}
+
+
+def importar_email_eml(origin: str, entity_id: int, filename: str, content: bytes) -> dict[str, Any]:
+    from email import policy
+    from email.parser import BytesParser
+    origin, entity_id = _subject(origin, entity_id)
+    try:
+        message = BytesParser(policy=policy.default).parsebytes(content)
+    except Exception as exc:
+        raise ValueError("Arquivo EML inválido.") from exc
+    attachments = []
+    for part in message.walk():
+        if part.is_multipart():
+            continue
+        name = part.get_filename() or ""
+        payload = part.get_payload(decode=True)
+        if payload and (name.lower().endswith(".xml") or part.get_content_type().lower() in {"application/xml", "text/xml"}):
+            attachments.append((name or "anexo.xml", payload))
+    if not attachments:
+        raise ValueError("Não encontrei anexos XML neste e-mail.")
+    results = []
+    for name, payload in attachments:
+        result = importar_xml_manual(origin, entity_id, name, payload)
+        with conectar_banco() as conn:
+            conn.execute("UPDATE nfse_documentos SET resposta_json=json_set(COALESCE(resposta_json,'{}'),'$._omega_metadata.origem_documento',?) WHERE id=?", ("E-mail (XML anexado)", result["id"]))
+            conn.execute("INSERT INTO nfse_eventos(nfse_id,tipo_evento,descricao,origem,dados_json) VALUES(?,?,?,?,?)", (result["id"], "EMAIL_IMPORTADO", f"XML recebido no e-mail {Path(filename or 'mensagem.eml').name}", "EMAIL_EML", json.dumps({"anexo": name}, ensure_ascii=False)))
+            conn.commit()
+        results.append({"id": result["id"], "arquivo": name, "duplicado": result.get("duplicado", False)})
+    return {"ok": True, "importados": sum(not item["duplicado"] for item in results), "resultados": results}
+
+
+def registrar_evento(nfse_id: int, tipo_evento: str, descricao: str, user_id: int | None = None) -> dict[str, Any]:
+    kind = str(tipo_evento or "").strip().upper()
+    if not kind:
+        raise ValueError("Informe o tipo do evento.")
+    with conectar_banco() as conn:
+        if not conn.execute("SELECT id FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone():
+            raise LookupError("NFS-e não encontrada.")
+        conn.execute("INSERT INTO nfse_eventos(nfse_id,tipo_evento,descricao,origem,usuario_id) VALUES(?,?,?,?,?)", (nfse_id, kind, descricao, "SISTEMA", user_id))
+        if kind in {"CANCELADA", "CANCELAMENTO", "CANCELAMENTO_REGISTRADO"}:
+            conn.execute("UPDATE nfse_documentos SET situacao='CANCELADA',atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (nfse_id,))
+        conn.commit()
+    return detalhe(nfse_id)
+
+
+def listar_eventos(nfse_id: int) -> list[dict[str, Any]]:
+    with conectar_banco() as conn:
+        if not conn.execute("SELECT id FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone():
+            raise LookupError("NFS-e não encontrada.")
+        return [dict(r) for r in conn.execute("SELECT * FROM nfse_eventos WHERE nfse_id=? ORDER BY id DESC", (nfse_id,)).fetchall()]
+
+
+def salvar_lancamento(nfse_id: int, data_lancamento: str, conta_debito: str, conta_credito: str, historico: str, valor: float, observacao: str = "", user_id: int | None = None) -> dict[str, Any]:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data_lancamento or "")):
+        raise ValueError("Data do lançamento inválida. Use AAAA-MM-DD.")
+    if not conta_debito or not conta_credito:
+        raise ValueError("Informe as contas de débito e crédito.")
+    with conectar_banco() as conn:
+        if not conn.execute("SELECT id FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone():
+            raise LookupError("NFS-e não encontrada.")
+        conn.execute("""INSERT INTO nfse_lancamentos_contabeis(nfse_id,data_lancamento,conta_debito,conta_credito,historico,valor,status,observacao,criado_por,atualizado_em)
+          VALUES(?,?,?,?,?,?,'RASCUNHO',?,?,CURRENT_TIMESTAMP) ON CONFLICT(nfse_id) DO UPDATE SET data_lancamento=excluded.data_lancamento,
+          conta_debito=excluded.conta_debito,conta_credito=excluded.conta_credito,historico=excluded.historico,valor=excluded.valor,status='RASCUNHO',
+          observacao=excluded.observacao,criado_por=excluded.criado_por,atualizado_em=CURRENT_TIMESTAMP""",
+          (nfse_id, data_lancamento, conta_debito.strip(), conta_credito.strip(), historico, float(valor), observacao, user_id))
+        conn.commit()
+        row = conn.execute("SELECT * FROM nfse_lancamentos_contabeis WHERE nfse_id=?", (nfse_id,)).fetchone()
+    return {"ok": True, "lancamento": dict(row)}
+
+
+def exportar_excel(competencia: str, origin: str | None = None, entity_id: int | None = None) -> bytes:
+    from io import BytesIO
+    from openpyxl import Workbook
+    docs = [d for d in listar(origin, entity_id, 500, 0) if str(d.get("data_emissao") or "").startswith(competencia)]
+    output = BytesIO()
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "NFS-e"
+    sheet.append(["ID", "Origem", "Entidade", "Provedor", "Número", "Chave de acesso", "Emissão", "Valor", "Situação"])
+    for d in docs:
+        sheet.append([d.get("id"), d.get("origem"), d.get("entidade_id"), d.get("provider"), d.get("numero"), d.get("chave_acesso"), d.get("data_emissao"), d.get("valor"), d.get("situacao")])
+    sheet.freeze_panes = "A2"
+    sheet.auto_filter.ref = sheet.dimensions
+    workbook.save(output)
+    return output.getvalue()
+
+
+def zip_xmls(nfse_ids: list[int]) -> bytes:
+    import zipfile
+    from io import BytesIO
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+        for nfse_id in dict.fromkeys(int(value) for value in nfse_ids):
+            doc = detalhe(nfse_id)
+            if doc.get("xml"):
+                name = re.sub(r"[^A-Za-z0-9_-]", "_", str(doc.get("numero") or nfse_id))
+                archive.writestr(f"nfse-{name}.xml", doc["xml"])
+    return output.getvalue()
+
+
+def _request_a1_url(origin: str, cert: dict[str, Any], url: str) -> tuple[int, str, str]:
+    if str(cert.get("tipo") or "").upper() != "A1":
+        raise ValueError("A consulta oficial de eventos exige certificado A1.")
+    timeout = float(os.getenv("OMEGA_NFSE_TIMEOUT", "60"))
+    with _a1_mtls_files(cert, origin) as (cert_file, key_file):
+        with httpx.Client(timeout=timeout, cert=(str(cert_file), str(key_file)), verify=True, follow_redirects=True) as client:
+            response = client.get(url)
+    return response.status_code, response.headers.get("content-type", ""), response.text
+
+
+def _event_items(payload: Any) -> list[dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return []
+    result, stack = [], [payload]
+    keys = {"doczip", "xmlevento", "eventoxml", "xml", "conteudo"}
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            normalized = {re.sub(r"[^a-z]", "", str(key).casefold()) for key in item}
+            if normalized & keys:
+                result.append(item)
+            stack.extend(value for value in item.values() if isinstance(value, (dict, list)))
+        elif isinstance(item, list):
+            stack.extend(value for value in item if isinstance(value, (dict, list)))
+    return result
+
+
+def _parse_event_xml(raw: Any) -> dict[str, Any] | None:
+    xml_text = _decode_xml_candidate(raw)
+    if not xml_text:
+        return None
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return None
+    index = _xml_text_index(root)
+    code = _first_xml_text(index, ("tpEvento", "tipoEvento", "cEvento")) or "EVENTO"
+    description = _first_xml_text(index, ("xMotivo", "descricao", "descEvento", "xEvento")) or f"Evento {code}"
+    date = _normalize_xml_date(_first_xml_text(index, ("dhEvento", "dataEvento", "dhRegEvento")))
+    kind = "CANCELADA" if code in {"101101", "101102"} or "cancelamento" in description.casefold() else code
+    return {"tipo_evento": kind, "descricao": description, "data_evento": date or datetime.now(timezone.utc).isoformat(), "xml": xml_text}
+
+
+def _save_event(nfse_id: int, event: dict[str, Any], origin: str) -> bool:
+    with conectar_banco() as conn:
+        if conn.execute("SELECT id FROM nfse_eventos WHERE nfse_id=? AND origem=? AND tipo_evento=? AND descricao=? AND data_evento=? LIMIT 1",
+                        (nfse_id, origin, event["tipo_evento"], event["descricao"], event["data_evento"])).fetchone():
+            return False
+        conn.execute("INSERT INTO nfse_eventos(nfse_id,tipo_evento,descricao,data_evento,origem,dados_json) VALUES(?,?,?,?,?,?)",
+                     (nfse_id, event["tipo_evento"], event["descricao"], event["data_evento"], origin, json.dumps({"xml": event.get("xml")}, ensure_ascii=False)))
+        if event["tipo_evento"] == "CANCELADA":
+            conn.execute("UPDATE nfse_documentos SET situacao='CANCELADA',atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (nfse_id,))
+        conn.commit()
+    return True
+
+
+def consultar_eventos_adn(nfse_id: int) -> dict[str, Any]:
+    doc = detalhe(nfse_id)
+    origin = doc["origem"]
+    cert = _active_certificate(origin, int(doc["entidade_id"]))
+    if cert["tipo"] != "A1":
+        raise ValueError("A consulta oficial de eventos requer certificado A1.")
+    key = re.sub(r"\D", "", str(doc.get("chave_acesso") or ""))
+    if len(key) != 44:
+        raise ValueError("A NFS-e não possui chave de acesso de 44 dígitos para consultar eventos.")
+    url = f"{_provider_base_url()}/NFSe/{key}/Eventos"
+    status, content_type, body = _request_a1_url(origin, cert, url)
+    if status >= 400:
+        raise ValueError(f"ADN respondeu HTTP {status} ao consultar eventos.")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("A resposta de eventos do ADN não é JSON válido.") from exc
+    candidates = _event_items(payload)
+    inserted = 0
+    for item in candidates:
+        event = _parse_event_xml(_mapping_value(item, "docZip", "xmlEvento", "eventoXml", "xml", "conteudo"))
+        if event and _save_event(nfse_id, event, "ADN_NFSE"):
+            inserted += 1
+    return {"ok": True, "eventos_encontrados": len(candidates), "eventos_importados": inserted, "content_type": content_type}
+
+
+def importar_eventos_a3(nfse_id: int, thumbprint: str, content_type: str, body_b64: str) -> dict[str, Any]:
+    doc = detalhe(nfse_id)
+    cert = _active_certificate(doc["origem"], int(doc["entidade_id"]))
+    if cert.get("tipo") != "A3":
+        raise ValueError("O certificado ativo não é A3.")
+    expected = str(cert.get("thumbprint_sha256") or "").lower()
+    if not expected or expected != str(thumbprint or "").lower():
+        raise ValueError("O cartão A3 não corresponde ao certificado cadastrado.")
+    try:
+        payload = json.loads(base64.b64decode(body_b64, validate=True).decode("utf-8-sig"))
+    except Exception as exc:
+        raise ValueError("Resposta de eventos do Bridge inválida.") from exc
+    candidates = _event_items(payload)
+    inserted = 0
+    for item in candidates:
+        event = _parse_event_xml(_mapping_value(item, "docZip", "xmlEvento", "eventoXml", "xml", "conteudo"))
+        if event and _save_event(nfse_id, event, "ADN_NFSE_A3_BRIDGE"):
+            inserted += 1
+    return {"ok": True, "eventos_encontrados": len(candidates), "eventos_importados": inserted, "content_type": content_type}
