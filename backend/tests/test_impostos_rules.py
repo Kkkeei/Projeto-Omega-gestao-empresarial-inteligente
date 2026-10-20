@@ -84,3 +84,31 @@ def test_relatorio_gera_meses_contiguos_ao_cruzar_ano():
     assert _meses(2026, 11, 2027, 2) == [
         (2026, 11), (2026, 12), (2027, 1), (2027, 2)
     ]
+
+import pytest
+from pydantic import ValidationError
+
+from app.modules.impostos.schemas import VinculoTributoCreate, VinculoTributoUpdate
+
+
+def test_configuracao_rejeita_mes_invalido():
+    with pytest.raises(ValidationError):
+        VinculoTributoCreate(tributo_id=1, vigencia_inicio="2026-13-01")
+
+
+def test_configuracao_rejeita_competencia_final_anterior_ao_inicio():
+    with pytest.raises(ValidationError):
+        VinculoTributoCreate(
+            tributo_id=1,
+            vigencia_inicio="2026-08-01",
+            vigencia_fim="2026-07-01",
+        )
+
+
+def test_edicao_rejeita_competencia_final_anterior_ao_inicio():
+    with pytest.raises(ValidationError):
+        VinculoTributoUpdate(
+            vigencia_inicio="2026-08-01",
+            vigencia_fim="2026-07-01",
+            status="INATIVO",
+        )
