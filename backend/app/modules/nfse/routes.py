@@ -38,6 +38,35 @@ class ImportarA3Request(BaseModel):
     body_b64: str = Field(min_length=1)
 
 
+class ImportarArquivoRequest(BaseModel):
+    origem: str = Field(min_length=2, max_length=2)
+    entidade_id: int = Field(gt=0)
+    nome_arquivo: str = Field(min_length=1, max_length=255)
+    conteudo_b64: str = Field(min_length=1)
+
+
+class ConfigNfseRequest(BaseModel):
+    origem: str = Field(min_length=2, max_length=2)
+    entidade_id: int = Field(gt=0)
+    sincronizacao_automatica: bool
+    frequencia_horas: int = Field(ge=1, le=720)
+    horario: str = Field(pattern=r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+
+
+class EventoRequest(BaseModel):
+    tipo_evento: str = Field(min_length=1, max_length=80)
+    descricao: str = Field(min_length=1, max_length=2000)
+
+
+class LancamentoRequest(BaseModel):
+    data_lancamento: str = Field(min_length=10, max_length=10)
+    conta_debito: str = Field(min_length=1, max_length=120)
+    conta_credito: str = Field(min_length=1, max_length=120)
+    historico: str = Field(min_length=1, max_length=500)
+    valor: float = Field(ge=0)
+    observacao: str = Field(default="", max_length=2000)
+
+
 @router.get("/contexto")
 def contexto(origem: str, entidade_id: int, _user=Depends(current_user)):
     try:
@@ -50,6 +79,89 @@ def contexto(origem: str, entidade_id: int, _user=Depends(current_user)):
 def listar(origem: str | None = None, entidade_id: int | None = None, limit: int = 100, offset: int = 0, _user=Depends(current_user)):
     documents = service.listar(origem, entidade_id, limit, offset)
     return {"total": len(documents), "nfse": documents}
+
+
+@router.get("/painel")
+def painel(competencia: str, _user=Depends(current_user)):
+    try:
+        return service.painel(competencia)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/config")
+def salvar_config(body: ConfigNfseRequest, _user=Depends(current_user)):
+    try:
+        return service.salvar_config(body.origem, body.entidade_id, body.sincronizacao_automatica,
+                                     body.frequencia_horas, body.horario, _user.get("id") if isinstance(_user, dict) else None)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/xml/importar")
+def importar_xml(body: ImportarArquivoRequest, _user=Depends(current_user)):
+    try:
+        content = base64.b64decode(body.conteudo_b64, validate=True)
+        user_id = _user.get("id") if isinstance(_user, dict) else None
+        return service.importar_xml_manual(body.origem, body.entidade_id, body.nome_arquivo, content, user_id)
+    except (LookupError, ValueError, base64.binascii.Error) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/email/importar")
+def importar_email(body: ImportarArquivoRequest, _user=Depends(current_user)):
+    try:
+        content = base64.b64decode(body.conteudo_b64, validate=True)
+        return service.importar_email_eml(body.origem, body.entidade_id, body.nome_arquivo, content)
+    except (LookupError, ValueError, base64.binascii.Error) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/{nfse_id}/eventos")
+def listar_eventos(nfse_id: int, _user=Depends(current_user)):
+    try:
+        return {"eventos": service.listar_eventos(nfse_id)}
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/eventos")
+def registrar_evento(nfse_id: int, body: EventoRequest, _user=Depends(current_user)):
+    try:
+        user_id = _user.get("id") if isinstance(_user, dict) else None
+        return service.registrar_evento(nfse_id, body.tipo_evento, body.descricao, user_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/eventos/consultar-adn")
+def consultar_eventos_adn(nfse_id: int, _user=Depends(current_user)):
+    try:
+        return service.consultar_eventos_adn(nfse_id)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/eventos/a3/importar")
+def importar_eventos_a3(nfse_id: int, body: ImportarA3Request, _user=Depends(current_user)):
+    try:
+        # A3 event response is bound to the NFSe's own entity; client origin/entity
+        # fields are intentionally not used to select a different certificate.
+        return service.importar_eventos_a3(nfse_id, body.thumbprint_sha256, body.content_type, body.body_b64)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/lancamento")
+def salvar_lancamento(nfse_id: int, body: LancamentoRequest, _user=Depends(current_user)):
+    try:
+        user_id = _user.get("id") if isinstance(_user, dict) else None
+        return service.salvar_lancamento(nfse_id, body.data_lancamento, body.conta_debito, body.conta_credito,
+                                         body.historico, body.valor, body.observacao, user_id)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/{nfse_id}")
