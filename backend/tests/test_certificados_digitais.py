@@ -72,6 +72,12 @@ def test_a1_parse_validate_store_and_replace():
     assert any(e["tipo_evento"] == "SUBSTITUIDO" for e in service.eventos(first["id"]))
 
 
+def test_extract_document_does_not_join_separated_number_fragments():
+    assert service._extract_document("CNPJ: 43002824 430028") == (None, "NAO_IDENTIFICADO")
+    assert service._extract_document("CNPJ: 50.410.847/0001-12") == ("50410847000112", "PJ")
+    assert service._extract_document("CPF: 123.456.789-01") == ("12345678901", "PF")
+
+
 def test_a1_rejects_incompatible_cnpj():
     data, password = _pfx("12.345.678/0001-99")
     with pytest.raises(ValueError, match="incompatível"):
