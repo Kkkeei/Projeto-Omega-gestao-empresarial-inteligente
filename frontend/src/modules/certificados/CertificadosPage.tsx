@@ -113,9 +113,12 @@ export function CertificadosPage(){
     if(origin==='PJ'){
       // Ao iniciar a partir de um certificado, use empresa_id (não o ID do
       // próprio certificado); ao iniciar a partir da tabela, use o ID da empresa.
-      const company=entity&&'cnpj' in entity?entity as Empresa:null;
+      // Certificado também possui a propriedade opcional "cnpj". Portanto,
+      // testar "cnpj" primeiro confunde o ID do certificado com o ID da empresa.
+      // Identifique certificados por empresa_id antes de tratar a entidade como empresa.
       const existingCert=entity&&'empresa_id' in entity?entity as Certificado:null;
-      const empresaId=company?.id??existingCert?.empresa_id;
+      const company=!existingCert&&entity&&'cnpj' in entity?entity as Empresa:null;
+      const empresaId=existingCert?.empresa_id??company?.id;
       setMode({kind,origin,empresaId,replaceId});
     }else{
       const c='pessoa_id' in (entity||{})?(entity as Certificado):undefined;
