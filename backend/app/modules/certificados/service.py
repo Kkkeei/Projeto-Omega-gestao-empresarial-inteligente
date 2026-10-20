@@ -103,13 +103,38 @@ def _issuer_value(cert, oid) -> str | None:
 
 
 def _extract_document(subject_text: str) -> tuple[str | None, str]:
-    digits = _normalizar_documento(subject_text)
-    # Prioriza CNPJ; depois CPF. O campo SERIALNUMBER de certificados ICP-Brasil
-    # costuma carregar o identificador do titular.
-    for match in re.findall(r"\d{14}", digits):
-        return match, "PJ"
-    for match in re.findall(r"\d{11}", digits):
-        return match, "PF"
+    """Extrai somente um documento completo do atributo do titular.
+
+    Não remova toda a pontuação antes de procurar o documento: isso pode colar
+    números separados no SERIALNUMBER e fabricar um CNPJ que não existe no
+    certificado. Primeiro procura CNPJ/CPF explicitamente identificado; depois
+    aceita apenas uma sequência completa com máscara padrão ou dígitos contíguos.
+    """
+    raw = str(subject_text or "").strip()
+    if not raw:
+        return None, "NAO_IDENTIFICADO"
+
+    patterns = (
+        (r"(?i)\bCNPJ\s*[:=]?\s*(\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})(?!\d)", "PJ"),
+        (r"(?i)\bCPF\s*[:=]?\s*(\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?!\d)", "PF"),
+    )
+    for pattern, kind in patterns:
+        match = re.search(pattern, raw)
+        if match:
+            document = _normalizar_documento(match.group(1))
+            if len(document) == (14 if kind == "PJ" else 11):
+                return document, kind
+
+    # Fallback: aceita apenas blocos isolados; nunca junta dígitos que estejam
+    # separados por letras, barras ou outros identificadores do certificado.
+    for match in re.finditer(r"(?<!\d)(?:\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2})(?!\d)", raw):
+        document = _normalizar_documento(match.group(0))
+        if len(document) == 14:
+            return document, "PJ"
+    for match in re.finditer(r"(?<!\d)(?:\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?!\d)", raw):
+        document = _normalizar_documento(match.group(0))
+        if len(document) == 11:
+            return document, "PF"
     return None, "NAO_IDENTIFICADO"
 
 
