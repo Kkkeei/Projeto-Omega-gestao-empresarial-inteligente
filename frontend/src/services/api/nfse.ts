@@ -1,4 +1,4 @@
-import {apiFetch} from './client';
+import {API_URL,apiFetch} from './client';
 
 export type NfseContext={
   origem:'PJ'|'PF';
@@ -55,3 +55,10 @@ export const importarNfseA3=(origem:'PJ'|'PF',entidadeId:number,thumbprint:strin
   apiFetch<{ok:boolean;documentos_encontrados:number;documentos_importados:number;ultimo_nsu?:number|null;max_nsu?:number|null}>('/api/v1/nfse/a3/importar',{
     method:'POST',body:JSON.stringify({origem,entidade_id:entidadeId,thumbprint_sha256:thumbprint,content_type:contentType,body_b64:bodyB64}),timeoutMs:30000,
   });
+
+export async function baixarNfsePdf(id:number){
+  const token=localStorage.getItem('omega_access_token');
+  const response=await fetch(`${API_URL}/api/v1/nfse/${id}/pdf`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+  if(!response.ok){let message='Não foi possível gerar o PDF desta NFS-e.';try{const body=await response.json();if(typeof body?.detail==='string')message=body.detail}catch{}throw new Error(message)}
+  return {blob:await response.blob(),name:response.headers.get('content-disposition')||`nfse-${id}.pdf`};
+}

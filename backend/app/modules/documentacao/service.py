@@ -745,3 +745,50 @@ def registrar_acesso_arquivo(versao_id: int, user_id: int | None, acao: str) -> 
         conexao.commit()
     finally:
         conexao.close()
+
+
+def listar_documentos_arquivados(q: str | None = None):
+    """Lista documentos arquivados sem apagar versões ou arquivos físicos."""
+    conexao = conectar_banco()
+    try:
+        filtros = ["d.ativo=0"]
+        params: list[Any] = []
+        if q and q.strip():
+            termo = f"%{q.strip()}%"
+            filtros.append("(d.nome LIKE ? OR e.razao_social LIKE ? OR COALESCE(e.nome_fantasia,'') LIKE ? OR e.cnpj LIKE ? OR COALESCE(c.nome,'') LIKE ?)")
+            params.extend([termo, termo, termo, termo, termo])
+        rows = conexao.execute(f"""
+            SELECT d.id,d.empresa_id,d.categoria_id,d.tipo,d.nome,d.descricao,d.origem,d.ativo,d.criado_em,d.atualizado_em,
+                   e.razao_social,e.nome_fantasia,e.cnpj,c.nome AS categoria_nome,c.ativo AS categoria_ativa,
+                   (SELECT COUNT(*) FROM documento_versoes v WHERE v.documento_id=d.id) AS versoes_count,
+                   (SELECT v.id FROM documento_versoes v WHERE v.documento_id=d.id ORDER BY v.versao DESC LIMIT 1) AS ultima_versao_id,
+                   (SELECT v.versao FROM documento_versoes v WHERE v.documento_id=d.id ORDER BY v.versao DESC LIMIT 1) AS ultima_versao,
+                   (SELECT v.nome_arquivo FROM documento_versoes v WHERE v.documento_id=d.id ORDER BY v.versao DESC LIMIT 1) AS nome_arquivo
+              FROM documentos d JOIN empresas e ON e.id=d.empresa_id
+              LEFT JOIN categorias_documentos c ON c.id=d.categoria_id
+             WHERE {' AND '.join(filtros)} ORDER BY COALESCE(d.atualizado_em,d.criado_em) DESC,d.id DESC
+        """, params).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conexao.close()
+
+
+def restaurar_documento(documento_id: int, user_id: int | None = None):
+    conexao = conectar_banco()
+    try:
+        doc = conexao.execute("SELECT * FROM documentos WHERE id=?", (documento_id,)).fetchone()
+        if not doc:
+            raise LookupError("Documento não encontrado.")
+        if doc["ativo"]:
+            return dict(doc)
+        if doc["categoria_id"] is None:
+            raise ValueError("Este documento não está vinculado a uma pasta ativa e não pode ser restaurado isoladamente.")
+        categoria = conexao.execute("SELECT ativo FROM categorias_documentos WHERE id=? AND empresa_id=?", (doc["categoria_id"], doc["empresa_id"])).fetchone()
+        if not categoria or not categoria["ativo"]:
+            raise ValueError("A pasta deste documento também está arquivada. Restaure a pasta antes de restaurar o arquivo.")
+        conexao.execute("UPDATE documentos SET ativo=1,atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (documento_id,))
+        conexao.execute("INSERT INTO auditorias (entidade,entidade_id,acao,dados_anteriores,dados_novos,origem) VALUES (?,?,?,?,?,?)", ("DOCUMENTO",documento_id,"RESTAURAR",json.dumps(dict(doc),ensure_ascii=False),json.dumps({"usuario_id":user_id},ensure_ascii=False),"DOCUMENTACAO"))
+        conexao.commit()
+        return dict(conexao.execute("SELECT * FROM documentos WHERE id=?", (documento_id,)).fetchone())
+    finally:
+        conexao.close()

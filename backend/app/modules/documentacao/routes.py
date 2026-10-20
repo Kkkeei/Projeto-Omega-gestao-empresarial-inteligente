@@ -83,6 +83,21 @@ async def upload_documento(
         raise HTTPException(400, str(exc))
 
 
+@router.get("/arquivados")
+def documentos_arquivados(q: str | None = Query(default=None), _user=Depends(_user)):
+    return {"documentos": service.listar_documentos_arquivados(q)}
+
+
+@router.post("/documentos/{documento_id}/restaurar")
+def documento_restaurar(documento_id: int, _user=Depends(_user)):
+    try:
+        return service.restaurar_documento(documento_id, _user["id"])
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 @router.delete("/documentos/{documento_id}")
 def documento_arquivar(documento_id: int, _user=Depends(_user)):
     try:

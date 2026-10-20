@@ -53,3 +53,7 @@ function nomeArquivoDoHeader(value:string){
  return ascii?.[1]||'';
 }
 export async function baixarVersao(versaoId:number,nome?:string){const r=await arquivoBlob(versaoId);const url=URL.createObjectURL(r.blob);const a=document.createElement('a');a.href=url;a.download=nome||'documento';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+export type DocumentoArquivado=Documento & {razao_social:string;nome_fantasia?:string|null;cnpj:string;categoria_ativa?:number|null};
+export async function listarDocumentosArquivados(q=''){const p=new URLSearchParams();if(q.trim())p.set('q',q.trim());return apiFetch<{documentos:DocumentoArquivado[]}>(`/api/v1/documentacao/arquivados${p.toString()?`?${p.toString()}`:''}`)}
+export async function restaurarDocumento(id:number){return apiFetch<Documento>(`/api/v1/documentacao/documentos/${id}/restaurar`,{method:'POST'})}
