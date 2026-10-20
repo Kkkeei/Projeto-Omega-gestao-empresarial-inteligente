@@ -357,7 +357,7 @@ def _mapping_value(item: dict[str, Any], *names: str) -> Any:
 
 _ADN_XML_PAYLOAD_KEYS = (
     "docZip", "doczip", "conteudo", "documento", "arquivoXml", "arquivo_xml",
-    "xml", "xmlGzip", "conteudoXml", "arquivoXML", "xmlEvento", "eventoXml",
+    "xml", "xmlGzip", "conteudoXml", "arquivoXML",
 )
 
 
