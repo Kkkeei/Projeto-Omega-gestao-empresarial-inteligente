@@ -50,7 +50,7 @@ class ConfigNfseRequest(BaseModel):
     entidade_id: int = Field(gt=0)
     sincronizacao_automatica: bool
     frequencia_horas: int = Field(ge=1, le=720)
-    horario: str = Field(pattern=r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+    horario: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
 class EventoRequest(BaseModel):
