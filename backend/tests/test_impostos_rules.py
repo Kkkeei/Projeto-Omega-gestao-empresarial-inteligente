@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from app.modules.impostos import repository
 from app.modules.impostos.service import _parse_extracao
@@ -42,10 +42,11 @@ def test_status_exibicao_nao_confunde_credor_com_pendente():
 
 
 def test_status_geral_prioriza_vencido_sobre_vencendo_e_pendente():
+    hoje = date.today()
     items = [
-        {"status_mensal": "A_PAGAR", "data_vencimento": "2026-10-21"},
+        {"status_mensal": "A_PAGAR", "data_vencimento": (hoje + timedelta(days=1)).isoformat()},
         {"status_mensal": "PENDENTE", "data_vencimento": None},
-        {"status_mensal": "A_PAGAR", "data_vencimento": "2026-10-19"},
+        {"status_mensal": "A_PAGAR", "data_vencimento": (hoje - timedelta(days=1)).isoformat()},
     ]
     status = repository._status_geral(items)
     assert status["chave"] == "VENCIDO"
@@ -53,11 +54,12 @@ def test_status_geral_prioriza_vencido_sobre_vencendo_e_pendente():
 
 
 def test_status_geral_prioriza_vencendo_sobre_pendente():
+    hoje = date.today()
     items = [
         {"status_mensal": "PENDENTE", "data_vencimento": None},
-        {"status_mensal": "A_PAGAR", "data_vencimento": "2026-10-22"},
+        {"status_mensal": "A_PAGAR", "data_vencimento": (hoje + timedelta(days=2)).isoformat()},
     ]
-    status = repository._status_geral(items, hoje=date(2026, 10, 20))
+    status = repository._status_geral(items)
     assert status["chave"] == "VENCENDO"
     assert status["quantidade"] == 1
 
