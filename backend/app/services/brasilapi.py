@@ -43,7 +43,7 @@ async def consultar_cnpj(cnpj: str) -> dict:
                 response.raise_for_status()
                 try:
                     payload = response.json()
-                except (ValueError, json.JSONDecodeError) as exc:
+                except ValueError as exc:
                     raise BrasilAPIError(
                         "BrasilAPI retornou uma resposta inválida (JSON malformado).",
                         502,
