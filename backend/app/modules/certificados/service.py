@@ -155,9 +155,21 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
     serial_attr = _subject_value(cert, NameOID.SERIAL_NUMBER) or ""
     document, titular_tipo = _extract_document(serial_attr)
     if not document:
-        # Alguns emissores não usam SERIALNUMBER; nesse caso procuramos apenas
-        # nos campos de identificação do titular, nunca no subject completo,
-        # para evitar capturar números de OID/códigos de outros atributos.
+        # ICP-Brasil pode colocar o CNPJ em uma OU (organizationalUnitName),
+        # inclusive como um valor isolado de 14 dígitos, como ocorre em alguns
+        # certificados A1 empresariais. Examine cada atributo separadamente:
+        # nunca concatene valores de atributos diferentes.
+        for attr in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME):
+            value = str(attr.value or "").strip()
+            if re.fullmatch(r"\\d{14}", value):
+                document, titular_tipo = value, "PJ"
+            else:
+                document, titular_tipo = _extract_document(value)
+            if document:
+                break
+    if not document:
+        # Outros emissores podem identificar o titular no CN ou O.
+        # Não procure no subject completo para evitar capturar OIDs/códigos.
         for value in (
             _subject_value(cert, NameOID.COMMON_NAME) or "",
             _subject_value(cert, NameOID.ORGANIZATION_NAME) or "",
