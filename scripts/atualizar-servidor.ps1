@@ -89,25 +89,6 @@ if ($LASTEXITCODE -ne 0) { throw "git pull falhou. Backup preservado em $Backup.
 
 # Verify paths using the deployed Python configuration; do not print secrets.
 $env:PYTHONPATH = $Backend
-@'
-import os
-from pathlib import Path
-from app.db import database
-
-expected_db = (Path(os.environ["OMEGA_DEPLOY_DB"])).resolve()
-expected_storage = (Path(os.environ["OMEGA_DEPLOY_STORAGE"])).resolve()
-print("DB configurado:", database.DB_PATH)
-print("Storage configurado:", database.STORAGE_BASE)
-if database.DB_PATH.resolve() != expected_db:
-    raise SystemExit("O caminho do banco mudou após a atualização; não inicie o servidor.")
-if database.STORAGE_BASE.resolve() != expected_storage:
-    raise SystemExit("O caminho do storage mudou após a atualização; não inicie o servidor.")
-if not database.DB_PATH.is_file():
-    raise SystemExit("Banco ausente após atualização.")
-if not database.STORAGE_BASE.is_dir():
-    raise SystemExit("Storage ausente após atualização.")
-print("Caminhos persistentes validados.")
-'@ | ForEach-Object { $_ } # kept separate from Python invocation below
 $env:OMEGA_DEPLOY_STORAGE = $Storage
 @'
 import os
