@@ -30,15 +30,22 @@ def _clean_certificate_data():
     yield
 
 
-def _pfx(cnpj="50.410.847/0001-12", password="Senha@123"):
+def _pfx(cnpj="50.410.847/0001-12", password="Senha@123", document_in_ou=False):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     now = datetime.now(timezone.utc)
-    subject = issuer = x509.Name([
+    subject_attrs = [
         x509.NameAttribute(NameOID.COUNTRY_NAME, "BR"),
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, "EMPRESA TESTE LTDA"),
         x509.NameAttribute(NameOID.COMMON_NAME, "EMPRESA TESTE LTDA"),
-        x509.NameAttribute(NameOID.SERIAL_NUMBER, f"CNPJ:{cnpj}"),
-    ])
+    ]
+    if document_in_ou:
+        subject_attrs.extend([
+            x509.NameAttribute(NameOID.SERIAL_NUMBER, "SEM-DOCUMENTO"),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, cnpj),
+        ])
+    else:
+        subject_attrs.append(x509.NameAttribute(NameOID.SERIAL_NUMBER, f"CNPJ:{cnpj}"))
+    subject = issuer = x509.Name(subject_attrs)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject).issuer_name(issuer).public_key(key.public_key())
@@ -76,6 +83,13 @@ def test_extract_document_does_not_join_separated_number_fragments():
     assert service._extract_document("CNPJ: 43002824 430028") == (None, "NAO_IDENTIFICADO")
     assert service._extract_document("CNPJ: 50.410.847/0001-12") == ("50410847000112", "PJ")
     assert service._extract_document("CPF: 123.456.789-01") == ("12345678901", "PF")
+
+
+def test_a1_extracts_cnpj_from_organizational_unit():
+    data, password = _pfx("07112850000120", document_in_ou=True)
+    meta = service._cert_metadata(data, password)
+    assert meta["documento_titular"] == "07112850000120"
+    assert meta["titular_tipo"] == "PJ"
 
 
 def test_a1_rejects_incompatible_cnpj():
