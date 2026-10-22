@@ -171,43 +171,41 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
         if document:
             break
 
-    # Em certificados sem OID específico, examine OU antes de SERIALNUMBER.
-    # Cada atributo é avaliado separadamente; números de campos diferentes
-    # nunca são concatenados. Corrigida também a regex de 14 dígitos.
+    # Fallback apenas para documentos explicitamente rotulados. Não trate
+    # qualquer OU de 14 dígitos como CNPJ do titular: pode ser identificador
+    # de uma AC/intermediária, causando o mesmo CNPJ errado em vários PFX.
+    # SERIALNUMBER, OU, CN e O só são aceitos quando dizem CNPJ:/CPF:.
     if not document:
-        for attr in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME):
-            value = str(attr.value or "").strip()
-            if re.fullmatch(r"\d{14}", value):
-                document, titular_tipo = value, "PJ"
-            else:
-                document, titular_tipo = _extract_document(value)
-            if document:
-                break
-
-    # SERIALNUMBER não é, por si só, um CNPJ: em certificados ICP-Brasil
-    # pode conter outro identificador numérico (inclusive um CNPJ de outra
-    # entidade/atributo). Só o aceite quando o próprio valor rotula o documento
-    # explicitamente como CNPJ ou CPF. Nunca inferir documento por 14 dígitos
-    # puros neste campo.
-    if not document:
-        serial_attr = _subject_value(cert, NameOID.SERIAL_NUMBER) or ""
-        explicit_document = re.search(
-            r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*([^,;]+)",
-            str(serial_attr),
+        labeled_values = []
+        labeled_values.extend(
+            str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.SERIAL_NUMBER)
         )
-        if explicit_document:
-            document, titular_tipo = _extract_document(
-                f"{explicit_document.group(1)}: {explicit_document.group(2)}"
-            )
-
-    if not document:
-        for value in (
+        labeled_values.extend(
+            str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
+        )
+        labeled_values.extend([
             _subject_value(cert, NameOID.COMMON_NAME) or "",
             _subject_value(cert, NameOID.ORGANIZATION_NAME) or "",
-        ):
-            document, titular_tipo = _extract_document(value)
-            if document:
+        ])
+        for value in labeled_values:
+            match = re.search(
+                r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*(\\d[\\d./\\-]{9,20})",
+                value,
+            )
+            if not match:
+                continue
+            candidate = _normalizar_documento(match.group(2))
+            kind = "PJ" if match.group(1).upper() == "CNPJ" else "PF"
+            if len(candidate) == (14 if kind == "PJ" else 11):
+                document, titular_tipo = candidate, kind
                 break
+
+    if not document:
+        raise ValueError(
+            "Não foi possível identificar o CNPJ/CPF do titular nos campos oficiais deste certificado. "
+            "O certificado não foi vinculado; confira o PFX e a senha."
+        )
+
     common_name = _subject_value(cert, NameOID.COMMON_NAME)
     organization = _subject_value(cert, NameOID.ORGANIZATION_NAME)
     issuer = _issuer_value(cert, NameOID.COMMON_NAME) or cert.issuer.rfc4514_string()
