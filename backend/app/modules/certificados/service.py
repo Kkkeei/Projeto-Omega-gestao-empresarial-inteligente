@@ -165,8 +165,8 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
         if not raw:
             return ""
 
-        # Decode a DER TLV length safely; accept the common OCTET STRING wrapper.
-        if raw[0] == 0x04:
+        # Decode DER TLV for OCTET STRING and common ASN.1 string encodings.
+        if raw[0] in (0x04, 0x0C, 0x13, 0x16):
             if len(raw) < 2:
                 return ""
             first_len = raw[1]
@@ -237,25 +237,21 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             if document:
                 break
 
-    # Fallback para documentos explicitamente rotulados nos campos do titular.
-    # Não aceite SERIALNUMBER numérico isolado: ele pode ser identificador da AC.
-    # Também não aceite OU numérica isolada em certificados reais, pois pode ser
-    # CNPJ de AC/intermediária. Mantemos compatibilidade com PFX legados/sintéticos
-    # que marcam SERIALNUMBER como SEM-DOCUMENTO e trazem o CNPJ completo na OU.
+    # Fallback restrito a documentos explicitamente rotulados nos atributos
+    # do titular. Números isolados em SERIALNUMBER ou OU podem identificar uma
+    # autoridade certificadora/intermediária e nunca devem virar CNPJ do cliente.
     if not document:
-        serial_values = [
-            str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.SERIAL_NUMBER)
-        ]
-        ou_values = [
-            str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
-        ]
-        labeled_values = serial_values + ou_values + [
-            _subject_value(cert, NameOID.COMMON_NAME) or "",
-            _subject_value(cert, NameOID.ORGANIZATION_NAME) or "",
-        ]
+        labeled_values = []
+        for oid in (
+            NameOID.SERIAL_NUMBER,
+            NameOID.ORGANIZATIONAL_UNIT_NAME,
+            NameOID.COMMON_NAME,
+            NameOID.ORGANIZATION_NAME,
+        ):
+            labeled_values.extend(str(a.value or "") for a in cert.subject.get_attributes_for_oid(oid))
         for value in labeled_values:
             match = re.search(
-                r"(?i)\b(CNPJ|CPF)\s*[:=]?\s*(\d[\d./\-]{9,20})",
+                r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*(\\d[\\d./\\-]{9,20})",
                 value,
             )
             if not match:
@@ -265,15 +261,6 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             if len(candidate) == (14 if kind == "PJ" else 11):
                 document, titular_tipo = candidate, kind
                 break
-
-        # Backward compatibility only for explicitly marked legacy PFX.
-        if not document and any("SEM-DOCUMENTO" in value.upper() for value in serial_values):
-            for value in ou_values:
-                candidate = _normalizar_documento(value)
-                if re.fullmatch(r"[0-9]{14}", candidate):
-                    document, titular_tipo = candidate, "PJ"
-                    break
-
 
     common_name = _subject_value(cert, NameOID.COMMON_NAME)
     organization = _subject_value(cert, NameOID.ORGANIZATION_NAME)
