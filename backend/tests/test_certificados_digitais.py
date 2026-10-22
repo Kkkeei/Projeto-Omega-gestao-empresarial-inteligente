@@ -103,6 +103,7 @@ def test_a1_prefers_icp_brasil_cnpj_oid_over_wrong_serial_and_ou():
         x509.NameAttribute(NameOID.COMMON_NAME, "EMPRESA TESTE LTDA"),
         x509.NameAttribute(NameOID.SERIAL_NUMBER, "22121066000172"),
         x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "22121066000172"),
+        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "22121066000172"),
         x509.NameAttribute(ObjectIdentifier("2.16.76.1.3.3"), "19167350000175"),
     ])
     cert = (
