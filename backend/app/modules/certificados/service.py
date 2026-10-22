@@ -237,22 +237,22 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             if document:
                 break
 
-    # Fallback apenas para documentos explicitamente rotulados. Não trate
-    # qualquer OU de 14 dígitos como CNPJ do titular: pode ser identificador
-    # de uma AC/intermediária, causando o mesmo CNPJ errado em vários PFX.
-    # SERIALNUMBER, OU, CN e O só são aceitos quando dizem CNPJ:/CPF:.
+    # Fallback para documentos explicitamente rotulados nos campos do titular.
+    # Não aceite SERIALNUMBER numérico isolado: ele pode ser identificador da AC.
+    # Também não aceite OU numérica isolada em certificados reais, pois pode ser
+    # CNPJ de AC/intermediária. Mantemos compatibilidade com PFX legados/sintéticos
+    # que marcam SERIALNUMBER como SEM-DOCUMENTO e trazem o CNPJ completo na OU.
     if not document:
-        labeled_values = []
-        labeled_values.extend(
+        serial_values = [
             str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.SERIAL_NUMBER)
-        )
-        labeled_values.extend(
+        ]
+        ou_values = [
             str(a.value or "") for a in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
-        )
-        labeled_values.extend([
+        ]
+        labeled_values = serial_values + ou_values + [
             _subject_value(cert, NameOID.COMMON_NAME) or "",
             _subject_value(cert, NameOID.ORGANIZATION_NAME) or "",
-        ])
+        ]
         for value in labeled_values:
             match = re.search(
                 r"(?i)\b(CNPJ|CPF)\s*[:=]?\s*(\d[\d./\-]{9,20})",
@@ -266,11 +266,14 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
                 document, titular_tipo = candidate, kind
                 break
 
-    if not document:
-        raise ValueError(
-            "Não foi possível identificar o CNPJ/CPF do titular nos campos oficiais deste certificado. "
-            "O certificado não foi vinculado; confira o PFX e a senha."
-        )
+        # Backward compatibility only for explicitly marked legacy PFX.
+        if not document and any("SEM-DOCUMENTO" in value.upper() for value in serial_values):
+            for value in ou_values:
+                candidate = _normalizar_documento(value)
+                if re.fullmatch(r"[0-9]{14}", candidate):
+                    document, titular_tipo = candidate, "PJ"
+                    break
+
 
     common_name = _subject_value(cert, NameOID.COMMON_NAME)
     organization = _subject_value(cert, NameOID.ORGANIZATION_NAME)
