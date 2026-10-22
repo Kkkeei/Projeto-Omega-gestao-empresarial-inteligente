@@ -184,10 +184,21 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             if document:
                 break
 
-    # SERIALNUMBER só é fallback; não pode sobrepor CNPJ/CPF já identificado.
+    # SERIALNUMBER não é, por si só, um CNPJ: em certificados ICP-Brasil
+    # pode conter outro identificador numérico (inclusive um CNPJ de outra
+    # entidade/atributo). Só o aceite quando o próprio valor rotula o documento
+    # explicitamente como CNPJ ou CPF. Nunca inferir documento por 14 dígitos
+    # puros neste campo.
     if not document:
         serial_attr = _subject_value(cert, NameOID.SERIAL_NUMBER) or ""
-        document, titular_tipo = _extract_document(serial_attr)
+        explicit_document = re.search(
+            r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*([^,;]+)",
+            str(serial_attr),
+        )
+        if explicit_document:
+            document, titular_tipo = _extract_document(
+                f"{explicit_document.group(1)}: {explicit_document.group(2)}"
+            )
 
     if not document:
         for value in (
