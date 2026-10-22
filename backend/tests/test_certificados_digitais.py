@@ -331,7 +331,7 @@ def test_a1_extracts_cnpj_from_real_icp_brasil_san_othername():
             x509.SubjectAlternativeName([
                 x509.OtherName(
                     ObjectIdentifier("2.16.76.1.3.3"),
-                    b"\\x04\\x0e19167350000175",
+                    b"\x04\x0e19167350000175",
                 ),
             ]),
             critical=False,
