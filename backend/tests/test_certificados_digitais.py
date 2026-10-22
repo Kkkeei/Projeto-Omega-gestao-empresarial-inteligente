@@ -305,3 +305,44 @@ def test_a3_date_only_validity_last_day_is_not_treated_as_midnight_expiry():
     parsed = service._parse_a3_validity(today)
     assert parsed.date().isoformat() == today
     assert parsed.hour == 23 and parsed.minute == 59 and parsed.second == 59
+
+
+def test_a1_extracts_cnpj_from_real_icp_brasil_san_othername():
+    """Real ICP-Brasil e-CNPJ places its CNPJ in SAN OtherName OID .3.3."""
+    from cryptography.x509.oid import ObjectIdentifier
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.now(timezone.utc)
+    subject = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "BR"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "ICP-Brasil"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "EMPRESA TESTE:19167350000175"),
+        # These fields are not authoritative for the certificate holder's CNPJ.
+        x509.NameAttribute(NameOID.SERIAL_NUMBER, "22121066000172"),
+        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "04740806000177"),
+    ])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject).issuer_name(subject).public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=1))
+        .not_valid_after(now + timedelta(days=365))
+        .add_extension(
+            x509.SubjectAlternativeName([
+                x509.OtherName(
+                    ObjectIdentifier("2.16.76.1.3.3"),
+                    b"\\x04\\x0e19167350000175",
+                ),
+            ]),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256())
+    )
+    data = pkcs12.serialize_key_and_certificates(
+        b"omega-real-san", key, cert, None,
+        serialization.BestAvailableEncryption(b"Senha@123"),
+    )
+
+    meta = service._cert_metadata(data, "Senha@123")
+    assert meta["documento_titular"] == "19167350000175"
+    assert meta["titular_tipo"] == "PJ"
