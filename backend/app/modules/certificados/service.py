@@ -183,7 +183,7 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             raw = raw[offset:offset + length]
 
         try:
-            return raw.decode("utf-8").strip().strip("\\x00")
+            return raw.decode("utf-8").strip().strip(chr(0))
         except UnicodeDecodeError:
             return ""
 
@@ -213,10 +213,10 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             # concatenation of unrelated values. CPF OID may include date
             # information after the first 11 digits in some ICP-Brasil profiles.
             if kind == "PJ":
-                valid = bool(re.fullmatch(r"(?:\\d{14}|\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2})", decoded))
+                valid = bool(re.fullmatch(r"[0-9]{14}", decoded))
                 candidate = digits if valid and len(digits) == expected_len else ""
             else:
-                valid = bool(re.match(r"^\\d{11}", digits))
+                valid = bool(re.match(r"^[0-9]{11}", digits))
                 candidate = digits[:11] if valid else ""
             if candidate:
                 document, titular_tipo = candidate, kind
