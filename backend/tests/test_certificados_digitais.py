@@ -92,6 +92,36 @@ def test_a1_extracts_cnpj_from_organizational_unit():
     assert meta["titular_tipo"] == "PJ"
 
 
+def test_a1_prefers_icp_brasil_cnpj_oid_over_wrong_serial_and_ou():
+    from cryptography.x509.oid import ObjectIdentifier
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.now(timezone.utc)
+    subject = issuer = x509.Name([
+        x509.NameAttribute(NameOID.COUNTRY_NAME, "BR"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "EMPRESA TESTE LTDA"),
+        x509.NameAttribute(NameOID.COMMON_NAME, "EMPRESA TESTE LTDA"),
+        x509.NameAttribute(NameOID.SERIAL_NUMBER, "22121066000172"),
+        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "22121066000172"),
+        x509.NameAttribute(ObjectIdentifier("2.16.76.1.3.3"), "19167350000175"),
+    ])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject).issuer_name(issuer).public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=1))
+        .not_valid_after(now + timedelta(days=365))
+        .sign(key, hashes.SHA256())
+    )
+    data = pkcs12.serialize_key_and_certificates(
+        b"omega-icp", key, cert, None,
+        serialization.BestAvailableEncryption(b"Senha@123")
+    )
+    meta = service._cert_metadata(data, "Senha@123")
+    assert meta["documento_titular"] == "19167350000175"
+    assert meta["titular_tipo"] == "PJ"
+
+
 def test_a1_rejects_incompatible_cnpj():
     data, password = _pfx("12.345.678/0001-99")
     with pytest.raises(ValueError, match="incompatível"):
