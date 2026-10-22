@@ -251,7 +251,7 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
             labeled_values.extend(str(a.value or "") for a in cert.subject.get_attributes_for_oid(oid))
         for value in labeled_values:
             match = re.search(
-                r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*(\\d[\\d./\\-]{9,20})",
+                r"(?i)\b(CNPJ|CPF)\s*[:=]?\s*(\d[\d./\-]{9,20})",
                 value,
             )
             if not match:
