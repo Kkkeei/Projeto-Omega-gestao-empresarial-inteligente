@@ -152,24 +152,44 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
     if private_key is None:
         raise ValueError("O certificado não contém chave privada disponível.")
     subject = cert.subject.rfc4514_string()
-    serial_attr = _subject_value(cert, NameOID.SERIAL_NUMBER) or ""
-    document, titular_tipo = _extract_document(serial_attr)
+
+    # ICP-Brasil define OIDs próprios para CPF/CNPJ do titular.
+    # O OID 2.16.76.1.3.3 identifica CNPJ; ele deve ter prioridade sobre
+    # SERIALNUMBER, que pode conter outro identificador e causar falso mismatch.
+    from cryptography.x509.oid import ObjectIdentifier
+    document = None
+    titular_tipo = "NAO_IDENTIFICADO"
+    for oid, kind, expected_len in (
+        ("2.16.76.1.3.3", "PJ", 14),
+        ("2.16.76.1.3.1", "PF", 11),
+    ):
+        for attr in cert.subject.get_attributes_for_oid(ObjectIdentifier(oid)):
+            candidate = _normalizar_documento(str(attr.value or ""))
+            if len(candidate) == expected_len:
+                document, titular_tipo = candidate, kind
+                break
+        if document:
+            break
+
+    # Em certificados sem OID específico, examine OU antes de SERIALNUMBER.
+    # Cada atributo é avaliado separadamente; números de campos diferentes
+    # nunca são concatenados. Corrigida também a regex de 14 dígitos.
     if not document:
-        # ICP-Brasil pode colocar o CNPJ em uma OU (organizationalUnitName),
-        # inclusive como um valor isolado de 14 dígitos, como ocorre em alguns
-        # certificados A1 empresariais. Examine cada atributo separadamente:
-        # nunca concatene valores de atributos diferentes.
         for attr in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME):
             value = str(attr.value or "").strip()
-            if re.fullmatch(r"\\d{14}", value):
+            if re.fullmatch(r"\d{14}", value):
                 document, titular_tipo = value, "PJ"
             else:
                 document, titular_tipo = _extract_document(value)
             if document:
                 break
+
+    # SERIALNUMBER só é fallback; não pode sobrepor CNPJ/CPF já identificado.
     if not document:
-        # Outros emissores podem identificar o titular no CN ou O.
-        # Não procure no subject completo para evitar capturar OIDs/códigos.
+        serial_attr = _subject_value(cert, NameOID.SERIAL_NUMBER) or ""
+        document, titular_tipo = _extract_document(serial_attr)
+
+    if not document:
         for value in (
             _subject_value(cert, NameOID.COMMON_NAME) or "",
             _subject_value(cert, NameOID.ORGANIZATION_NAME) or "",
