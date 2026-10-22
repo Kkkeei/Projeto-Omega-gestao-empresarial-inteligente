@@ -189,7 +189,7 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
         ])
         for value in labeled_values:
             match = re.search(
-                r"(?i)\\b(CNPJ|CPF)\\s*[:=]?\\s*(\\d[\\d./\\-]{9,20})",
+                r"(?i)\b(CNPJ|CPF)\s*[:=]?\s*(\d[\d./\-]{9,20})",
                 value,
             )
             if not match:
