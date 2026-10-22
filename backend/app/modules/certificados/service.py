@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
@@ -153,23 +154,88 @@ def _cert_metadata(data: bytes, password: str) -> dict[str, Any]:
         raise ValueError("O certificado não contém chave privada disponível.")
     subject = cert.subject.rfc4514_string()
 
-    # ICP-Brasil define OIDs próprios para CPF/CNPJ do titular.
-    # O OID 2.16.76.1.3.3 identifica CNPJ; ele deve ter prioridade sobre
-    # SERIALNUMBER, que pode conter outro identificador e causar falso mismatch.
+    # ICP-Brasil places CPF/CNPJ in Subject Alternative Name (SAN) OtherName
+    # values, not necessarily in subject attributes. cryptography exposes
+    # OtherName.value as the DER encoding of the inner ASN.1 value (often an
+    # OCTET STRING), so decode that wrapper before interpreting the document.
     from cryptography.x509.oid import ObjectIdentifier
+
+    def decode_other_name(raw_value: bytes) -> str:
+        raw = bytes(raw_value or b"")
+        if not raw:
+            return ""
+
+        # Decode a DER TLV length safely; accept the common OCTET STRING wrapper.
+        if raw[0] == 0x04:
+            if len(raw) < 2:
+                return ""
+            first_len = raw[1]
+            if first_len < 0x80:
+                offset, length = 2, first_len
+            else:
+                count = first_len & 0x7F
+                if count == 0 or count > 4 or len(raw) < 2 + count:
+                    return ""
+                offset = 2 + count
+                length = int.from_bytes(raw[2:offset], "big")
+            if offset + length != len(raw):
+                return ""
+            raw = raw[offset:offset + length]
+
+        try:
+            return raw.decode("utf-8").strip().strip("\\x00")
+        except UnicodeDecodeError:
+            return ""
+
     document = None
     titular_tipo = "NAO_IDENTIFICADO"
-    for oid, kind, expected_len in (
-        ("2.16.76.1.3.3", "PJ", 14),
-        ("2.16.76.1.3.1", "PF", 11),
-    ):
-        for attr in cert.subject.get_attributes_for_oid(ObjectIdentifier(oid)):
-            candidate = _normalizar_documento(str(attr.value or ""))
-            if len(candidate) == expected_len:
+    expected_oids = {
+        "2.16.76.1.3.3": ("PJ", 14),  # CNPJ
+        "2.16.76.1.3.1": ("PF", 11),  # CPF
+    }
+
+    try:
+        san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    except x509.ExtensionNotFound:
+        san = None
+
+    if san is not None:
+        for entry in san:
+            if not isinstance(entry, x509.OtherName):
+                continue
+            oid = entry.type_id.dotted_string
+            if oid not in expected_oids:
+                continue
+            kind, expected_len = expected_oids[oid]
+            decoded = decode_other_name(entry.value)
+            digits = _normalizar_documento(decoded)
+            # CNPJ's official OID must contain exactly the document, not a
+            # concatenation of unrelated values. CPF OID may include date
+            # information after the first 11 digits in some ICP-Brasil profiles.
+            if kind == "PJ":
+                valid = bool(re.fullmatch(r"(?:\\d{14}|\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2})", decoded))
+                candidate = digits if valid and len(digits) == expected_len else ""
+            else:
+                valid = bool(re.match(r"^\\d{11}", digits))
+                candidate = digits[:11] if valid else ""
+            if candidate:
                 document, titular_tipo = candidate, kind
                 break
-        if document:
-            break
+
+    # Compatibility for certificates that put the ICP-Brasil document OID
+    # directly in subject attributes (seen in test/legacy certificates).
+    if not document:
+        for oid, kind, expected_len in (
+            ("2.16.76.1.3.3", "PJ", 14),
+            ("2.16.76.1.3.1", "PF", 11),
+        ):
+            for attr in cert.subject.get_attributes_for_oid(ObjectIdentifier(oid)):
+                candidate = _normalizar_documento(str(attr.value or ""))
+                if len(candidate) == expected_len:
+                    document, titular_tipo = candidate, kind
+                    break
+            if document:
+                break
 
     # Fallback apenas para documentos explicitamente rotulados. Não trate
     # qualquer OU de 14 dígitos como CNPJ do titular: pode ser identificador
