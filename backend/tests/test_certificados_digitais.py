@@ -41,7 +41,7 @@ def _pfx(cnpj="50.410.847/0001-12", password="Senha@123", document_in_ou=False):
     if document_in_ou:
         subject_attrs.extend([
             x509.NameAttribute(NameOID.SERIAL_NUMBER, "SEM-DOCUMENTO"),
-            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, cnpj),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, f"CNPJ:{cnpj}"),
         ])
     else:
         subject_attrs.append(x509.NameAttribute(NameOID.SERIAL_NUMBER, f"CNPJ:{cnpj}"))
