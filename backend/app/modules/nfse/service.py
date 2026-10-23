@@ -472,6 +472,37 @@ def _has_unparsed_document_batch(payload: Any) -> bool:
     return False
 
 
+def _sync_diagnostic(
+    payload: dict[str, Any],
+    requested_nsu: int,
+    status_code: int,
+    content_type: str,
+    item_count: int,
+) -> str:
+    """Build a concise, non-sensitive diagnostic for empty ADN responses."""
+    errors = payload.get("Erros") or []
+    error_summary = []
+    for item in errors:
+        if not isinstance(item, dict):
+            continue
+        code = str(item.get("Codigo") or "").strip()
+        description = str(item.get("Descricao") or "").strip()
+        if code or description:
+            error_summary.append({"codigo": code or None, "descricao": description[:180] or None})
+
+    diagnostic = {
+        "http_status": status_code,
+        "nsu_solicitado": requested_nsu,
+        "ultNSU": _safe_int(_mapping_value(payload, "ultNSU", "ultNsu", "ultimoNSU", "ultimo_nsu")),
+        "maxNSU": _safe_int(_mapping_value(payload, "maxNSU", "maxNsu", "maximoNSU", "max_nsu")),
+        "status_processamento": str(payload.get("StatusProcessamento") or "")[:100] or None,
+        "itens_reconhecidos": item_count,
+        "content_type": content_type.split(";", 1)[0][:100],
+        "erros": error_summary[:5],
+    }
+    return "Diagnóstico ADN: " + json.dumps(diagnostic, ensure_ascii=False, separators=(",", ":"))
+
+
 def _extract_items(payload: Any) -> tuple[list[dict[str, Any]], int | None, int | None]:
     if not isinstance(payload, dict):
         return [], None, None
@@ -761,10 +792,11 @@ def consultar_a1(origin: str, entity_id: int) -> dict[str, Any]:
         )
 
         if status_code >= 400 and no_documents and not items:
+            diagnostic = _sync_diagnostic(payload, current_nsu, status_code, content_type, len(items))
             _update_cursor(
                 origin, entity_id, current_nsu,
                 max_nsu if max_nsu is not None else previous_max,
-                "SEM_DOCUMENTOS", None
+                "SEM_DOCUMENTOS", diagnostic
             )
             certificate_service.record_usage(cert["id"], "NFS-E", origin=origin)
             return {
@@ -779,6 +811,7 @@ def consultar_a1(origin: str, entity_id: int) -> dict[str, Any]:
                 "content_type": content_type,
                 "lotes_consultados": batch_number + 1,
                 "fim_da_fila": True,
+                "diagnostico": diagnostic,
             }
 
         if status_code >= 400:
@@ -833,10 +866,11 @@ def consultar_a1(origin: str, entity_id: int) -> dict[str, Any]:
         next_nsu = max(candidates) if candidates else current_nsu
 
         if not documents:
+            diagnostic = _sync_diagnostic(payload, current_nsu, status_code, content_type, len(items))
             _update_cursor(
                 origin, entity_id, current_nsu,
                 max_nsu if max_nsu is not None else previous_max,
-                "SEM_DOCUMENTOS", None
+                "SEM_DOCUMENTOS", diagnostic
             )
             certificate_service.record_usage(cert["id"], "NFS-E", origin=origin)
             return {
@@ -851,6 +885,7 @@ def consultar_a1(origin: str, entity_id: int) -> dict[str, Any]:
                 "content_type": content_type,
                 "lotes_consultados": batch_number + 1,
                 "fim_da_fila": True,
+                "diagnostico": diagnostic,
             }
 
         if next_nsu <= current_nsu:
