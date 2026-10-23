@@ -1,5 +1,5 @@
 import {NavLink,Outlet,useLocation} from 'react-router-dom';
-import {LayoutDashboard,Building2,FileCheck2,AlertTriangle,LogOut,Users,ShieldCheck,Folder,BadgeDollarSign,ReceiptText,KeyRound,FileText,ChevronDown,PanelLeftClose,Workflow} from 'lucide-react';
+import {LayoutDashboard,Building2,FileCheck2,AlertTriangle,LogOut,Users,ShieldCheck,Folder,BadgeDollarSign,ReceiptText,KeyRound,FileText,ChevronDown,Workflow} from 'lucide-react';
 import {useAuth} from '../../auth/AuthContext';
 
 const groups=[
