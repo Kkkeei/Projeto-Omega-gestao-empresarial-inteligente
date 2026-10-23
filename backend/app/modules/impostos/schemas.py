@@ -1,10 +1,26 @@
 from __future__ import annotations
 
 from datetime import date
+import re
 from pydantic import BaseModel, Field, model_validator
 
 
 ESFERAS = {"Federal", "Estadual", "Municipal"}
+
+
+def _validar_competencia(value: str | None, campo: str) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    match = re.fullmatch(r"(20\d{2})-(0[1-9]|1[0-2])(?:-(\d{2}))?", value)
+    if not match:
+        raise ValueError(f"{campo} deve estar no formato AAAA-MM ou AAAA-MM-DD, com mês válido.")
+    if match.group(3):
+        try:
+            date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"{campo} contém uma data inválida.") from exc
+    return value
 
 
 class TributoCreate(BaseModel):
@@ -34,6 +50,14 @@ class VinculoTributoCreate(BaseModel):
     vigencia_fim: str | None = Field(default=None, min_length=7, max_length=10)
     observacao: str | None = None
 
+    @model_validator(mode="after")
+    def validar_vigencia(self):
+        self.vigencia_inicio = _validar_competencia(self.vigencia_inicio, "Competência inicial") or ""
+        self.vigencia_fim = _validar_competencia(self.vigencia_fim, "Competência final")
+        if self.vigencia_fim and self.vigencia_inicio[:7] > self.vigencia_fim[:7]:
+            raise ValueError("A competência final não pode ser anterior à inicial.")
+        return self
+
 
 class VinculoTributoUpdate(BaseModel):
     obrigatorio: bool = True
@@ -41,6 +65,14 @@ class VinculoTributoUpdate(BaseModel):
     vigencia_fim: str | None = None
     status: str = Field(default="ATIVO", pattern="^(ATIVO|INATIVO)$")
     observacao: str | None = None
+
+    @model_validator(mode="after")
+    def validar_vigencia(self):
+        self.vigencia_inicio = _validar_competencia(self.vigencia_inicio, "Competência inicial")
+        self.vigencia_fim = _validar_competencia(self.vigencia_fim, "Competência final")
+        if self.vigencia_inicio and self.vigencia_fim and self.vigencia_inicio[:7] > self.vigencia_fim[:7]:
+            raise ValueError("A competência final não pode ser anterior à inicial.")
+        return self
 
 
 class ImpostoMensalCreate(BaseModel):

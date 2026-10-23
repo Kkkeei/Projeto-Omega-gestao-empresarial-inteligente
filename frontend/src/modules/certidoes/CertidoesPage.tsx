@@ -4,6 +4,7 @@ import {listarCertidoes,listarTiposCertidao,historicoCertidoes,listarEmpresasPar
 import type {Certidao,TipoCertidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {StatusBadge} from '../../components/status/StatusBadge';
+import './Certidoes.css';
 
 function formatarData(value?:string|null){
   if(!value) return '—';
