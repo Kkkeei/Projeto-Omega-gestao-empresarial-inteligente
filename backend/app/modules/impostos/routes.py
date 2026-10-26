@@ -79,7 +79,7 @@ def registrar_situacao(empresa_id:int,data:RegistroSituacaoCreate, tipo:str=Quer
 
 
 @router.post("/empresas/{empresa_id}/mensais/{tributo_id}/pago")
-def marcar_pago(empresa_id:int,tributo_id:int,ano:int=Query(...),mes:int=Query(...)):
+def marcar_pago(empresa_id:int,tributo_id:int,ano:int=Query(...,ge=2000,le=2100),mes:int=Query(...,ge=1,le=12)):
     try:
         mensal=repository.obter_mensal(empresa_id,tributo_id,ano,mes)
         if not mensal:
@@ -105,7 +105,7 @@ def detalhe_imposto(empresa_id:int,tributo_id:int,ano:int|None=Query(None,ge=200
 
 
 @router.post("/empresas/{empresa_id}/tributos/{tributo_id}/preparar-guia")
-async def preparar_guia(empresa_id:int,tributo_id:int,ano:int=Query(...),mes:int=Query(...),arquivo:UploadFile=File(...),user=Depends(current_user)):
+async def preparar_guia(empresa_id:int,tributo_id:int,ano:int=Query(...,ge=2000,le=2100),mes:int=Query(...,ge=1,le=12),arquivo:UploadFile=File(...),user=Depends(current_user)):
     try: return await _preparar_guia(empresa_id,tributo_id,ano,mes,arquivo,user.get("id"))
     except ValueError as exc: raise HTTPException(400,str(exc)) from exc
 
