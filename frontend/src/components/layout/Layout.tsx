@@ -31,7 +31,7 @@ export function Layout(){
   return <div className="app-shell">
     <aside className="sidebar">
       <NavLink to="/" className="brand" aria-label="ÔMEGA — início">
-        <img className="sidebar-company-logo" src="/omega-logo.svg" alt="Grupo ÔMEGA — Gestão de Empresas"/>
+        <img className="sidebar-company-logo" src="/omega-logo-original.png" alt="Grupo ÔMEGA — Gestão de Empresas"/>
       </NavLink>
       <div className="sidebar-context"><span className="context-mark"><Workflow size={15}/></span><div><strong>Central de operações</strong><small>Ambiente de trabalho</small></div><ChevronDown size={14}/></div>
       <nav className="nav" aria-label="Navegação principal">
