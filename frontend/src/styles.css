@@ -628,3 +628,9 @@ input:focus,select:focus,.search-box input:focus{border-color:#9aa9eb;box-shadow
  .nfse-current-entity strong{max-width:calc(100vw - 115px)}
  .nfse-back-button{width:100%}
 }
+
+/* Grupo ÔMEGA brand assets */
+.sidebar-company-logo{display:block;width:100%;max-width:205px;height:auto;object-fit:contain;object-position:left center;margin:4px 0 24px;border-radius:2px}
+.login-company-logo{display:block;width:min(100%,460px);height:auto;max-height:170px;object-fit:contain;margin:0 auto 22px;background:#fff;border-radius:8px;padding:8px}
+.login-brand>p{max-width:460px}
+@media(max-width:900px){.login-company-logo{max-width:330px;max-height:120px}.sidebar-company-logo{max-width:180px}}
