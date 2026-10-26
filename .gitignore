@@ -1,18 +1,74 @@
+# Segredos e configurações locais
 .env
-__pycache__/
-*.pyc
-node_modules/
-dist/
-.venv/
-.pytest_cache/
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p7b
+*.p7c
+*.crt
+*.cer
 
+# Bancos de dados e backups locais
 *.db
+*.db-*
 *.sqlite
 *.sqlite3
-storage/backups/database/
+*.sqlite-*
+*.bak
+*.backup
+*.dump
 
-# Dados locais do OMEGA
-backend/omega.db
-backend/omega.db-shm
-backend/omega.db-wal
+# Documentos e arquivos privados de clientes
 storage/
+backend/storage/
+frontend/storage/
+uploads/
+backend/uploads/
+
+# Dependências
+.venv/
+venv/
+env/
+node_modules/
+**/node_modules/
+.python-version.local
+
+# Builds e caches
+dist/
+build/
+**/dist/
+**/build/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vite/
+coverage/
+htmlcov/
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE e sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Arquivos compactados e cópias locais
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar

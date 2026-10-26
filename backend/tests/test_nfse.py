@@ -542,3 +542,26 @@ def test_a3_event_response_requires_matching_certificate_and_imports(monkeypatch
     assert result["eventos_importados"] == 1
     events = service.listar_eventos(nfse_id)
     assert any(item["origem"] == "ADN_NFSE_A3_BRIDGE" for item in events)
+
+
+def test_sync_diagnostic_records_cursor_and_empty_response_without_sensitive_data():
+    payload = {
+        "StatusProcessamento": "NENHUM_DOCUMENTO_LOCALIZADO",
+        "ultNSU": "173",
+        "maxNSU": "180",
+        "Erros": [{
+            "Codigo": "E2220",
+            "Descricao": "Nenhum documento localizado - não existem documentos fiscais para o Contribuinte.",
+        }],
+    }
+    diagnostic = service._sync_diagnostic(
+        payload, requested_nsu=173, status_code=404,
+        content_type="application/json; charset=utf-8", item_count=0,
+    )
+    assert '"nsu_solicitado":173' in diagnostic
+    assert '"ultNSU":173' in diagnostic
+    assert '"maxNSU":180' in diagnostic
+    assert '"http_status":404' in diagnostic
+    assert "E2220" in diagnostic
+    assert "senha" not in diagnostic.lower()
+    assert "certificado" not in diagnostic.lower()

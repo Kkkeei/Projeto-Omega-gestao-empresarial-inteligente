@@ -3,6 +3,9 @@ from app.services.auth_service import buscar_usuario_por_id, verify_password
 
 
 def test_register_and_reset_flow(monkeypatch):
+    # Este teste cobre o fluxo de cadastro; habilita explicitamente o cadastro
+    # público apenas no ambiente isolado do teste. Em produção ele continua fechado.
+    monkeypatch.setenv("OMEGA_ALLOW_PUBLIC_REGISTRATION", "true")
     monkeypatch.setenv("OMEGA_RESET_EXPOSE_URL", "true")
     result = register(RegisterIn(nome="Usuário Teste", email="teste.auth@example.com", senha="SenhaTeste123", confirmar_senha="SenhaTeste123"))
     assert result["ok"] is True

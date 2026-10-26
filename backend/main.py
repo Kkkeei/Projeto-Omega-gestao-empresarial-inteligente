@@ -15,6 +15,7 @@ from app.db.database import criar_tabelas
 from app.api.v1.routes import router as api_router
 from app.api.v1.auth.routes import router as auth_router
 from app.services.sincronizacao_inicial import sincronizar_todas_ao_iniciar
+from app.services.auth_service import ensure_admin_user
 from app.modules.nfse import service as nfse_service
 
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +25,8 @@ logger = logging.getLogger("omega")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     criar_tabelas()
+    # Cria a conta administrativa inicial somente quando as variáveis OMEGA_ADMIN_* estão configuradas.
+    ensure_admin_user()
 
     async def executar_agenda_nfse():
         # A agenda só processa titulares que habilitaram explicitamente a

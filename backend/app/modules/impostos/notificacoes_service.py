@@ -81,14 +81,57 @@ def programar_notificacoes(empresa_id: int, imposto_mensal_id: int, tributo_nome
     return eventos
 
 
-def gerar_alertas_vencidos(empresa_id: int | None = None) -> list[dict]:
-    """Cria, de forma idempotente, alertas internos para impostos vencidos.
+def processar_eventos_agendados() -> int:
+    """Move eventos cujo horário chegou para a fila de envio.
 
-    O documento prevê o alerta de imposto vencido para a contabilidade.
-    O envio externo depende do canal do cliente e não é inferido aqui; o evento fica registrado para processamento posterior.
+    Não envia mensagens por si só; deixa o estado explícito para um conector
+    de e-mail/WhatsApp/app processar posteriormente.
     """
-    cfg = _configs().get("CONTABILIDADE", {})
-    if not int(cfg.get("imposto_vencido", 0)):
+    conn = conectar_banco()
+    try:
+        rows = conn.execute("""
+            SELECT ev.id, ev.tipo, im.status AS status_mensal
+              FROM impostos_notificacoes_eventos ev
+              LEFT JOIN impostos_mensais im ON im.id=ev.imposto_mensal_id
+             WHERE ev.status='PROGRAMADA'
+               AND datetime(COALESCE(ev.agendado_para, ev.criado_em)) <= datetime('now','localtime')
+        """).fetchall()
+        alteradas = 0
+        for row in rows:
+            tipo = str(row["tipo"] or "").upper()
+            status_mensal = str(row["status_mensal"] or "").upper()
+            if tipo in {"ANTES_VENCIMENTO", "VENCIMENTO", "NAO_PAGAMENTO", "IMPOSTO_VENCIDO"} and status_mensal in {
+                "PAGO", "CREDOR", "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO"
+            }:
+                novo_status = "CANCELADA"
+            else:
+                novo_status = "PENDENTE_ENVIO"
+            cur = conn.execute(
+                "UPDATE impostos_notificacoes_eventos SET status=? WHERE id=? AND status='PROGRAMADA'",
+                (novo_status, row["id"]),
+            )
+            alteradas += cur.rowcount
+        conn.commit()
+        return alteradas
+    finally:
+        conn.close()
+
+
+def gerar_alertas_vencidos(empresa_id: int | None = None) -> list[dict]:
+    """Registra alertas internos idempotentes para guias vencidas/não pagas.
+
+    Os eventos ficam pendentes para um canal de envio processá-los. Este módulo
+    não afirma que enviou e-mail/WhatsApp sem integração de transporte ativa.
+    """
+    processar_eventos_agendados()
+    configs = _configs()
+    ativos = {
+        publico: cfg
+        for publico, cfg in configs.items()
+        if int(cfg.get("nao_pagamento", 0))
+        or (publico == "CONTABILIDADE" and int(cfg.get("imposto_vencido", 0)))
+    }
+    if not ativos:
         return []
     conn = conectar_banco()
     try:
@@ -102,27 +145,51 @@ def gerar_alertas_vencidos(empresa_id: int | None = None) -> list[dict]:
             where.append("im.empresa_id=?")
             params.append(empresa_id)
         rows = conn.execute(f"""
-            SELECT im.id,im.empresa_id,im.data_vencimento,im.competencia_ano,im.competencia_mes,t.nome
+            SELECT im.id,im.empresa_id,im.data_vencimento,im.competencia_ano,
+                   im.competencia_mes,t.nome,im.valor
               FROM impostos_mensais im JOIN tributos t ON t.id=im.tributo_id
              WHERE {' AND '.join(where)}
         """, params).fetchall()
-        created = []
+        created: list[int] = []
         for row in rows:
-            existe = conn.execute("SELECT 1 FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico='CONTABILIDADE' AND tipo='IMPOSTO_VENCIDO' LIMIT 1", (row["id"],)).fetchone()
-            if existe:
-                continue
-            titulo = "Imposto vencido"
-            mensagem = f"O imposto {row['nome']} da competência {row['competencia_mes']:02d}/{row['competencia_ano']} está vencido desde {row['data_vencimento'][:10][8:10]}/{row['data_vencimento'][:10][5:7]}/{row['data_vencimento'][:10][:4]}."
-            cur = conn.execute("INSERT INTO impostos_notificacoes_eventos (empresa_id,imposto_mensal_id,publico,tipo,titulo,mensagem,agendado_para,status) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP,'PENDENTE_ENVIO')", (row["empresa_id"],row["id"],"CONTABILIDADE","IMPOSTO_VENCIDO",titulo,mensagem))
-            created.append(cur.lastrowid)
+            venc = date.fromisoformat(row["data_vencimento"][:10])
+            competencia = f"{row['competencia_mes']:02d}/{row['competencia_ano']}"
+            for publico, cfg in ativos.items():
+                tipos: list[tuple[str, str, str]] = []
+                if int(cfg.get("nao_pagamento", 0)):
+                    tipos.append((
+                        "NAO_PAGAMENTO",
+                        "Guia não identificada como paga",
+                        f"A guia de {row['nome']} da competência {competencia}, vencida em {venc.strftime('%d/%m/%Y')}, ainda não está registrada como paga."
+                    ))
+                if publico == "CONTABILIDADE" and int(cfg.get("imposto_vencido", 0)):
+                    tipos.append((
+                        "IMPOSTO_VENCIDO",
+                        "Imposto vencido",
+                        f"O imposto {row['nome']} da competência {competencia} está vencido desde {venc.strftime('%d/%m/%Y')}."
+                    ))
+                for tipo, titulo, mensagem in tipos:
+                    existe = conn.execute(
+                        "SELECT 1 FROM impostos_notificacoes_eventos WHERE imposto_mensal_id=? AND publico=? AND tipo=? LIMIT 1",
+                        (row["id"], publico, tipo),
+                    ).fetchone()
+                    if existe:
+                        continue
+                    cur = conn.execute(
+                        "INSERT INTO impostos_notificacoes_eventos (empresa_id,imposto_mensal_id,publico,tipo,titulo,mensagem,agendado_para,status) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP,'PENDENTE_ENVIO')",
+                        (row["empresa_id"], row["id"], publico, tipo, titulo, mensagem),
+                    )
+                    created.append(cur.lastrowid)
         conn.commit()
         if not created:
             return []
-        return [dict(r) for r in conn.execute(f"SELECT * FROM impostos_notificacoes_eventos WHERE id IN ({','.join('?' for _ in created)}) ORDER BY id", created).fetchall()]
+        placeholders = ",".join("?" for _ in created)
+        return [dict(r) for r in conn.execute(
+            f"SELECT * FROM impostos_notificacoes_eventos WHERE id IN ({placeholders}) ORDER BY id",
+            created,
+        ).fetchall()]
     finally:
         conn.close()
-
-
 def listar_eventos(empresa_id: int | None = None, imposto_mensal_id: int | None = None) -> list[dict]:
     conn = conectar_banco()
     try:

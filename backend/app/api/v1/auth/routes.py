@@ -93,6 +93,8 @@ def admin_user(user=Depends(current_user)):
 
 @router.post("/registrar", status_code=status.HTTP_201_CREATED)
 def register(data: RegisterIn):
+    if os.getenv("OMEGA_ALLOW_PUBLIC_REGISTRATION", "false").strip().lower() not in {"1", "true", "sim", "yes"}:
+        raise HTTPException(status_code=403, detail="Cadastro público desativado. Solicite ao administrador a criação do seu acesso.")
     if data.senha != data.confirmar_senha:
         raise HTTPException(status_code=400, detail="As senhas não conferem.")
     try:
