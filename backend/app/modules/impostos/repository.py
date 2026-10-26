@@ -381,24 +381,33 @@ def atualizar_vinculo(vinculo_id:int,data:dict[str,Any]) -> dict[str,Any]:
         if not atual: raise LookupError("Configuração de imposto não encontrada.")
         status=str(data.get("status") or atual["status"]).upper()
         inicio=data.get("vigencia_inicio") or atual["vigencia_inicio"]
-        fim=data.get("vigencia_fim")
-        if status=="INATIVO" and not fim: raise ValueError("Informe a competência de encerramento ao inativar o imposto.")
-        if fim and inicio and fim[:7] < inicio[:7]: raise ValueError("A competência final não pode ser anterior à inicial.")
+        fim=data.get("vigencia_fim") if "vigencia_fim" in data else atual["vigencia_fim"]
+        if status=="INATIVO" and not fim:
+            raise ValueError("Informe a competência de encerramento ao inativar o imposto.")
+        if fim and inicio and fim[:7] < inicio[:7]:
+            raise ValueError("A competência final não pode ser anterior à inicial.")
+        # A competência final é inclusiva: o vínculo vale até esse mês,
+        # deixando de ser aplicado a partir do mês seguinte.
         overlap=conn.execute("""
             SELECT id FROM empresa_impostos
              WHERE id<>? AND empresa_id=? AND tributo_id=?
-               AND NOT (COALESCE(vigencia_fim,'9999-12-01') < ? OR COALESCE(?, '9999-12-01') < COALESCE(vigencia_inicio,'0000-01-01'))
+               AND NOT (
+                 COALESCE(substr(vigencia_fim,1,7),'9999-12') < ?
+                 OR COALESCE(?, '9999-12') < COALESCE(substr(vigencia_inicio,1,7),'0000-01')
+               )
              LIMIT 1
-        """,(vinculo_id,atual["empresa_id"],atual["tributo_id"],inicio,fim)).fetchone()
-        if overlap: raise ValueError("Este imposto já possui outro vínculo no período informado.")
-        conn.execute("UPDATE empresa_impostos SET vigencia_inicio=?,vigencia_fim=?,status=?,obrigatorio=?,observacao=?,atualizado_em=CURRENT_TIMESTAMP WHERE id=?",(inicio,fim if status=="INATIVO" else None,status,int(bool(data.get("obrigatorio",atual["obrigatorio"]))),data.get("observacao"),vinculo_id))
+        """,(vinculo_id,atual["empresa_id"],atual["tributo_id"],inicio[:7],fim[:7] if fim else None)).fetchone()
+        if overlap:
+            raise ValueError("Este imposto já possui outro vínculo no período informado.")
+        conn.execute(
+            "UPDATE empresa_impostos SET vigencia_inicio=?,vigencia_fim=?,status=?,obrigatorio=?,observacao=?,atualizado_em=CURRENT_TIMESTAMP WHERE id=?",
+            (inicio,fim,status,int(bool(data.get("obrigatorio",atual["obrigatorio"]))),data.get("observacao",atual["observacao"]),vinculo_id)
+        )
         conn.commit()
         return dict(conn.execute("SELECT ei.*,t.nome,t.sigla,t.esfera FROM empresa_impostos ei JOIN tributos t ON t.id=ei.tributo_id WHERE ei.id=?",(vinculo_id,)).fetchone())
     except Exception:
         conn.rollback(); raise
     finally: conn.close()
-
-
 def obter_mensal(empresa_id:int,tributo_id:int,ano:int,mes:int) -> dict[str,Any] | None:
     conn=conectar_banco()
     try:
