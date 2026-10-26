@@ -8,7 +8,6 @@ import {PendenciasPage} from '../modules/pendencias/PendenciasPage';
 import {DocumentacaoPage} from '../modules/documentacao/DocumentacaoPage';
 import {EmpresaDocumentacaoPage} from '../modules/documentacao/EmpresaDocumentacaoPage';
 import {LoginPage} from '../modules/auth/LoginPage';
-import {RegisterPage} from '../modules/auth/RegisterPage';
 import {ForgotPasswordPage} from '../modules/auth/ForgotPasswordPage';
 import {ResetPasswordPage} from '../modules/auth/ResetPasswordPage';
 import {ChangePasswordPage} from '../modules/auth/ChangePasswordPage';
@@ -26,6 +25,6 @@ import {NfsePage} from '../modules/nfse/NfsePage';
 
 function AdminOnly({children}:{children:ReactNode}){const {usuario}=useAuth();return usuario?.perfil==='ADMIN'?<>{children}</>:<div className="page"><div className="panel empty"><strong>Acesso restrito</strong><span>Seu perfil não possui permissão para administrar usuários.</span></div></div>}
 
-export function App(){return <AuthProvider><BrowserRouter><Routes><Route path="/login" element={<LoginPage/>}/><Route path="/registrar" element={<RegisterPage/>}/><Route path="/esqueci-senha" element={<ForgotPasswordPage/>}/><Route path="/redefinir-senha" element={<ResetPasswordPage/>}/><Route path="/alterar-senha" element={<ProtectedRoute><ChangePasswordPage/></ProtectedRoute>}/><Route element={<ProtectedRoute><Layout/></ProtectedRoute>}><Route path="/" element={<DashboardPage/>}/><Route path="/empresas" element={<EmpresasPage/>}/><Route path="/empresas/:id" element={<EmpresaDetailPage/>}/><Route path="/certidoes" element={<CertidoesPage/>}/><Route path="/certificados" element={<CertificadosPage/>}/>
+export function App(){return <AuthProvider><BrowserRouter><Routes><Route path="/login" element={<LoginPage/>}/><Route path="/esqueci-senha" element={<ForgotPasswordPage/>}/><Route path="/redefinir-senha" element={<ResetPasswordPage/>}/><Route path="/alterar-senha" element={<ProtectedRoute><ChangePasswordPage/></ProtectedRoute>}/><Route element={<ProtectedRoute><Layout/></ProtectedRoute>}><Route path="/" element={<DashboardPage/>}/><Route path="/empresas" element={<EmpresasPage/>}/><Route path="/empresas/:id" element={<EmpresaDetailPage/>}/><Route path="/certidoes" element={<CertidoesPage/>}/><Route path="/certificados" element={<CertificadosPage/>}/>
 <Route path="/documentacao" element={<DocumentacaoPage/>}/>
 <Route path="/documentacao/empresa/:id" element={<EmpresaDocumentacaoPage/>}/><Route path="/pendencias" element={<PendenciasPage/>}/><Route path="/faturamento" element={<FaturamentoPage/>}/><Route path="/faturamento/empresa/:id" element={<EmpresaFaturamentoPage/>}/><Route path="/impostos" element={<ImpostosPage/>}/><Route path="/impostos/empresa/:id" element={<EmpresaImpostosPage/>}/><Route path="/impostos/empresa/:empresaId/tributo/:tributoId" element={<ImpostoMensalPage/>}/><Route path="/nfse" element={<NfsePage/>}/><Route path="/usuarios" element={<AdminOnly><UsuariosPage/></AdminOnly>}/></Route></Routes></BrowserRouter></AuthProvider>}
