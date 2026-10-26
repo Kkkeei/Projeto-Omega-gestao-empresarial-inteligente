@@ -81,12 +81,49 @@ def programar_notificacoes(empresa_id: int, imposto_mensal_id: int, tributo_nome
     return eventos
 
 
+def processar_eventos_agendados() -> int:
+    """Move eventos cujo horário chegou para a fila de envio.
+
+    Não envia mensagens por si só; deixa o estado explícito para um conector
+    de e-mail/WhatsApp/app processar posteriormente.
+    """
+    conn = conectar_banco()
+    try:
+        rows = conn.execute("""
+            SELECT ev.id, ev.tipo, im.status AS status_mensal
+              FROM impostos_notificacoes_eventos ev
+              LEFT JOIN impostos_mensais im ON im.id=ev.imposto_mensal_id
+             WHERE ev.status='PROGRAMADA'
+               AND datetime(COALESCE(ev.agendado_para, ev.criado_em)) <= datetime('now','localtime')
+        """).fetchall()
+        alteradas = 0
+        for row in rows:
+            tipo = str(row["tipo"] or "").upper()
+            status_mensal = str(row["status_mensal"] or "").upper()
+            if tipo in {"ANTES_VENCIMENTO", "VENCIMENTO", "NAO_PAGAMENTO", "IMPOSTO_VENCIDO"} and status_mensal in {
+                "PAGO", "CREDOR", "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO"
+            }:
+                novo_status = "CANCELADA"
+            else:
+                novo_status = "PENDENTE_ENVIO"
+            cur = conn.execute(
+                "UPDATE impostos_notificacoes_eventos SET status=? WHERE id=? AND status='PROGRAMADA'",
+                (novo_status, row["id"]),
+            )
+            alteradas += cur.rowcount
+        conn.commit()
+        return alteradas
+    finally:
+        conn.close()
+
+
 def gerar_alertas_vencidos(empresa_id: int | None = None) -> list[dict]:
     """Registra alertas internos idempotentes para guias vencidas/não pagas.
 
     Os eventos ficam pendentes para um canal de envio processá-los. Este módulo
     não afirma que enviou e-mail/WhatsApp sem integração de transporte ativa.
     """
+    processar_eventos_agendados()
     configs = _configs()
     ativos = {
         publico: cfg
