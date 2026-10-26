@@ -87,8 +87,9 @@ def marcar_pago(empresa_id:int,tributo_id:int,ano:int=Query(...),mes:int=Query(.
         # O status persistido pode continuar como PENDENTE/A_PAGAR enquanto
         # status_exibicao é calculado dinamicamente pela data de vencimento.
         # A validação precisa usar o status exibido para não bloquear guias vencidas.
-        status_atual = str(mensal.get("status_exibicao") or mensal.get("status") or "").upper()
-        if status_atual not in {"A_VENCER", "EM_ATRASO"}:
+        status_persistido = str(mensal.get("status") or "").upper()
+        status_atual = str(mensal.get("status_exibicao") or status_persistido).upper()
+        if status_atual not in {"A_VENCER", "EM_ATRASO"} and status_persistido not in {"A_VENCER", "EM_ATRASO"}:
             raise ValueError("O imposto só pode ser marcado como pago quando estiver a vencer ou em atraso.")
         return repository.salvar_mensal(empresa_id,{"tributo_id":tributo_id,"competencia_ano":ano,"competencia_mes":mes,"status":"PAGO","valor":mensal.get("valor"),"data_vencimento":mensal.get("data_vencimento"),"data_pagamento":__import__('datetime').date.today().isoformat(),"numero_documento":mensal.get("numero_documento"),"observacao":mensal.get("observacao")},"MARCAR_PAGO")
     except LookupError as exc:
