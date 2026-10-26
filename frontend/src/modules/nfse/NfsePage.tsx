@@ -175,7 +175,7 @@ export function NfsePage(){
       }
       await loadContext(entityId,origin);
       const refreshed=await listarTodasNfse();setOfficeDocs(refreshed);
-    }catch(e){const detail=e instanceof Error?e.message:'Não foi possível consultar a NFS-e.';const normalized=detail.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();if(normalized.includes('nenhum documento localizado')||normalized.includes('sem documentos')||normalized.includes('nenhuma nfse encontrada')||normalized.includes('nenhuma nfs-e encontrada')){setError('');setMessage('Nenhuma NFS-e nova encontrada para este titular.');}else{setError(detail);}}
+    }catch(e){const detail=e instanceof Error?e.message:'Não foi possível consultar a NFS-e.';const normalized=detail.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();if(normalized.includes('nenhum documento localizado')||normalized.includes('nenhum_documento_localizado')||normalized.includes('sem documentos')||normalized.includes('sem_documentos')||normalized.includes('nenhuma nfse encontrada')||normalized.includes('nenhuma nfs-e encontrada')){setError('');setMessage('Nenhuma NFS-e nova encontrada para este titular.');}else{setError(detail);}}
     finally{setBusy(false);}
   }
 
