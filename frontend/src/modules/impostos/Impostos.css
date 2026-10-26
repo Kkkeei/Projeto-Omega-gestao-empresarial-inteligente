@@ -70,3 +70,67 @@
 @media(max-width:1100px){.impostos-page .imp-company-row{grid-template-columns:38px minmax(180px,1fr) 130px 90px minmax(130px,.8fr) 85px}.impostos-page .imp-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:820px){.impostos-page .imp-regime-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.impostos-page .imp-toolbar{grid-template-columns:1fr}.impostos-page .imp-company-row{grid-template-columns:38px minmax(0,1fr);gap:10px}.impostos-page .imp-company-row>.imp-regime-col,.impostos-page .imp-company-row>.imp-progress-col,.impostos-page .imp-company-row>.imp-general-status,.impostos-page .imp-company-row>.imp-access{grid-column:2}.impostos-page .imp-heading-actions{width:100%}.impostos-page .imp-heading-actions .button{flex:1}.impostos-page .imp-dialog-toolbar{grid-template-columns:1fr}.impostos-page .imp-summary-grid{grid-template-columns:1fr}.impostos-page .imp-tax-section-head{align-items:flex-start;flex-direction:column}.impostos-page .imp-notice-panel label{grid-template-columns:18px minmax(0,1fr)}.impostos-page .imp-notice-panel select{grid-column:2}}
 @media(max-width:520px){.impostos-page .imp-page-heading h2{font-size:23px}.impostos-page .imp-regime-grid{grid-template-columns:1fr}.impostos-page .imp-company-row{grid-template-columns:30px minmax(0,1fr);padding:12px}.impostos-page .imp-company-icon{width:30px;height:30px}.impostos-page .imp-company-data strong{white-space:normal}.impostos-page .imp-modal-overlay{padding:10px}.impostos-page .imp-dialog-head{padding:15px}.impostos-page .imp-modal-overlay .modal-body{padding:14px}.impostos-page .modal-actions{padding:12px 14px}.impostos-page .imp-report-head{align-items:flex-start;flex-direction:column;gap:10px}}
+
+
+/* Correção: modais não podem ultrapassar a área visível da janela */
+.impostos-page .imp-modal-overlay{
+  overflow-y:auto;
+  align-items:center;
+  padding:clamp(12px,3vh,28px) clamp(12px,3vw,28px);
+}
+.impostos-page .imp-dialog{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:calc(100vh - 56px);
+  max-height:calc(100dvh - 56px);
+  overflow:hidden;
+}
+.impostos-page .imp-dialog-head,
+.impostos-page .imp-tabs,
+.impostos-page .modal-actions{
+  flex-shrink:0;
+}
+.impostos-page .imp-dialog-toolbar,
+.impostos-page .imp-dialog-table,
+.impostos-page .imp-notice-panel{
+  min-height:0;
+}
+.impostos-page .imp-dialog-table{
+  flex:1 1 auto;
+  overflow:auto;
+}
+.impostos-page .imp-dialog > .imp-notice-panel{
+  flex:1 1 auto;
+  overflow-y:auto;
+}
+.impostos-page .imp-submodal{
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
+  align-items:center;
+  padding:clamp(10px,3vh,24px);
+}
+.impostos-page .imp-submodal-card{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:100%;
+  overflow:hidden;
+}
+.impostos-page .imp-submodal-card .modal-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.impostos-page .imp-submodal-card .modal-actions{
+  flex-shrink:0;
+  background:#fff;
+}
+@media(max-height:620px){
+  .impostos-page .imp-modal-overlay{align-items:flex-start;padding-top:8px;padding-bottom:8px}
+  .impostos-page .imp-dialog{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px)}
+  .impostos-page .imp-dialog-head{padding-top:12px;padding-bottom:12px}
+  .impostos-page .imp-submodal{align-items:flex-start}
+}
