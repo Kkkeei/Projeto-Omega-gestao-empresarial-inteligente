@@ -1,2 +1,79 @@
-import {useEffect,useState} from 'react';import {Building2,ShieldCheck,AlertTriangle,FileWarning,ArrowRight,Plus,Search,RefreshCw} from 'lucide-react';import {Link} from 'react-router-dom';import {buscarResumoDashboard} from '../../services/api/dashboard';import type {DashboardResumo} from '../../types';import {Loading} from '../../components/ui/Loading';import {ErrorState} from '../../components/ui/ErrorState';
-export function DashboardPage(){const [d,setD]=useState<DashboardResumo|null>(null);const [err,setErr]=useState('');const load=()=>{setErr('');buscarResumoDashboard().then(setD).catch(x=>setErr(x instanceof Error?x.message:'Erro ao carregar dashboard.'))};useEffect(load,[]);if(err)return <ErrorState message={err} onRetry={load}/>;if(!d)return <Loading/>;const cards: {label:string;value:number;icon:any;to:string}[] = [{label:'Empresas',value:d.empresas_total,icon:Building2,to:'/empresas'},{label:'Empresas regulares',value:d.empresas_regulares,icon:ShieldCheck,to:'/empresas'},{label:'Pendências abertas',value:d.pendencias_abertas,icon:AlertTriangle,to:'/pendencias'},{label:'Certidões vencidas',value:d.certidoes_vencidas,icon:FileWarning,to:'/certidoes'},{label:'Próximas do vencimento',value:d.certidoes_proximas_vencimento,icon:FileWarning,to:'/certidoes'}];return <div className="page"><div className="page-heading"><div><span className="eyebrow">CENTRO DE CONTROLE EMPRESARIAL</span><h2>Visão geral</h2><p>Uma visão única do cadastro, regularidade, pendências e certidões.</p></div><div className="actions"><Link className="button secondary" to="/certidoes"><Search size={15}/> Consultar certidões</Link><Link className="button primary" to="/empresas"><Plus size={15}/> Nova empresa</Link></div></div><div className="metric-grid">{cards.map(({label,value,icon:Icon,to})=><Link className="metric-card" to={to} key={label}><div className="metric-icon"><Icon size={20}/></div><span>{label}</span><strong>{value}</strong><small>Ver detalhes <ArrowRight size={12}/></small></Link>)}</div><div className="dashboard-grid"><div className="panel"><div className="panel-header"><div><span className="eyebrow">CADASTRO</span><h3>Situação das empresas</h3></div><Link to="/empresas" className="text-link">Abrir cadastro</Link></div><div className="split-stats"><div><strong>{d.empresas_ativas}</strong><span>Ativas</span></div><div><strong>{d.empresas_inativas}</strong><span>Inativas</span></div><div><strong>{d.empresas_total}</strong><span>Total</span></div></div></div><div className="panel"><div className="panel-header"><div><span className="eyebrow">REGULARIDADE</span><h3>Atenção necessária</h3></div><Link to="/certidoes" className="text-link">Ver certidões</Link></div><div className="attention-row"><span>Certidões vencidas</span><strong>{d.certidoes_vencidas}</strong></div><div className="attention-row"><span>Próximas do vencimento</span><strong>{d.certidoes_proximas_vencimento}</strong></div><div className="attention-row"><span>Pendências abertas</span><strong>{d.pendencias_abertas}</strong></div></div></div><div className="panel quick-panel"><div><span className="eyebrow">ACESSO RÁPIDO</span><h3>Próximas ações</h3></div><div className="quick-actions"><Link to="/empresas"><Building2 size={17}/> Gerenciar empresas</Link><Link to="/certidoes"><FileWarning size={17}/> Consultar certidões</Link><Link to="/pendencias"><AlertTriangle size={17}/> Ver pendências</Link><button onClick={load}><RefreshCw size={17}/> Atualizar indicadores</button></div></div></div>}
+import { useEffect, useState } from 'react';
+import { Activity, AlertTriangle, ArrowRight, Building2, FileWarning, Plus, RefreshCw, Search, ShieldCheck, Workflow } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { buscarResumoDashboard } from '../../services/api/dashboard';
+import type { DashboardResumo } from '../../types';
+import { Loading } from '../../components/ui/Loading';
+import { ErrorState } from '../../components/ui/ErrorState';
+
+export function DashboardPage() {
+  const [data, setData] = useState<DashboardResumo | null>(null);
+  const [error, setError] = useState('');
+  async function load() {
+    setError('');
+    try { setData(await buscarResumoDashboard()); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Erro ao carregar o painel.'); }
+  }
+  useEffect(() => { void load(); }, []);
+  if (error) return <div className="page"><ErrorState message={error} onRetry={() => void load()} /></div>;
+  if (!data) return <div className="page"><Loading /></div>;
+  const metrics = [
+    { label: 'Empresas cadastradas', value: data.empresas_total ?? data.empresas ?? 0, hint: 'Base empresarial', icon: Building2, to: '/empresas', tone: 'blue' },
+    { label: 'Empresas ativas', value: data.empresas_ativas ?? 0, hint: 'Cadastros ativos', icon: ShieldCheck, to: '/empresas', tone: 'green' },
+    { label: 'Empresas regulares', value: data.empresas_regulares ?? 0, hint: 'Com certidão regular', icon: ShieldCheck, to: '/certidoes', tone: 'green' },
+    { label: 'Pendências abertas', value: data.pendencias_abertas ?? 0, hint: 'Precisam de atenção', icon: AlertTriangle, to: '/pendencias', tone: 'amber' },
+    { label: 'Certidões vencidas', value: data.certidoes_vencidas ?? 0, hint: 'Verificar regularidade', icon: FileWarning, to: '/certidoes', tone: 'red' },
+    { label: 'Vencem em até 30 dias', value: data.certidoes_proximas_vencimento ?? 0, hint: 'Antecipe a renovação', icon: FileWarning, to: '/certidoes', tone: 'amber' },
+    { label: 'Automações em andamento', value: data.automacoes_em_andamento ?? 0, hint: 'Execuções registradas', icon: Workflow, to: '/automacoes', tone: 'blue' },
+  ];
+  const total = data.empresas_total ?? data.empresas ?? 0;
+  const inativas = data.empresas_inativas ?? Math.max(0, total - (data.empresas_ativas ?? 0));
+  const hoje = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date());
+  return <main className="page omega-dashboard">
+    <header className="omega-dashboard-header">
+      <div className="omega-dashboard-title">
+        <span className="eyebrow">PLATAFORMA DE GESTÃO EMPRESARIAL</span>
+        <h2>Painel de controle</h2>
+        <p>Acompanhe a situação das empresas, obrigações e rotinas do ÔMEGA em um só lugar.</p>
+        <span className="omega-dashboard-date"><Activity size={14} aria-hidden="true" /> Resumo operacional · {hoje}</span>
+      </div>
+      <div className="omega-dashboard-actions">
+        <button className="button secondary" type="button" onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" /> Atualizar painel</button>
+        <Link className="button primary" to="/empresas"><Plus size={16} aria-hidden="true" /> Nova empresa</Link>
+      </div>
+    </header>
+    <section aria-label="Indicadores principais" className="omega-dashboard-metrics">
+      {metrics.map(({ label, value, hint, icon: Icon, to, tone }) => <Link className="omega-dashboard-metric" to={to} key={label}>
+        <span className={`omega-dashboard-metric-icon tone-${tone}`}><Icon size={21} strokeWidth={2} aria-hidden="true" /></span>
+        <span className="omega-dashboard-metric-copy"><span className="omega-dashboard-metric-label">{label}</span><strong>{value.toLocaleString('pt-BR')}</strong><small>{hint}</small></span>
+        <ArrowRight className="omega-dashboard-arrow" size={16} aria-hidden="true" />
+      </Link>)}
+    </section>
+    <section className="omega-dashboard-lower">
+      <article className="panel omega-dashboard-panel">
+        <div className="omega-dashboard-panel-heading"><div><span className="eyebrow">CADASTRO</span><h3>Visão das empresas</h3></div><Link className="text-link" to="/empresas">Abrir empresas <ArrowRight size={13} /></Link></div>
+        <div className="omega-dashboard-company-stats">
+          <div><span>Ativas</span><strong>{(data.empresas_ativas ?? 0).toLocaleString('pt-BR')}</strong></div>
+          <div><span>Inativas</span><strong>{inativas.toLocaleString('pt-BR')}</strong></div>
+          <div><span>Total</span><strong>{total.toLocaleString('pt-BR')}</strong></div>
+        </div>
+        <div className="omega-dashboard-note">Os indicadores refletem os registros disponíveis no banco de dados do ÔMEGA.</div>
+      </article>
+      <article className="panel omega-dashboard-panel">
+        <div className="omega-dashboard-panel-heading"><div><span className="eyebrow">PRIORIDADES</span><h3>O que merece atenção</h3></div><AlertTriangle size={19} aria-hidden="true" /></div>
+        <Link className="omega-dashboard-priority" to="/pendencias"><span><AlertTriangle size={17} aria-hidden="true" /> Pendências abertas</span><strong>{data.pendencias_abertas ?? 0}</strong></Link>
+        <Link className="omega-dashboard-priority" to="/certidoes"><span><FileWarning size={17} aria-hidden="true" /> Certidões vencidas</span><strong>{data.certidoes_vencidas ?? 0}</strong></Link>
+        <Link className="omega-dashboard-priority" to="/certidoes"><span><ShieldCheck size={17} aria-hidden="true" /> Certidões a vencer</span><strong>{data.certidoes_proximas_vencimento ?? 0}</strong></Link>
+      </article>
+    </section>
+    <section className="panel omega-dashboard-quick">
+      <div><span className="eyebrow">ATALHOS</span><h3>Ações frequentes</h3><p>Vá direto às tarefas mais utilizadas.</p></div>
+      <div className="omega-dashboard-quick-actions">
+        <Link to="/empresas"><Building2 size={17} aria-hidden="true" /> Gerenciar empresas</Link>
+        <Link to="/certidoes"><Search size={17} aria-hidden="true" /> Consultar certidões</Link>
+        <Link to="/pendencias"><AlertTriangle size={17} aria-hidden="true" /> Tratar pendências</Link>
+        <Link to="/automacoes"><Workflow size={17} aria-hidden="true" /> Ver automações</Link>
+      </div>
+    </section>
+  </main>;
+}
