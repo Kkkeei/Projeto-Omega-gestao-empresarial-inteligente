@@ -1,16 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 180" role="img" aria-labelledby="title desc">
-<title id="title">Grupo ÔMEGA — Gestão de Empresas</title><desc id="desc">Marca monocromática do Grupo ÔMEGA com símbolo arquitetônico e nome.</desc>
-<rect width="620" height="180" fill="#fff"/>
-<g transform="translate(10 15)" fill="#111">
-<ellipse cx="76" cy="74" rx="69" ry="63" fill="none" stroke="#111" stroke-width="5"/>
-<path d="M8 82 L76 8 L76 137 Q53 138 32 116 L20 89 Z"/>
-<path d="M79 9 L108 34 L121 77 L108 123 L88 140 Z" fill="#fff" stroke="#111" stroke-width="4" stroke-linejoin="round"/>
-<path d="M89 26 L105 47 L99 40 M96 53 L111 70 L104 64 M94 78 L108 94 L101 88 M91 102 L103 116 L97 111" fill="none" stroke="#111" stroke-width="3"/>
-<path d="M8 83 L-2 88 L8 91 M13 127 L13 145 L39 145 L39 138 L22 138 L22 127 M110 127 L110 138 L127 138 L127 145 L102 145 L102 128" fill="#111"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
+<title id="title">Grupo ÔMEGA — Gestão de Empresas</title>
+<desc id="desc">Versão vetorial refinada da marca Grupo ÔMEGA, com símbolo arquitetônico circular e assinatura tipográfica.</desc>
+<rect width="1120" height="300" fill="#fff"/>
+<g transform="translate(22 20)" stroke-linejoin="round">
+  <circle cx="128" cy="130" r="112" fill="none" stroke="#161616" stroke-width="8"/>
+  <path d="M18 151 126 25v210c-28 1-54-12-73-34-15-17-24-33-31-50Z" fill="#111"/>
+  <path d="M126 25 166 61 187 100 173 170 153 228 143 239Z" fill="#fff" stroke="#111" stroke-width="6"/>
+  <path d="M145 53 166 82 159 111M151 92 171 121 164 148M157 131 168 150 162 176M151 169 161 187 155 207" fill="none" stroke="#171717" stroke-width="5" stroke-linecap="round"/>
+  <path d="M16 151 0 159 15 162M26 207v31h54v-11H39l-13-20M177 207l-1 20h-13v11h53v-31l-11-8v19h-28Z" fill="#111"/>
+  <path d="M17 151 27 132 57 109 85 84 111 60" fill="none" stroke="#111" stroke-width="6"/>
 </g>
-<g fill="#111" font-family="Arial,Helvetica,sans-serif">
-<text x="158" y="49" font-size="27" font-weight="300" letter-spacing="3">GRUPO</text>
-<text x="154" y="115" font-size="66" font-weight="500" letter-spacing="1">ÔMEGA</text>
-<path d="M193 61 L207 47 L221 61 L212 61 L207 56 L202 61 Z"/>
-<text x="158" y="146" font-size="18" font-weight="300" letter-spacing="1.1">GESTÃO DE EMPRESAS</text>
-</g></svg>
+<g fill="#141414" font-family="Montserrat,Arial,Helvetica,sans-serif">
+  <text x="300" y="77" font-size="33" font-weight="400" letter-spacing="8">GRUPO</text>
+  <path d="M424 93 444 73 464 93 451 93 444 86 437 93Z"/>
+  <text x="300" y="192" font-size="112" font-weight="500" letter-spacing="-2">ÔMEGA</text>
+  <text x="302" y="239" font-size="27" font-weight="400" letter-spacing="3.2">GESTÃO DE EMPRESAS</text>
+</g>
+</svg>
