@@ -396,7 +396,7 @@ def obter_senha_a1(cert_id: int, user_id: int | None = None) -> str:
         raise FileNotFoundError("Arquivo criptografado da senha não encontrado.")
     password = _decrypt(pwd_path.read_bytes()).decode("utf-8")
     with conectar_banco() as conn:
-        _evento(conn, cert_id, "SENHA_ACESSADA", user_id, "Senha do certificado A1 recuperada por administrador.")
+        _evento(conn, cert_id, "SENHA_ACESSADA", user_id, "Senha do certificado A1 visualizada por usuário autenticado.")
         conn.commit()
     return password
 
@@ -794,7 +794,7 @@ def obter_senha_pf_a1(cert_id: int, user_id: int | None = None) -> str:
         raise FileNotFoundError("Arquivo criptografado da senha não encontrado.")
     password = _decrypt(path.read_bytes()).decode("utf-8")
     with conectar_banco() as conn:
-        _pf_evento(conn, cert_id, "SENHA_ACESSADA", user_id, "Senha do certificado PF A1 recuperada por administrador.")
+        _pf_evento(conn, cert_id, "SENHA_ACESSADA", user_id, "Senha do certificado PF A1 visualizada por usuário autenticado.")
         conn.commit()
     return password
 
