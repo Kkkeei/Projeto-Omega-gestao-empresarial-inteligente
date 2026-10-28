@@ -183,7 +183,6 @@ export function CertidoesPage(){
         return <section className={`cert-selected-panel ${cardAtual.className}`}>
           <div className="cert-selected-head">
             <div className="cert-selected-title"><span className="type-icon-v2"><Icon size={20}/></span><div><span className="eyebrow">CERTIDÃO SELECIONADA</span><h3>{cardAtual.title}</h3><p>{cardAtual.desc}</p></div></div>
-            <button className="button primary" onClick={()=>void executar(tipoSelecionado)} disabled={busy}><Play size={14} fill="currentColor"/> Emitir {cardAtual.short}</button>
           </div>
           <div className="cert-selected-grid">
             <div><span>Situação</span><strong className={`selected-status ${classeSituacao(selected?.situacao)}`}>{selected?.situacao||'Ainda não consultada'}</strong></div>
