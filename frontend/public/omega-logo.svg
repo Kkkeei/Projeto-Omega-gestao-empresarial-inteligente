@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 180" role="img" aria-labelledby="title desc">
+<title id="title">Grupo ÔMEGA — Gestão de Empresas</title><desc id="desc">Marca monocromática do Grupo ÔMEGA com símbolo arquitetônico e nome.</desc>
+<rect width="620" height="180" fill="#fff"/>
+<g transform="translate(10 15)" fill="#111">
+<ellipse cx="76" cy="74" rx="69" ry="63" fill="none" stroke="#111" stroke-width="5"/>
+<path d="M8 82 L76 8 L76 137 Q53 138 32 116 L20 89 Z"/>
+<path d="M79 9 L108 34 L121 77 L108 123 L88 140 Z" fill="#fff" stroke="#111" stroke-width="4" stroke-linejoin="round"/>
+<path d="M89 26 L105 47 L99 40 M96 53 L111 70 L104 64 M94 78 L108 94 L101 88 M91 102 L103 116 L97 111" fill="none" stroke="#111" stroke-width="3"/>
+<path d="M8 83 L-2 88 L8 91 M13 127 L13 145 L39 145 L39 138 L22 138 L22 127 M110 127 L110 138 L127 138 L127 145 L102 145 L102 128" fill="#111"/>
+</g>
+<g fill="#111" font-family="Arial,Helvetica,sans-serif">
+<text x="158" y="49" font-size="27" font-weight="300" letter-spacing="3">GRUPO</text>
+<text x="154" y="115" font-size="66" font-weight="500" letter-spacing="1">ÔMEGA</text>
+<path d="M193 61 L207 47 L221 61 L212 61 L207 56 L202 61 Z"/>
+<text x="158" y="146" font-size="18" font-weight="300" letter-spacing="1.1">GESTÃO DE EMPRESAS</text>
+</g></svg>
