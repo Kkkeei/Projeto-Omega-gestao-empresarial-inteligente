@@ -541,3 +541,14 @@ td strong{font-size:12px}
 @media(max-width:900px){.sidebar{width:225px;flex-basis:225px}.omega-dashboard-main-grid{grid-template-columns:1fr}.top-user-info{display:none}}
 @media(max-width:760px){.sidebar{display:none}.topbar{height:66px;padding:0 18px}.top-user-badge{display:none}.page{padding:22px 16px 35px}.omega-dashboard-header{flex-direction:column;gap:17px}.omega-dashboard-actions{width:100%;flex-wrap:wrap}.omega-dashboard-actions .button{flex:1}.omega-dashboard-metrics{grid-template-columns:1fr 1fr;gap:10px}.omega-dashboard-metric{padding:15px 12px;gap:9px}.omega-dashboard-metric-icon{width:34px;height:34px;flex-basis:34px;border-radius:10px}.omega-dashboard-metric-copy strong{font-size:25px}.omega-dashboard-metric-label{font-size:10px}.omega-dashboard-metric-copy small{font-size:9px}.omega-dashboard-company-stats{gap:7px}.omega-dashboard-company-stats>div{padding:12px 10px}.omega-dashboard-company-stats span{font-size:9px}.omega-dashboard-company-stats strong{font-size:21px}.omega-dashboard-shortcut-grid{grid-template-columns:1fr}.omega-dashboard-panel{padding:18px 17px 0}.omega-dashboard-panel-footer{margin:0 -17px;padding:13px 17px}.omega-dashboard-pending-link{margin:0 -17px;padding:14px 17px}.omega-dashboard-pending-number{margin:22px 0}.omega-dashboard-title h2{font-size:27px}}
 @media(max-width:380px){.omega-dashboard-metrics{grid-template-columns:1fr}.omega-dashboard-metric{padding:15px}.omega-dashboard-panel-footer{align-items:flex-start;flex-direction:column}}
+
+/* Logo oficial da interface e navegação de retorno consistente */
+.brand-logo-link{display:flex;align-items:center;justify-content:flex-start;padding:6px 5px 24px;min-height:84px}
+.omega-sidebar-logo{display:block;width:100%;max-width:218px;height:auto;max-height:66px;object-fit:contain;object-position:left center;border-radius:3px}
+.topbar-title-group{display:flex;align-items:center;gap:12px;min-width:0}
+.topbar-back{width:36px;height:36px;flex:0 0 36px;background:#fff;border-color:#e1e6ee;color:#526174}
+.topbar-back:hover{background:#edf3ff;color:#315fba;border-color:#cbd9f0}
+.login-brand{display:flex;flex-direction:column;align-items:center}
+.login-omega-logo{display:block;width:min(100%,480px);height:auto;max-height:180px;object-fit:contain;margin:0 auto 20px}
+.login-brand>p{margin-top:0}
+@media(max-width:760px){.omega-sidebar-logo{max-width:190px}.topbar-title-group{gap:8px}.topbar-back{width:32px;height:32px;flex-basis:32px}.login-omega-logo{max-width:320px;max-height:120px}}
