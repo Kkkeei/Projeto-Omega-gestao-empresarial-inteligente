@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, AlertTriangle, ArrowRight, Building2, FileWarning, Plus, RefreshCw, Search, ShieldCheck, Workflow } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowRight, Building2, FileText, FileWarning, Plus, RefreshCw, Search, ShieldCheck, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { buscarResumoDashboard } from '../../services/api/dashboard';
 import type { DashboardResumo } from '../../types';
@@ -24,7 +24,6 @@ export function DashboardPage() {
     { label: 'Pendências abertas', value: data.pendencias_abertas ?? 0, hint: 'Precisam de atenção', icon: AlertTriangle, to: '/pendencias', tone: 'amber' },
     { label: 'Certidões vencidas', value: data.certidoes_vencidas ?? 0, hint: 'Verificar regularidade', icon: FileWarning, to: '/certidoes', tone: 'red' },
     { label: 'Vencem em até 30 dias', value: data.certidoes_proximas_vencimento ?? 0, hint: 'Antecipe a renovação', icon: FileWarning, to: '/certidoes', tone: 'amber' },
-    { label: 'Automações em andamento', value: data.automacoes_em_andamento ?? 0, hint: 'Execuções registradas', icon: Workflow, to: '/automacoes', tone: 'blue' },
   ];
   const total = data.empresas_total ?? data.empresas ?? 0;
   const inativas = data.empresas_inativas ?? Math.max(0, total - (data.empresas_ativas ?? 0));
@@ -64,6 +63,7 @@ export function DashboardPage() {
         <Link className="omega-dashboard-priority" to="/pendencias"><span><AlertTriangle size={17} aria-hidden="true" /> Pendências abertas</span><strong>{data.pendencias_abertas ?? 0}</strong></Link>
         <Link className="omega-dashboard-priority" to="/certidoes"><span><FileWarning size={17} aria-hidden="true" /> Certidões vencidas</span><strong>{data.certidoes_vencidas ?? 0}</strong></Link>
         <Link className="omega-dashboard-priority" to="/certidoes"><span><ShieldCheck size={17} aria-hidden="true" /> Certidões a vencer</span><strong>{data.certidoes_proximas_vencimento ?? 0}</strong></Link>
+        <div className="omega-dashboard-priority"><span><Workflow size={17} aria-hidden="true" /> Automações em andamento</span><strong>{data.automacoes_em_andamento ?? 0}</strong></div>
       </article>
     </section>
     <section className="panel omega-dashboard-quick">
@@ -72,7 +72,8 @@ export function DashboardPage() {
         <Link to="/empresas"><Building2 size={17} aria-hidden="true" /> Gerenciar empresas</Link>
         <Link to="/certidoes"><Search size={17} aria-hidden="true" /> Consultar certidões</Link>
         <Link to="/pendencias"><AlertTriangle size={17} aria-hidden="true" /> Tratar pendências</Link>
-        <Link to="/automacoes"><Workflow size={17} aria-hidden="true" /> Ver automações</Link>
+        <Link to="/nfse"><FileText size={17} aria-hidden="true" /> NFS-e</Link>
+        <Link to="/documentacao"><FileText size={17} aria-hidden="true" /> Documentação</Link>
       </div>
     </section>
   </main>;
