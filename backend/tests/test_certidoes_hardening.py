@@ -48,11 +48,13 @@ def test_sefaz_classifier_distinguishes_certificate_outcomes():
     regular = sefaz.analisar_certidao("CERTIDÃO NEGATIVA DE DÉBITOS")
     positiva = sefaz.analisar_certidao("CERTIDÃO POSITIVA COM EFEITOS DE NEGATIVA")
     irregular = sefaz.analisar_certidao("CERTIDÃO POSITIVA DE DÉBITOS")
+    filename_only = sefaz.analisar_certidao("Documento sem resultado legível", "INSCRITOREGULAR.pdf")
 
     assert regular["situacao"] == "REGULAR"
     assert positiva["situacao"] == "POSITIVA COM EFEITOS DE NEGATIVA"
     assert irregular["situacao"] == "IRREGULAR"
     assert irregular["pendencia"] is True
+    assert filename_only["situacao"] == "NAO IDENTIFICADO"
 
 
 def _create_pdf(path: Path) -> Path:
@@ -107,9 +109,12 @@ def test_relative_database_paths_are_resolved_against_backend(tmp_path):
 
 
 
-def test_certificate_api_sanitizer_hides_paths_text_and_technical_exceptions():
-    from app.api.v1.certidoes.routes import _sanitizar_resultado_certidao
+def test_certificate_api_sanitizer_hides_paths_text_and_technical_exceptions(tmp_path, monkeypatch):
+    from app.api.v1.certidoes import routes
 
+    pdf = tmp_path / "certificate.pdf"
+    pdf.write_bytes(b"%PDF-1.4 test")
+    monkeypatch.setattr(routes, "obter_pdf_path", lambda _path: pdf)
     payload = {
         "situacao": "ERRO",
         "status_processamento": "Erro técnico",
@@ -121,7 +126,7 @@ def test_certificate_api_sanitizer_hides_paths_text_and_technical_exceptions():
         "situacao_detectada": "REGULAR",
         "consulta_id": 42,
     }
-    safe = _sanitizar_resultado_certidao(payload)
+    safe = routes._sanitizar_resultado_certidao(payload)
 
     assert safe["pdf_disponivel"] is True
     assert safe["consulta_id"] == 42
@@ -131,10 +136,11 @@ def test_certificate_api_sanitizer_hides_paths_text_and_technical_exceptions():
     assert "traceback" not in safe["mensagem"]
 
 
-def test_certificate_batch_sanitizer_sanitizes_nested_results():
-    from app.api.v1.certidoes.routes import _sanitizar_resultado_certidao
+def test_certificate_batch_sanitizer_sanitizes_nested_results(tmp_path, monkeypatch):
+    from app.api.v1.certidoes import routes
 
-    safe = _sanitizar_resultado_certidao({
+    monkeypatch.setattr(routes, "obter_pdf_path", lambda _path: tmp_path / "missing.pdf")
+    safe = routes._sanitizar_resultado_certidao({
         "resumo": {"total": 1, "erro": 1},
         "resultados": [{
             "situacao": "ERRO",
@@ -147,7 +153,7 @@ def test_certificate_batch_sanitizer_sanitizes_nested_results():
     })
     item = safe["resultados"][0]
     assert item["consulta_id"] == 7
-    assert item["pdf_disponivel"] is True
+    assert item["pdf_disponivel"] is False
     assert "pdf_path" not in item
     assert "erro_tecnico" not in item
     assert "secret local path" not in item["mensagem"]
