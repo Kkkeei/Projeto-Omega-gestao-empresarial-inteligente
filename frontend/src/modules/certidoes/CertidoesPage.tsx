@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {AlertTriangle, CheckCircle2, Download, ExternalLink, FileCheck2, FileText, History, Landmark, RefreshCw, Search, ShieldCheck, Play, Building2, CalendarDays} from 'lucide-react';
-import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfCertidaoAutenticado} from '../../services/api/certidoes';
+import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfConsultaAutenticado} from '../../services/api/certidoes';
 import type {Certidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {StatusBadge} from '../../components/status/StatusBadge';
@@ -149,7 +149,7 @@ export function CertidoesPage(){
 
   function certAtual(typeName:string){return items.find(x=>x.tipo_certidao===typeName);}
 
-  const pdfHistory=hist.filter(h=>h.pdf_path);
+  const pdfHistory=hist.filter(h=>h.pdf_disponivel && Number.isInteger(Number(h.consulta_id)) && Number(h.consulta_id)>0);
 
   function renderResult(){
     if(!resultado) return null;
@@ -162,7 +162,7 @@ export function CertidoesPage(){
         <div><span>Número</span><strong>{resultado.numero_certidao||'—'}</strong></div>
       </div>
       {resultado.mensagem&&<div className="result-message">{resultado.mensagem}</div>}
-      {resultado.pdf_path&&<div className="result-actions"><button className="button primary" onClick={()=>void abrirPdfCertidaoAutenticado(resultado.pdf_path!,true)}><Download size={15}/> Baixar PDF</button><button className="button secondary" onClick={()=>void abrirPdfCertidaoAutenticado(resultado.pdf_path!)}><ExternalLink size={15}/> Visualizar PDF</button></div>}
+      {resultado.pdf_disponivel && resultado.consulta_id ? <div className="result-actions"><button className="button primary" onClick={()=>void abrirPdfConsultaAutenticado(resultado.consulta_id!,true)}><Download size={15}/> Baixar PDF</button><button className="button secondary" onClick={()=>void abrirPdfConsultaAutenticado(resultado.consulta_id!)}><ExternalLink size={15}/> Visualizar PDF</button></div> : null}
     </div>
   }
 
@@ -221,14 +221,14 @@ export function CertidoesPage(){
             <div><span>Validade</span><strong>{formatarData(selected?.data_validade)}</strong></div>
             <div><span>Número</span><strong>{selected?.numero_certidao||'—'}</strong></div>
           </div>
-          <div className="cert-selected-actions">{selected?.pdf_path?<><button className="button secondary small" onClick={()=>void abrirPdfCertidaoAutenticado(selected.pdf_path!,true)}><Download size={13}/> Baixar PDF</button><button className="button secondary small" onClick={()=>void abrirPdfCertidaoAutenticado(selected.pdf_path!)}><ExternalLink size={13}/> Visualizar PDF</button></>:<span className="cert-no-pdf">Nenhum PDF armazenado para esta certidão.</span>}</div>
+          <div className="cert-selected-actions">{selected?.pdf_disponivel && selected.consulta_id ? <><button className="button secondary small" onClick={()=>void abrirPdfConsultaAutenticado(selected.consulta_id!,true)}><Download size={13}/> Baixar PDF</button><button className="button secondary small" onClick={()=>void abrirPdfConsultaAutenticado(selected.consulta_id!)}><ExternalLink size={13}/> Visualizar PDF</button></> : <span className="cert-no-pdf">Nenhum PDF armazenado para esta certidão.</span>}</div>
         </section>;
       })()}
 
       <section className="downloads-panel panel">
         <div className="panel-header"><div><span className="eyebrow">DOCUMENTOS DISPONÍVEIS</span><h3>Certidões para download</h3></div><span className="download-count">{pdfHistory.length} PDF(s)</span></div>
         {pdfHistory.length===0?<div className="empty compact"><FileText size={26}/><strong>Nenhuma certidão armazenada ainda</strong><span>Ao emitir uma certidão, o PDF fica disponível aqui para visualizar e baixar novamente.</span></div>:<div className="downloads-list">
-          {pdfHistory.map((h:any,index:number)=><div className="download-row" key={`${h.id}-${index}`}><div className="download-file-icon"><FileCheck2 size={19}/></div><div className="download-main"><strong>{h.tipo_certidao||'Certidão'}</strong><span>{h.nome_arquivo_original||'certidao.pdf'} · {formatarData(h.data_emissao)} · validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}</small></div><div className="download-status"><StatusBadge value={statusDaCertidao(h)}/></div><div className="download-actions"><button className="icon-button" title="Baixar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path,true)}><Download size={15}/></button><button className="icon-button" title="Visualizar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path)}><ExternalLink size={15}/></button></div></div>)}
+          {pdfHistory.map((h:any,index:number)=><div className="download-row" key={`${h.id}-${index}`}><div className="download-file-icon"><FileCheck2 size={19}/></div><div className="download-main"><strong>{h.tipo_certidao||'Certidão'}</strong><span>{h.nome_arquivo_original||'certidao.pdf'} · {formatarData(h.data_emissao)} · validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}</small></div><div className="download-status"><StatusBadge value={statusDaCertidao(h)}/></div><div className="download-actions"><button className="icon-button" title="Baixar PDF" onClick={()=>void abrirPdfConsultaAutenticado(Number(h.consulta_id),true)}><Download size={15}/></button><button className="icon-button" title="Visualizar PDF" onClick={()=>void abrirPdfConsultaAutenticado(Number(h.consulta_id))}><ExternalLink size={15}/></button></div></div>)}
         </div>}
       </section>
 
