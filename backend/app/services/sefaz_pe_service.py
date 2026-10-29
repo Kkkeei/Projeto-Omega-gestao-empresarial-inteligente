@@ -108,8 +108,8 @@ def _extrair_datas(texto: str) -> tuple[Optional[str], Optional[str]]:
 
 def analisar_certidao(texto_pdf: str, nome_arquivo: str = "") -> dict:
     texto = normalizar_texto(texto_pdf)
-    arquivo = normalizar_texto(nome_arquivo).replace(" ", "")
-
+    # O nome do arquivo não é prova suficiente da situação fiscal. Exigimos
+    # texto extraído do PDF; caso contrário, o resultado permanece não identificado.
     # A ordem é deliberada: a expressão mais específica vem primeiro.
     if "CERTIDAO POSITIVA COM EFEITOS DE NEGATIVA" in texto or "POSITIVA COM EFEITOS DE NEGATIVA" in texto:
         situacao = "POSITIVA COM EFEITOS DE NEGATIVA"
@@ -126,12 +126,6 @@ def analisar_certidao(texto_pdf: str, nome_arquivo: str = "") -> dict:
     elif any(p in texto for p in ("INSCRITO IRREGULAR", "CONTRIBUINTE IRREGULAR", "SITUACAO IRREGULAR", "DEBITOS PENDENTES", "DEBITO PENDENTE", "EXISTENCIA DE DEBITO", "EXISTEM DEBITOS")):
         situacao = "IRREGULAR"
         tipo = "IRREGULARIDADE"
-    elif "INSCRITOREGULAR" in arquivo:
-        situacao = "REGULAR"
-        tipo = "NEGATIVA"
-    elif "INSCRITOIRREGULAR" in arquivo:
-        situacao = "IRREGULAR"
-        tipo = "POSITIVA"
     else:
         situacao = "NAO IDENTIFICADO"
         tipo = "NAO IDENTIFICADO"
