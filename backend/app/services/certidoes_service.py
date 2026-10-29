@@ -11,7 +11,9 @@ from app.db.database import conectar_banco, backup_banco_permanente, STORAGE_BAS
 from app.services.sefaz_pe_service import executar_consulta_playwright, limpar_cnpj, formatar_cnpj
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-STORAGE_DIR = BASE_DIR.parent / "storage" / "certidoes" / "estadual"
+PROJECT_ROOT = BASE_DIR.parent.resolve()
+LEGACY_CERTIDOES_ROOT = (PROJECT_ROOT / "storage" / "certidoes").resolve()
+STORAGE_DIR = (Path(STORAGE_BASE).expanduser().resolve() / "certidoes" / "estadual").resolve()
 
 
 def _tipo_estadual_id(conexao):
@@ -120,7 +122,7 @@ def _salvar_documento(conexao, empresa_id: int, pdf_origem: str, nome_original: 
 
     agora = datetime.now()
     cnpj = limpar_cnpj(empresa["cnpj"])
-    pasta = BASE_DIR.parent / "storage" / "certidoes" / subpasta / cnpj / str(agora.year)
+    pasta = Path(STORAGE_BASE).expanduser().resolve() / "certidoes" / subpasta / cnpj / str(agora.year)
     pasta.mkdir(parents=True, exist_ok=True)
 
     # Inclui microssegundos para impedir colisão quando várias consultas
@@ -829,8 +831,16 @@ def registrar(dados: dict):
 
 
 def obter_pdf_path(path: str) -> Path:
-    base = BASE_DIR.parent.resolve()
-    candidato = (base / path).resolve()
-    if base != candidato and base not in candidato.parents:
+    if not isinstance(path, str) or not path.strip():
         raise ValueError("Caminho de arquivo inválido.")
-    return candidato
+    raw = Path(path).expanduser()
+    candidate = raw.resolve() if raw.is_absolute() else (PROJECT_ROOT / raw).resolve()
+    roots = {
+        LEGACY_CERTIDOES_ROOT,
+        (Path(STORAGE_BASE).expanduser().resolve() / "certidoes").resolve(),
+    }
+    if candidate.suffix.lower() != ".pdf" or not any(
+        candidate == root or root in candidate.parents for root in roots
+    ):
+        raise ValueError("O arquivo solicitado não pertence ao armazenamento de certidões.")
+    return candidate
