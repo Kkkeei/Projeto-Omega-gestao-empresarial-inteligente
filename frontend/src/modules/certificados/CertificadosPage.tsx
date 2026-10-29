@@ -4,6 +4,7 @@ import {useAuth} from '../../auth/AuthContext';
 import {listarEmpresasParaSelecao} from '../../services/api/certidoes';
 import {baixarA1,baixarSenhaA1,bridgeCertificates,bridgeDiagnostics,bridgeSignTest,cadastrarA1,cadastrarA3,cadastrarPFA1,cadastrarPFA3,desativarCertificado,detalheCertificado,eventosCertificado,listarCertificados,listarPessoasFisicas,obterSenhaA1,resumoCertificados,solicitarSubstituicao,testarCertificado,type BridgeCertificate,type Certificado,type CertificadoEvento,type PessoaFisica} from '../../services/api/certificados';
 import type {Empresa} from '../../types';
+import './CertificadosHardening.css';
 
 function fmtDate(v?:string|null){if(!v)return '—';const raw=String(v);const dateOnly=/^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);const d=dateOnly?new Date(Number(dateOnly[1]),Number(dateOnly[2])-1,Number(dateOnly[3])):new Date(raw);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('pt-BR');}
 function expiryTimestamp(v?:string|null){if(!v)return null;const raw=String(v);const dateOnly=/^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);const d=dateOnly?new Date(Number(dateOnly[1]),Number(dateOnly[2])-1,Number(dateOnly[3]),23,59,59,999):new Date(raw);return Number.isNaN(d.getTime())?null:d.getTime();}
@@ -182,6 +183,10 @@ export function CertificadosPage(){
 
   async function submitA3(e:FormEvent<HTMLFormElement>){
     e.preventDefault();if(!mode)return;
+    if(mode.replaceId&&!detectedA3){
+      setError('Para substituir um A3, detecte e selecione o cartão/token novo. Isso evita desativar o vínculo técnico que ainda está em uso.');
+      return;
+    }
     setBusy(true);setError('');setMessage('');
     try{
       let c:Certificado;
