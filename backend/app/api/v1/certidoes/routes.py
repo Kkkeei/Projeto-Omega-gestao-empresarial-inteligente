@@ -20,6 +20,8 @@ from app.services.certidoes_service import (
     tipos,
 )
 
+logger = logging.getLogger("omega.certidoes")
+
 router = APIRouter(prefix="/api/v1/certidoes", tags=["Certidões"])
 
 
