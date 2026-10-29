@@ -2,11 +2,10 @@ import asyncio
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from app.db.database import conectar_banco
-from app.api.v1.auth.routes import current_user
 
 from app.schemas.certidoes import CertidaoCreate
 from app.services.receita_federal_service import consultar_federal
@@ -24,7 +23,7 @@ from app.services.certidoes_service import (
 
 logger = logging.getLogger("omega.certidoes")
 
-router = APIRouter(prefix="/api/v1/certidoes", tags=["Certidões"], dependencies=[Depends(current_user)])
+router = APIRouter(prefix="/api/v1/certidoes", tags=["Certidões"])
 
 def _sanitizar_resultado_certidao(valor):
     """Remove caminhos locais, texto fiscal integral e exceções internas das respostas HTTP."""
