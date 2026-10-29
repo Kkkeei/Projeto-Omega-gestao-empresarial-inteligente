@@ -580,3 +580,10 @@ td strong{font-size:12px}
 .sidebar .sidebar-note small{color:#728197}
 .sidebar .icon-button.dark{background:#f4f6fa;border-color:#e0e6ef;color:#52647c}
 @media(max-width:760px){.sidebar .brand.brand-logo-link{height:68px;padding:4px 6px 16px!important}}
+
+/* Ajustes finos de alinhamento da marca e luminosidade do login */
+.sidebar .brand.brand-logo-link{justify-content:center!important;padding-left:15px!important;padding-right:15px!important}
+.sidebar .brand.brand-logo-link .omega-sidebar-logo{object-position:center!important;margin-inline:auto!important;transform:translateX(4px)}
+.login-page{background:#f1f4f9!important}
+.login-brand{background:linear-gradient(145deg,#edf2f8 0%,#e5ebf4 100%)!important}
+.login-card{box-shadow:0 18px 50px rgba(28,43,67,.09)}
