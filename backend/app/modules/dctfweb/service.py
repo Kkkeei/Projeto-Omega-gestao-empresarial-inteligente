@@ -9,9 +9,9 @@ from app.modules.impostos.repository import competencia_iso, competencia_label
 REGIMES_DCTFWEB = {"LUCRO PRESUMIDO", "LUCRO REAL"}
 STATUS_FINALIZADOS = {
     "A_PAGAR", "A_VENCER", "EM_ATRASO", "PAGO", "CREDOR",
-    "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO", "GUIA_REGISTRADA",
+    "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "GUIA_REGISTRADA",
 }
-STATUS_SEM_MOVIMENTACAO = {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO"}
+STATUS_SEM_MOVIMENTACAO = {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO"}
 
 
 def _normalizar_regime(valor: Any) -> str:
@@ -23,7 +23,7 @@ def _status_obrigacao(status: Any, registro_existe: bool) -> tuple[str, bool]:
     chave = str(status or "").strip().upper()
     if not registro_existe or not chave or chave == "PENDENTE":
         return "PENDENTE", False
-    if chave in {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "SEM_APURACAO"}:
+    if chave in {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO"}:
         return "SEM_MOVIMENTACAO", True
     if chave == "CREDOR":
         return "CREDOR", True
