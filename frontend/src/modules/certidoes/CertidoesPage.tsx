@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {AlertTriangle, CheckCircle2, Download, ExternalLink, FileCheck2, FileText, History, Landmark, RefreshCw, Search, ShieldCheck, Play, Building2, CalendarDays} from 'lucide-react';
+import {AlertTriangle, CheckCircle2, Download, ExternalLink, FileCheck2, FileText, History, Landmark, RefreshCw, Search, ShieldCheck, Play, Building2, CalendarDays,ChevronRight} from 'lucide-react';
 import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfConsultaAutenticado} from '../../services/api/certidoes';
 import type {Certidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
