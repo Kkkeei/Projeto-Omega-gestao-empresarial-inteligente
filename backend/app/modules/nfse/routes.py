@@ -18,6 +18,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from typing import Literal
 
 from app.api.v1.auth.routes import current_user
 from app.modules.nfse import service
@@ -36,6 +37,37 @@ class ImportarA3Request(BaseModel):
     thumbprint_sha256: str = Field(min_length=16, max_length=128)
     content_type: str = "application/json"
     body_b64: str = Field(min_length=1)
+
+
+class SalvarConfigRequest(BaseModel):
+    origem: Literal["PJ", "PF"]
+    entidade_id: int = Field(gt=0)
+    sincronizacao_automatica: bool = False
+    frequencia_horas: int = Field(default=24, ge=1, le=720)
+    horario: str = Field(default="02:00", pattern=r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+
+
+@router.get("/config")
+def obter_config(origem: Literal["PJ", "PF"], entidade_id: int, _user=Depends(current_user)):
+    try:
+        return service.obter_config(origem, entidade_id)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/config")
+def salvar_config(body: SalvarConfigRequest, _user=Depends(current_user)):
+    try:
+        return service.salvar_config(
+            body.origem,
+            body.entidade_id,
+            body.sincronizacao_automatica,
+            body.frequencia_horas,
+            body.horario,
+            _user["id"],
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/contexto")
