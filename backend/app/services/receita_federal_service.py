@@ -571,10 +571,17 @@ def _persistir(empresa_id: int, resultado: dict[str, Any]) -> dict[str, Any]:
             try:
                 doc_id, pdf_path, _ = _salvar_pdf(conexao, empresa_id, resultado["arquivo_pdf"], resultado.get("nome_original_arquivo") or "certidao_federal.pdf")
             except Exception as exc:
-                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {exc}"
+                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                resultado["situacao"] = "ERRO"
+                resultado["status_processamento"] = "Erro técnico"
+                resultado["pendencia"] = bool(resultado.get("pendencia"))
+                resultado["mensagem"] = (
+                    "O portal retornou um resultado, mas o PDF não foi armazenado com segurança. "
+                    "A consulta precisa ser repetida antes de considerar a certidão concluída."
+                )
 
         situacao = resultado.get("situacao") or "ERRO"
-        pendencia = situacao == "IRREGULAR"
+        pendencia = bool(resultado.get("pendencia")) or situacao == "IRREGULAR"
         observacao = resultado.get("pendencia_detalhes") or resultado.get("mensagem")
 
         atual = conexao.execute("SELECT id FROM certidoes WHERE empresa_id=? AND tipo_certidao_id=?", (empresa_id, tipo_id)).fetchone()
