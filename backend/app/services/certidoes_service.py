@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import shutil
 from datetime import date, datetime
@@ -9,6 +10,8 @@ from typing import Optional
 
 from app.db.database import conectar_banco, backup_banco_permanente, STORAGE_BASE
 from app.services.sefaz_pe_service import executar_consulta_playwright, limpar_cnpj, formatar_cnpj
+
+logger = logging.getLogger("omega.certidoes")
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = BASE_DIR.parent.resolve()
@@ -457,15 +460,16 @@ async def _consultar_empresa(empresa_id: int, tentativas: int = 3, browser=None)
         try:
             ultimo = await executar_consulta_playwright(cnpj, browser=browser)
         except Exception as exc:
+            logger.exception("Falha na consulta SEFAZ-PE para empresa_id=%s, tentativa=%s.", empresa_id, tentativa)
             ultimo = {
                 "cnpj": cnpj,
                 "cnpj_formatado": formatar_cnpj(cnpj),
                 "empresa": razao_cadastrada,
                 "situacao": "ERRO",
                 "tipo_certidao": None,
-                "status_processamento": "Erro",
-                "mensagem": str(exc),
-                "erro_tecnico": str(exc),
+                "status_processamento": "Erro técnico",
+                "mensagem": "Não foi possível concluir a consulta à SEFAZ-PE nesta tentativa.",
+                "erro_tecnico": f"{type(exc).__name__}: {exc}",
                 "pendencia": False,
                 "pendencia_detalhes": None,
             }
@@ -496,11 +500,11 @@ async def _consultar_empresa(empresa_id: int, tentativas: int = 3, browser=None)
                 ultimo["documento_id"] = documento_id
                 ultimo["pdf_path"] = pdf_path
             except Exception as exc:
+                logger.exception("Falha ao armazenar PDF da certidão SEFAZ-PE (empresa_id=%s).", empresa_id)
                 ultimo["documento_id"] = None
                 ultimo["pdf_path"] = None
                 ultimo["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
-                situacao_detectada = ultimo.get("situacao")
-                ultimo["situacao_detectada"] = situacao_detectada
+                ultimo["situacao_detectada"] = ultimo.get("situacao")
                 ultimo["situacao"] = "ERRO"
                 ultimo["status_processamento"] = "Erro técnico"
                 ultimo["mensagem"] = (
@@ -583,14 +587,15 @@ def consultar_narrativa_pyautogui(empresa_id: int, certificado_nome: str | None 
     try:
         resultado = executar_automacao_pyautogui(cnpj, certificado_nome=certificado_nome)
     except Exception as exc:
+        logger.exception("Falha na consulta de certidão narrativa (empresa_id=%s).", empresa_id)
         resultado = {
             "cnpj": cnpj,
             "empresa": razao,
             "situacao": "ERRO",
             "tipo_certidao": "Narrativa de Débito Fiscal - SEFAZ",
-            "status_processamento": "Erro",
-            "mensagem": str(exc),
-            "erro_tecnico": str(exc),
+            "status_processamento": "Erro técnico",
+            "mensagem": "Não foi possível concluir a consulta narrativa na SEFAZ-PE.",
+            "erro_tecnico": f"{type(exc).__name__}: {exc}",
             "pendencia": False,
         }
 
@@ -611,7 +616,12 @@ def consultar_narrativa_pyautogui(empresa_id: int, certificado_nome: str | None 
                 resultado["documento_id"] = documento_id
                 resultado["pdf_path"] = pdf_path
             except Exception as exc:
-                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {exc}"
+                logger.exception("Falha ao armazenar PDF narrativo (empresa_id=%s).", empresa_id)
+                resultado["situacao_detectada"] = resultado.get("situacao")
+                resultado["situacao"] = "ERRO"
+                resultado["status_processamento"] = "Erro técnico"
+                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                resultado["mensagem"] = "O PDF da certidão narrativa não pôde ser armazenado. Repita a consulta antes de considerar a operação concluída."
         else:
             resultado["documento_id"] = None
             resultado["pdf_path"] = None
@@ -732,20 +742,24 @@ async def consultar_estadual_todas(tentativas: int = 3) -> dict:
                     resultado = await _consultar_empresa(
                         empresa["id"], tentativas=tentativas, browser=browser
                     )
-                except Exception as exc:
+                except Exception:
                     # Mesmo um erro inesperado de uma empresa não interrompe o lote.
-                    # O erro também é gravado no histórico para não deixar lacunas.
+                    # Detalhes técnicos são registrados no log, não retornados ao browser.
+                    logger.exception("Falha inesperada no lote de certidões (empresa_id=%s).", empresa["id"])
                     try:
-                        resultado = _registrar_falha_empresa(empresa["id"], str(exc))
-                    except Exception as persist_exc:
+                        resultado = _registrar_falha_empresa(
+                            empresa["id"],
+                            "Falha técnica ao consultar a certidão estadual. Consulte o histórico e os logs do servidor.",
+                        )
+                    except Exception:
+                        logger.exception("Falha ao persistir histórico de certidão (empresa_id=%s).", empresa["id"])
                         resultado = {
                             "empresa_id": empresa["id"],
                             "empresa": empresa["razao_social"],
                             "cnpj": formatar_cnpj(empresa["cnpj"]),
                             "situacao": "ERRO",
-                            "status_processamento": "Erro",
-                            "mensagem": str(exc),
-                            "erro_tecnico": f"{exc}; falha ao registrar histórico: {persist_exc}",
+                            "status_processamento": "Erro técnico",
+                            "mensagem": "A consulta falhou e o histórico não pôde ser registrado. Consulte os logs do servidor.",
                             "consulta_registrada": False,
                         }
                 resultado["ordem_lote"] = indice
