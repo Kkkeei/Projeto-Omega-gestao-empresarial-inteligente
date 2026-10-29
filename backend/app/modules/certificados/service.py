@@ -761,6 +761,13 @@ def cadastrar_pf_a3(cpf: str, nome: str, meio: str, emissor: str | None, numero_
         raise ValueError("Para A3, o meio deve ser CARTAO ou TOKEN.")
     thumbprint_sha256 = (thumbprint_sha256 or "").strip().lower()
     if not thumbprint_sha256:
+        # Cadastro declarativo sem dados técnicos é permitido; dados parciais não.
+        dados_tecnicos = (
+            emissor, numero_serie, data_emissao, data_validade, algoritmo,
+            dispositivo_modelo, dispositivo_identificador,
+        )
+        if any(str(value or "").strip() for value in dados_tecnicos):
+            raise ValueError("Informe um thumbprint SHA-256 válido quando há dados técnicos do certificado A3.")
         # Apenas marca o titular como usuário de A3; não consulta Bridge nem guarda PIN.
         thumbprint_sha256 = None
         emissor = numero_serie = data_emissao = data_validade = algoritmo = None
