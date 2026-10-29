@@ -18,7 +18,7 @@ export function DctfwebPage(){
  const [data,setData]=useState<DashboardDctfweb|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState('');
  const [busca,setBusca]=useState('');const [regime,setRegime]=useState('TODOS');const [situacao,setSituacao]=useState('TODAS');const [somentePendencias,setSomentePendencias]=useState(false);
  const [conferencia,setConferencia]=useState(false);const navigate=useNavigate();
- async function load(){setLoading(true);setError('');try{setData(await obterDashboardDctfweb(ano,mes));}catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar a DCTFWeb.');}finally{setLoading(false);}}
+ async function load(){setLoading(true);setError('');setData(null);try{setData(await obterDashboardDctfweb(ano,mes));}catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar a DCTFWeb.');}finally{setLoading(false);}}
  useEffect(()=>{void load();},[ano,mes]);
  function mudarMes(delta:number){const d=new Date(ano,mes-1+delta,1);setAno(d.getFullYear());setMes(d.getMonth()+1);setConferencia(false);}
  const filtradas=useMemo(()=>{const q=busca.trim().toLowerCase();return (data?.empresas||[]).filter(e=>{
