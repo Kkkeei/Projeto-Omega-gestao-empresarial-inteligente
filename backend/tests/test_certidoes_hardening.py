@@ -1,4 +1,7 @@
 from pathlib import Path
+from io import BytesIO
+
+from reportlab.pdfgen import canvas
 
 import pytest
 from pypdf import PdfWriter
@@ -157,3 +160,41 @@ def test_certificate_batch_sanitizer_sanitizes_nested_results(tmp_path, monkeypa
     assert "pdf_path" not in item
     assert "erro_tecnico" not in item
     assert "secret local path" not in item["mensagem"]
+
+
+def _create_text_pdf(path: Path, text: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    output = BytesIO()
+    pdf = canvas.Canvas(output)
+    y = 780
+    for line in text.splitlines():
+        pdf.drawString(40, y, line)
+        y -= 18
+    pdf.save()
+    path.write_bytes(output.getvalue())
+    return path
+
+
+def test_federal_pdf_must_identify_requested_cnpj(tmp_path):
+    from app.services.receita_federal_service import _extrair_texto_pdf, _texto_contem_cnpj
+
+    pdf = _create_text_pdf(
+        tmp_path / "certidao-federal.pdf",
+        "CERTIDAO NEGATIVA DE DEBITOS\nCNPJ: 50.410.847/0001-12",
+    )
+    text = _extrair_texto_pdf(pdf)
+    assert _texto_contem_cnpj(text, "50410847000112") is True
+    assert _texto_contem_cnpj(text, "11222333000181") is False
+
+
+def test_federal_pdf_classification_uses_pdf_content(tmp_path):
+    from app.services.receita_federal_service import _classificar, _extrair_texto_pdf
+
+    pdf = _create_text_pdf(
+        tmp_path / "certidao-federal.pdf",
+        "CERTIDAO NEGATIVA DE DEBITOS\nCNPJ: 50.410.847/0001-12\nData de validade: 30/11/2026",
+    )
+    pdf_text = _extrair_texto_pdf(pdf)
+    situacao, pendencia, _ = _classificar(pdf_text)
+    assert situacao == "REGULAR"
+    assert pendencia is False
