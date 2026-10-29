@@ -198,3 +198,14 @@ def test_federal_pdf_classification_uses_pdf_content(tmp_path):
     situacao, pendencia, _ = _classificar(pdf_text)
     assert situacao == "REGULAR"
     assert pendencia is False
+
+
+def test_sefaz_pdf_must_match_requested_cnpj():
+    assert sefaz.texto_contem_cnpj(
+        "CERTIDAO NEGATIVA DE DEBITOS\nCNPJ: 50.410.847/0001-12",
+        "50410847000112",
+    ) is True
+    assert sefaz.texto_contem_cnpj(
+        "CERTIDAO NEGATIVA DE DEBITOS\nCNPJ: 12.345.678/0001-90",
+        "50410847000112",
+    ) is False
