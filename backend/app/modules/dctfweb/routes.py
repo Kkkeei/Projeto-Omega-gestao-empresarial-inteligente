@@ -14,8 +14,8 @@ router = APIRouter(
 
 @router.get("/dashboard")
 def dashboard(
-    ano: int = Query(default_factory=lambda: date.today().year, ge=2000, le=2100),
-    mes: int = Query(default_factory=lambda: date.today().month, ge=1, le=12),
+    ano: int | None = Query(None, ge=2000, le=2100),
+    mes: int | None = Query(None, ge=1, le=12),
 ):
     try:
         return service.dashboard(ano, mes)
