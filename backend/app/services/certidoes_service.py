@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
-from app.db.database import conectar_banco, backup_banco_permanente
+from app.db.database import conectar_banco, backup_banco_permanente, STORAGE_BASE
 from app.services.sefaz_pe_service import executar_consulta_playwright, limpar_cnpj, formatar_cnpj
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -126,7 +126,12 @@ def _salvar_documento(conexao, empresa_id: int, pdf_origem: str, nome_original: 
     # Inclui microssegundos para impedir colisão quando várias consultas
     # terminarem no mesmo segundo.
     destino = pasta / f"certidao_{agora.strftime('%Y-%m-%d_%H%M%S_%f')}.pdf"
-    caminho_relativo = str(destino.resolve().relative_to(BASE_DIR.parent.resolve()))
+    try:
+        caminho_relativo = str(destino.resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        # Configuração externa de storage: caminhos absolutos ainda serão
+        # validados contra STORAGE_BASE/certidoes antes de servir o PDF.
+        caminho_relativo = str(destino.resolve())
     try:
         shutil.copyfile(pdf_origem, destino)
         tamanho = destino.stat().st_size
