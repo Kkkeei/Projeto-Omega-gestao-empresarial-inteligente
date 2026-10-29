@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {AlertTriangle, CheckCircle2, Download, ExternalLink, FileCheck2, FileText, History, Landmark, RefreshCw, Search, ShieldCheck, Play, Building2, CalendarDays} from 'lucide-react';
-import {listarCertidoes,listarTiposCertidao,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfCertidaoAutenticado} from '../../services/api/certidoes';
+import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfCertidaoAutenticado} from '../../services/api/certidoes';
 import type {Certidao,TipoCertidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {StatusBadge} from '../../components/status/StatusBadge';
@@ -26,17 +26,47 @@ const TYPE_CARDS: TypeCard[] = [
   {key:'narrativa',title:'Narrativa · Débito Fiscal',short:'Narrativa SEFAZ',desc:'Consulta autenticada por certificado',icon:FileText,className:'amber',method:'Emissão integrada',typeName:'Narrativa - Débito Fiscal'},
 ];
 
+function validadeCalculada(value?:string|null):string|null {
+  if(!value)return null;
+  const parts=value.slice(0,10).split('-').map(Number);
+  if(parts.length!==3||!parts.every(Number.isFinite))return null;
+  const [year,month,day]=parts;
+  const validade=new Date(year,month-1,day);
+  if(validade.getFullYear()!==year||validade.getMonth()!==month-1||validade.getDate()!==day)return null;
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  validade.setHours(0,0,0,0);
+  const dias=Math.floor((validade.getTime()-hoje.getTime())/86400000);
+  return dias<0?'VENCIDA':dias<=30?'PRÓXIMA DO VENCIMENTO':'VÁLIDA';
+}
+function statusDaCertidao(item?:{situacao?:string|null;status_validade?:string|null;data_validade?:string|null}|null):string {
+  const situacao=(item?.situacao||'').trim();
+  if(!situacao)return 'Ainda não consultada';
+  const normalized=situacao.toUpperCase();
+  const validade=item?.status_validade||validadeCalculada(item?.data_validade);
+  if(validade==='VENCIDA')return normalized==='IRREGULAR'||normalized==='ERRO'? `${situacao} · VENCIDA`:'VENCIDA';
+  if(validade==='PRÓXIMA DO VENCIMENTO'&&(normalized==='REGULAR'||normalized==='NEGATIVA'))return validade;
+  if(!item?.data_validade&&(normalized==='REGULAR'||normalized==='NEGATIVA'))return `${situacao} · validade não identificada`;
+  return situacao;
+}
 function classeSituacao(value?:string|null){
   const v=(value||'').toUpperCase();
+  if(v.includes('VENCIDA')||v.includes('IRREGULAR')||v.includes('ERRO')) return 'bad';
+  if(v.includes('POSITIVA COM EFEITOS')||v.includes('POSITIVA')||v.includes('PRÓXIMA DO VENCIMENTO')) return 'warn';
+  if(v.includes('VALIDADE NÃO IDENTIFICADA')) return 'neutral';
   if(v==='REGULAR'||v==='NEGATIVA') return 'ok';
-  if(v.includes('POSITIVA COM EFEITOS')) return 'warn';
-  if(v==='IRREGULAR'||v==='VENCIDA'||v==='ERRO') return 'bad';
   return 'neutral';
+}
+function resultadoLote(lote:{resumo:Record<string,number>;resultados:CertidaoConsultaResultado[]}):string {
+  const r=lote.resumo;
+  if((r.erro||0)>0||(r.consultas_registradas||0)<(r.total||0))return 'ERRO · REVISAR LOTE';
+  if((r.irregular||0)>0)return 'IRREGULAR';
+  if((r.positiva_com_efeitos_de_negativa||0)>0)return 'POSITIVA COM EFEITOS DE NEGATIVA';
+  if((r.regular||0)===(r.total||0)&&(r.total||0)>0)return 'REGULAR';
+  return 'REVISAR RESULTADOS';
 }
 
 export function CertidoesPage(){
   const [emp,setEmp]=useState<Empresa[]>([]);
-  const [tipos,setTipos]=useState<TipoCertidao[]>([]);
   const [empresaId,setEmpresaId]=useState('');
   const [tipoSelecionado,setTipoSelecionado]=useState<CertType>('federal');
   const [busca,setBusca]=useState('');
@@ -70,8 +100,8 @@ export function CertidoesPage(){
   async function load(selectedId?:string){
     setLoading(true);setErr('');
     try{
-      const [a,b]=await Promise.all([listarEmpresasParaSelecao(),listarTiposCertidao()]);
-      setEmp(a.empresas);setTipos(b.tipos);
+      const a=await listarEmpresasParaSelecao();
+      setEmp(a.empresas);
       const saved=selectedId ?? localStorage.getItem('omega_certidoes_empresa_id') ?? '';
       if(saved && a.empresas.some(e=>e.id===Number(saved)&&e.ativo)){
         setEmpresaId(saved); await carregarEmpresa(Number(saved));
@@ -118,13 +148,12 @@ export function CertidoesPage(){
 
   function certAtual(typeName:string){return items.find(x=>x.tipo_certidao===typeName);}
 
-  const currentCards=TYPE_CARDS.map(card=>({card,item:certAtual(card.typeName)}));
   const pdfHistory=hist.filter(h=>h.pdf_path);
 
   function renderResult(){
     if(!resultado) return null;
     return <div className="panel cert-result-card">
-      <div className="cert-result-top"><div><span className="eyebrow">ÚLTIMO RESULTADO</span><h3>{resultado.empresa||empresaSelecionada?.razao_social||'Empresa'}</h3><p>{resultado.cnpj||empresaSelecionada?.cnpj||'—'}</p></div><StatusBadge value={resultado.situacao}/></div>
+      <div className="cert-result-top"><div><span className="eyebrow">ÚLTIMO RESULTADO</span><h3>{resultado.empresa||empresaSelecionada?.razao_social||'Empresa'}</h3><p>{resultado.cnpj||empresaSelecionada?.cnpj||'—'}</p></div><StatusBadge value={statusDaCertidao(resultado)}/></div>
       <div className="cert-result-grid">
         <div><span>Certidão</span><strong>{resultado.tipo_certidao||cardAtual.title}</strong></div>
         <div><span>Emissão</span><strong>{formatarData(resultado.data_emissao)}</strong></div>
@@ -153,7 +182,7 @@ export function CertidoesPage(){
         {TYPE_CARDS.map(card=>{const Icon=card.icon;const selected=tipoSelecionado===card.key;const item=certAtual(card.typeName);return <button key={card.key} className={`cert-type-card-v2 ${card.className} ${selected?'selected':''}`} onClick={()=>{setTipoSelecionado(card.key);setResultado(null);setErr('')}} disabled={busy}>
           <span className="type-card-top"><span className="type-icon-v2"><Icon size={23}/></span>{selected&&<span className="selected-check"><CheckCircle2 size={17}/> Selecionada</span>}</span>
           <span className="type-card-name">{card.short}</span><strong>{card.title}</strong><small>{card.desc}</small>
-          <span className={`type-status ${classeSituacao(item?.situacao)}`}>{item?.situacao||'Ainda não consultada'}{item?.data_validade?` · validade ${formatarData(item.data_validade)}`:''}</span>
+          <span className={`type-status ${classeSituacao(statusDaCertidao(item))}`}>{statusDaCertidao(item)}{item?.data_validade?` · validade ${formatarData(item.data_validade)}`:''}</span>
           <span className="type-card-footer"><em>{card.method}</em><span><Play size={12} fill="currentColor"/> Emitir agora</span></span>
         </button>})}
       </div>
@@ -185,7 +214,7 @@ export function CertidoesPage(){
             <div className="cert-selected-title"><span className="type-icon-v2"><Icon size={20}/></span><div><span className="eyebrow">CERTIDÃO SELECIONADA</span><h3>{cardAtual.title}</h3><p>{cardAtual.desc}</p></div></div>
           </div>
           <div className="cert-selected-grid">
-            <div><span>Situação</span><strong className={`selected-status ${classeSituacao(selected?.situacao)}`}>{selected?.situacao||'Ainda não consultada'}</strong></div>
+            <div><span>Situação</span><strong className={`selected-status ${classeSituacao(statusDaCertidao(selected))}`}>{statusDaCertidao(selected)}</strong></div>
             <div><span>Emissão</span><strong>{formatarData(selected?.data_emissao)}</strong></div>
             <div><span>Validade</span><strong>{formatarData(selected?.data_validade)}</strong></div>
             <div><span>Número</span><strong>{selected?.numero_certidao||'—'}</strong></div>
@@ -197,13 +226,13 @@ export function CertidoesPage(){
       <section className="downloads-panel panel">
         <div className="panel-header"><div><span className="eyebrow">DOCUMENTOS DISPONÍVEIS</span><h3>Certidões para download</h3></div><span className="download-count">{pdfHistory.length} PDF(s)</span></div>
         {pdfHistory.length===0?<div className="empty compact"><FileText size={26}/><strong>Nenhuma certidão armazenada ainda</strong><span>Ao emitir uma certidão, o PDF fica disponível aqui para visualizar e baixar novamente.</span></div>:<div className="downloads-list">
-          {pdfHistory.map((h:any,index:number)=><div className="download-row" key={`${h.id}-${index}`}><div className="download-file-icon"><FileCheck2 size={19}/></div><div className="download-main"><strong>{h.tipo_certidao||'Certidão'}</strong><span>{h.nome_arquivo_original||'certidao.pdf'} · {formatarData(h.data_emissao)} · validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}</small></div><div className="download-status"><StatusBadge value={h.situacao}/></div><div className="download-actions"><button className="icon-button" title="Baixar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path,true)}><Download size={15}/></button><button className="icon-button" title="Visualizar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path)}><ExternalLink size={15}/></button></div></div>)}
+          {pdfHistory.map((h:any,index:number)=><div className="download-row" key={`${h.id}-${index}`}><div className="download-file-icon"><FileCheck2 size={19}/></div><div className="download-main"><strong>{h.tipo_certidao||'Certidão'}</strong><span>{h.nome_arquivo_original||'certidao.pdf'} · {formatarData(h.data_emissao)} · validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}</small></div><div className="download-status"><StatusBadge value={statusDaCertidao(h)}/></div><div className="download-actions"><button className="icon-button" title="Baixar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path,true)}><Download size={15}/></button><button className="icon-button" title="Visualizar PDF" onClick={()=>void abrirPdfCertidaoAutenticado(h.pdf_path)}><ExternalLink size={15}/></button></div></div>)}
         </div>}
       </section>
 
       <section className="history-panel panel"><div className="panel-header"><div><span className="eyebrow">HISTÓRICO</span><h3>Consultas realizadas</h3></div><History size={18}/></div>{hist.length===0?<div className="empty compact"><CalendarDays size={24}/><span>Nenhuma consulta registrada.</span></div>:<div className="history-list">{hist.slice(0,20).map((h:any,index:number)=><div className="history-item" key={`${h.id}-${index}`}><strong>{h.tipo_certidao||'Certidão'} · {h.situacao||'—'}</strong><span>{formatarData(h.data_emissao)} → validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}{h.numero_certidao?` · Nº ${h.numero_certidao}`:''}</small></div>)}</div>}</section>
     </section>}
 
-    {lote&&<section className="panel batch-panel"><div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Certidões estaduais emitidas</h3></div><StatusBadge value="REGULAR"/></div><div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k}</span></div>)}</div></section>}
+    {lote&&<section className="panel batch-panel"><div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Resultado do processamento em lote</h3></div><StatusBadge value={resultadoLote(lote)}/></div><div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k}</span></div>)}</div></section>}
   </div>
 }
