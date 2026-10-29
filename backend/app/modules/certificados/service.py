@@ -339,7 +339,7 @@ def cadastrar_a3(empresa_id: int, meio: str, titular_tipo: str, documento: str |
             dispositivo_modelo, dispositivo_identificador,
         )
         if any(str(value or "").strip() for value in dados_tecnicos):
-            raise ValueError("Thumbprint SHA-256 obrigatório quando há dados técnicos do certificado A3.")
+            raise ValueError("Informe um thumbprint SHA-256 válido quando há dados técnicos do certificado A3.")
         thumbprint_sha256 = None
         data_emissao = None
         data_validade = None
