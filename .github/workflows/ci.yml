@@ -50,6 +50,11 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+      - name: Report frontend dependency advisories
+        working-directory: frontend
+        run: |
+          npm audit --json > /tmp/omega-npm-audit.json || true
+          node -e "const r=require('/tmp/omega-npm-audit.json'); console.log(JSON.stringify({metadata:r.metadata?.vulnerabilities, vulnerabilities:r.vulnerabilities},null,2))"
       - name: Type-check and build frontend
         working-directory: frontend
         run: npm run build
