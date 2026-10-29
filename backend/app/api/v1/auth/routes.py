@@ -1,3 +1,4 @@
+import logging
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,8 +19,10 @@ from app.services.auth_service import (
     registrar_usuario,
     criar_token_redefinicao,
     redefinir_senha_com_token,
+    enviar_email_redefinicao,
 )
 
+logger = logging.getLogger("omega.auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["Autenticação"])
 bearer = HTTPBearer(auto_error=False)
 
@@ -92,7 +95,13 @@ def admin_user(user=Depends(current_user)):
 
 
 @router.post("/registrar", status_code=status.HTTP_201_CREATED)
-def register(data: RegisterIn):
+def register(data: RegisterIn, request: Request):
+    producao = os.getenv("OMEGA_ENV", "development").strip().lower() == "production"
+    padrao_publico = "false" if producao else "true"
+    publico_habilitado = os.getenv("OMEGA_PUBLIC_REGISTRATION", padrao_publico).strip().lower() in {"1", "true", "sim", "yes"}
+    if not publico_habilitado:
+        raise HTTPException(status_code=403, detail="O cadastro público está desabilitado. Solicite acesso ao administrador.")
+    _check_rate_limit(request, f"register:{request.client.host if request.client else 'unknown'}")
     if data.senha != data.confirmar_senha:
         raise HTTPException(status_code=400, detail="As senhas não conferem.")
     try:
@@ -106,14 +115,20 @@ def register(data: RegisterIn):
 
 
 @router.post("/esqueci-senha")
-def forgot_password(data: ForgotPasswordIn, request: Request = None):
-    if request is not None:
-        _check_rate_limit(request, f"reset:{request.client.host if request.client else 'unknown'}")
-    token, _user = criar_token_redefinicao(data.email)
+def forgot_password(data: ForgotPasswordIn, request: Request):
+    _check_rate_limit(request, f"reset:{request.client.host if request.client else 'unknown'}")
+    token, user = criar_token_redefinicao(data.email)
     response = {"ok": True, "mensagem": "Se o e-mail estiver cadastrado, as instruções de redefinição serão disponibilizadas."}
-    if token and os.getenv("OMEGA_ENV", "development").lower() != "production" and os.getenv("OMEGA_RESET_EXPOSE_URL", "false").lower() == "true":
-        response["reset_token"] = token
-        response["reset_url"] = f"/redefinir-senha?token={token}"
+    if token and user:
+        if os.getenv("OMEGA_ENV", "development").strip().lower() == "production":
+            try:
+                if not enviar_email_redefinicao(user["email"], user.get("nome") or "usuário", token):
+                    logger.error("Redefinição de senha solicitada, mas SMTP/OMEGA_FRONTEND_URL não estão configurados.")
+            except Exception:
+                logger.exception("Falha ao enviar o e-mail de redefinição de senha.")
+        elif os.getenv("OMEGA_RESET_EXPOSE_URL", "false").strip().lower() == "true":
+            response["reset_token"] = token
+            response["reset_url"] = f"/redefinir-senha?token={token}"
     return response
 
 
