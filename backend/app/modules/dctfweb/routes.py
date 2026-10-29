@@ -1,5 +1,3 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.v1.auth.routes import current_user
