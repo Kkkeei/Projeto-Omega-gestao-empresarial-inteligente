@@ -375,6 +375,10 @@ def _salvar_pdf_do_navegador(destino_dir: Path, inicio: float) -> Path | None:
             destino = destino_dir / f"certidao_federal_tmp_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.pdf"
             shutil.copy2(origem, destino)
             if _pdf_valido(destino):
+                # Se a origem veio da pasta temporária isolada do Chrome, já
+                # temos cópia própria para persistir; remova o download bruto.
+                if origem.parent.resolve() == destino_dir.resolve() and origem.resolve() != destino.resolve():
+                    origem.unlink(missing_ok=True)
                 return destino
             destino.unlink(missing_ok=True)
         time.sleep(float(os.getenv("RFB_PDF_DOWNLOAD_POLL", "0.75")))
