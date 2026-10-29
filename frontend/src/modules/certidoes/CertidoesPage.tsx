@@ -4,6 +4,7 @@ import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCe
 import type {Certidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {StatusBadge} from '../../components/status/StatusBadge';
+import './CertidoesHardening.css';
 
 function formatarData(value?:string|null){
   if(!value) return '—';
@@ -236,7 +237,7 @@ export function CertidoesPage(){
 
     {lote&&<section className="panel batch-panel">
       <div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Resultado do processamento em lote</h3></div><StatusBadge value={resultadoLote(lote)}/></div>
-      <div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k.replaceAll('_',' ')}</span></div>)}</div>
+      <div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k.replace(/_/g,' ')}</span></div>)}</div>
       {lote.resultados.some(r=>r.situacao!=='REGULAR'||r.status_processamento!=='Sucesso')&&<div className="batch-result-list">
         <strong>Resultados que precisam de atenção</strong>
         {lote.resultados.filter(r=>r.situacao!=='REGULAR'||r.status_processamento!=='Sucesso').map((r,index)=><div className="batch-result-row" key={`${r.empresa_id||r.cnpj||'empresa'}-${index}`}>
