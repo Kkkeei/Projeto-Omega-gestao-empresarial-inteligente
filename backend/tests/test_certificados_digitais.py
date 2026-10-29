@@ -257,3 +257,11 @@ def test_pf_unlinked_a3_cannot_replace_an_active_linked_a3():
     current = service.obter_pf(active["id"])
     assert current["status"] == "ATIVO"
     assert current["apto_para_uso"] is True
+
+
+def test_pf_a3_rejects_partial_technical_data_without_thumbprint():
+    with pytest.raises(ValueError, match="thumbprint SHA-256 válido"):
+        service.cadastrar_pf_a3(
+            "52998224725", "MARIA DA SILVA", "CARTAO", "AC TESTE", None,
+            None, None, None, None, None, None, 1,
+        )
