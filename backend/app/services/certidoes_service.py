@@ -49,6 +49,8 @@ def listar(empresa_id: int | None = None):
     try:
         sql = """
             SELECT c.*, t.nome AS tipo_certidao, e.cnpj, e.razao_social,
+                   (SELECT cc.id FROM consultas_certidoes cc
+                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS consulta_id,
                    (SELECT cc.pdf_path FROM consultas_certidoes cc
                       WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS pdf_path,
                    (SELECT cc.pendencia FROM consultas_certidoes cc
@@ -56,9 +58,7 @@ def listar(empresa_id: int | None = None):
                    (SELECT cc.pendencia_detalhes FROM consultas_certidoes cc
                       WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS pendencia_detalhes,
                    (SELECT cc.nome_arquivo_original FROM consultas_certidoes cc
-                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS nome_arquivo_original,
-                   (SELECT cc.texto_extraido FROM consultas_certidoes cc
-                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS texto_extraido
+                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS nome_arquivo_original
             FROM certidoes c
             JOIN tipos_certidao t ON t.id = c.tipo_certidao_id
             JOIN empresas e ON e.id = c.empresa_id
