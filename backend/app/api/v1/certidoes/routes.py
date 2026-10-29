@@ -37,7 +37,15 @@ def _sanitizar_resultado_certidao(valor):
     if "pdf_disponivel" not in resultado and (
         "consulta_id" in resultado or "pdf_path" in valor or "documento_id" in resultado
     ):
-        resultado["pdf_disponivel"] = bool(pdf_path)
+        disponivel = False
+        if isinstance(pdf_path, str) and pdf_path.strip():
+            try:
+                arquivo_pdf = obter_pdf_path(pdf_path)
+                disponivel = arquivo_pdf.is_file() and arquivo_pdf.suffix.lower() == ".pdf"
+            except (OSError, ValueError):
+                # Caminho ausente/antigo/inválido não deve parecer um PDF disponível.
+                disponivel = False
+        resultado["pdf_disponivel"] = disponivel
 
     for campo in ("arquivo_pdf", "texto_extraido", "erro_tecnico", "situacao_detectada"):
         resultado.pop(campo, None)
