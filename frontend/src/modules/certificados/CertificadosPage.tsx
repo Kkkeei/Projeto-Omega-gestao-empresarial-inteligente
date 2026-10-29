@@ -58,7 +58,7 @@ export function CertificadosPage(){
   const [a3Nome,setA3Nome]=useState('');
   const [a3Pin,setA3Pin]=useState('');
   const canAdmin=usuario?.perfil==='ADMIN';
-  const canViewPassword=Boolean(usuario);
+  const canViewPassword=Boolean(canAdmin);
 
   async function load(){
     setLoading(true);setError('');
