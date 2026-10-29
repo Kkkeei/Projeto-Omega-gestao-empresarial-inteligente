@@ -104,3 +104,50 @@ def test_relative_database_paths_are_resolved_against_backend(tmp_path):
 
     expected = (tmp_path / "omega.db").resolve()
     assert _resolve_configured_path("./omega.db", base_dir=tmp_path) == expected
+
+
+
+def test_certificate_api_sanitizer_hides_paths_text_and_technical_exceptions():
+    from app.api.v1.certidoes.routes import _sanitizar_resultado_certidao
+
+    payload = {
+        "situacao": "ERRO",
+        "status_processamento": "Erro técnico",
+        "mensagem": "ValueError: /srv/omega/storage/certidoes/empresa/certidao.pdf",
+        "pdf_path": "/srv/omega/storage/certidoes/empresa/certidao.pdf",
+        "arquivo_pdf": "/tmp/certidao_federal_tmp_123.pdf",
+        "texto_extraido": "CNPJ 00.000.000/0001-00 dados fiscais internos",
+        "erro_tecnico": "traceback com caminho local",
+        "situacao_detectada": "REGULAR",
+        "consulta_id": 42,
+    }
+    safe = _sanitizar_resultado_certidao(payload)
+
+    assert safe["pdf_disponivel"] is True
+    assert safe["consulta_id"] == 42
+    for key in ("pdf_path", "arquivo_pdf", "texto_extraido", "erro_tecnico", "situacao_detectada"):
+        assert key not in safe
+    assert "/srv/" not in safe["mensagem"]
+    assert "traceback" not in safe["mensagem"]
+
+
+def test_certificate_batch_sanitizer_sanitizes_nested_results():
+    from app.api.v1.certidoes.routes import _sanitizar_resultado_certidao
+
+    safe = _sanitizar_resultado_certidao({
+        "resumo": {"total": 1, "erro": 1},
+        "resultados": [{
+            "situacao": "ERRO",
+            "status_processamento": "Erro técnico",
+            "mensagem": "RuntimeError: secret local path",
+            "pdf_path": "/private/storage/certidoes/cnd.pdf",
+            "consulta_id": 7,
+            "erro_tecnico": "secret local path",
+        }],
+    })
+    item = safe["resultados"][0]
+    assert item["consulta_id"] == 7
+    assert item["pdf_disponivel"] is True
+    assert "pdf_path" not in item
+    assert "erro_tecnico" not in item
+    assert "secret local path" not in item["mensagem"]
