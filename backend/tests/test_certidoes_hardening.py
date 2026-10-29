@@ -56,6 +56,7 @@ def test_sefaz_classifier_distinguishes_certificate_outcomes():
 
 
 def _create_pdf(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     writer = PdfWriter()
     writer.add_blank_page(width=72, height=72)
     with path.open("wb") as target:
