@@ -420,81 +420,127 @@ def _obter_documento() -> Path | None:
     return None
 
 
+def _extrair_texto_pdf(caminho: Path) -> str:
+    """Extrai o texto do documento oficial capturado, não apenas da página intermediária."""
+    reader = PdfReader(str(caminho), strict=False)
+    return "\n".join((page.extract_text() or "") for page in reader.pages).strip()
+
+
+def _texto_contem_cnpj(texto: str, cnpj: str) -> bool:
+    """Confere se o PDF contém o CNPJ consultado, mesmo formatado ou quebrado por linhas."""
+    alvo = limpar_cnpj(cnpj)
+    if len(alvo) != 14:
+        return False
+    digitos_documento = re.sub(r"\D", "", texto or "")
+    return alvo in digitos_documento
+
+
+def _erro_consulta_federal(
+    mensagem: str,
+    detalhe: str,
+    *,
+    texto_tela: str = "",
+    arquivo_pdf: Path | None = None,
+    cnpj: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "situacao": "ERRO",
+        "status_processamento": "Erro técnico",
+        "mensagem": mensagem,
+        "erro_tecnico": detalhe,
+        "pendencia": False,
+        "pendencia_detalhes": None,
+        "numero_certidao": None,
+        "data_emissao": None,
+        "data_validade": None,
+        "arquivo_pdf": str(arquivo_pdf) if arquivo_pdf else None,
+        "nome_original_arquivo": arquivo_pdf.name if arquivo_pdf else None,
+        "texto_extraido": (texto_tela or "")[:30000],
+        "origem": "Consulta Automatizada / PyAutoGUI",
+    }
+
+
 def _executar_pyautogui(cnpj: str) -> dict[str, Any]:
+    arquivo: Path | None = None
+    texto_tela = ""
     try:
         _abrir_chrome()
         _abrir_portal()
         _digitar_cnpj(cnpj)
         _consultar()
-        # A consulta pode abrir o resultado e deixar o foco em um controle de
-        # emissão. Garantimos uma pequena janela para a página estabilizar antes
-        # de tentar emitir e capturar o PDF.
         time.sleep(float(os.getenv("RFB_BEFORE_EMIT_WAIT", "1.5")))
+        texto_tela = _copiar_clipboard()
 
-        texto = _copiar_clipboard()
-        situacao, pendencia, detalhes = _classificar(texto)
-        data_emissao = _parse_date(texto, r"data\s+de\s+emiss[aã]o")
-        data_validade = _parse_date(texto, r"data\s+de\s+validade|validade")
-        numero = _numero_certidao(texto)
-
-        if situacao == "NAO DISPONIVEL":
-            return {
-                "situacao": "ERRO",
-                "status_processamento": "Erro técnico",
-                "mensagem": "Não foi possível identificar com segurança o resultado exibido pela Receita Federal.",
-                "erro_tecnico": "Resultado não identificável após consulta visual.",
-                "pendencia": False,
-                "pendencia_detalhes": None,
-                "numero_certidao": numero,
-                "data_emissao": data_emissao,
-                "data_validade": data_validade,
-                "arquivo_pdf": None,
-                "nome_original_arquivo": None,
-                "texto_extraido": texto[:30000],
-                "origem": "Consulta Automatizada / PyAutoGUI",
-            }
-
-        arquivo = None
+        # O texto da página é apenas diagnóstico. A situação fiscal precisa ser
+        # classificada no PDF emitido e esse PDF precisa identificar o CNPJ alvo.
         try:
             arquivo = _obter_documento()
         except Exception as exc:
-            return {
-                "situacao": "ERRO",
-                "status_processamento": "Erro técnico",
-                "mensagem": "A consulta foi concluída, mas não foi possível capturar o PDF automaticamente.",
-                "erro_tecnico": f"Falha ao capturar PDF: {type(exc).__name__}: {exc}",
-                "pendencia": False,
-                "pendencia_detalhes": None,
-                "numero_certidao": numero,
-                "data_emissao": data_emissao,
-                "data_validade": data_validade,
-                "arquivo_pdf": None,
-                "nome_original_arquivo": None,
-                "texto_extraido": texto[:30000],
-                "origem": "Consulta Automatizada / PyAutoGUI",
-            }
+            return _erro_consulta_federal(
+                "A consulta não concluiu a captura da certidão PDF. Verifique a sessão gráfica e os logs.",
+                f"Falha ao capturar PDF: {type(exc).__name__}: {exc}",
+                texto_tela=texto_tela,
+            )
 
-        if arquivo is None:
-            return {
-                "situacao": "ERRO",
-                "status_processamento": "Erro técnico",
-                "mensagem": "A consulta foi concluída, mas o PDF não foi localizado no computador.",
-                "erro_tecnico": "Arquivo PDF não encontrado após o comando de salvamento.",
-                "pendencia": False,
-                "pendencia_detalhes": None,
+        if arquivo is None or not _pdf_valido(arquivo):
+            if arquivo:
+                arquivo.unlink(missing_ok=True)
+            return _erro_consulta_federal(
+                "A consulta não conseguiu localizar um PDF válido da certidão.",
+                "O portal não forneceu um arquivo PDF íntegro após a emissão.",
+                texto_tela=texto_tela,
+            )
+
+        try:
+            texto_pdf = _extrair_texto_pdf(arquivo)
+        except Exception as exc:
+            return _erro_consulta_federal(
+                "O PDF foi capturado, mas não foi possível ler o documento para conferir a situação fiscal.",
+                f"Falha ao extrair texto do PDF: {type(exc).__name__}: {exc}",
+                texto_tela=texto_tela,
+                arquivo_pdf=arquivo,
+            )
+
+        if not texto_pdf:
+            return _erro_consulta_federal(
+                "O PDF foi capturado, mas não contém texto legível para validar a situação fiscal automaticamente.",
+                "PDF sem texto extraível; exige conferência manual.",
+                texto_tela=texto_tela,
+                arquivo_pdf=arquivo,
+            )
+
+        if not _texto_contem_cnpj(texto_pdf, cnpj):
+            # Nunca arquiva nem associa um PDF que não identifique o titular
+            # consultado: pode ter sido um download concorrente ou arquivo antigo.
+            arquivo.unlink(missing_ok=True)
+            return _erro_consulta_federal(
+                "O PDF capturado não identifica o CNPJ consultado. Nenhuma certidão foi associada à empresa.",
+                "CNPJ esperado não encontrado no texto do PDF.",
+                texto_tela=texto_tela,
+            )
+
+        situacao, pendencia, detalhes = _classificar(texto_pdf)
+        data_emissao = _parse_date(texto_pdf, r"data\\s+de\\s+emiss[aã]o")
+        data_validade = _parse_date(texto_pdf, r"data\\s+de\\s+validade|validade")
+        numero = _numero_certidao(texto_pdf)
+
+        if situacao == "NAO DISPONIVEL":
+            return _erro_consulta_federal(
+                "A certidão corresponde ao CNPJ consultado, mas sua situação não pôde ser classificada com segurança. Confira o PDF manualmente.",
+                "O conteúdo do PDF não correspondeu aos padrões seguros de classificação.",
+                texto_tela=texto_pdf,
+                arquivo_pdf=arquivo,
+            ) | {
                 "numero_certidao": numero,
                 "data_emissao": data_emissao,
                 "data_validade": data_validade,
-                "arquivo_pdf": None,
-                "nome_original_arquivo": None,
-                "texto_extraido": texto[:30000],
-                "origem": "Consulta Automatizada / PyAutoGUI",
             }
 
         return {
             "situacao": situacao,
             "status_processamento": "Sucesso",
             "mensagem": None,
+            "erro_tecnico": None,
             "pendencia": pendencia,
             "pendencia_detalhes": detalhes,
             "numero_certidao": numero,
@@ -502,22 +548,17 @@ def _executar_pyautogui(cnpj: str) -> dict[str, Any]:
             "data_validade": data_validade,
             "arquivo_pdf": str(arquivo),
             "nome_original_arquivo": arquivo.name,
-            "texto_extraido": texto[:30000],
+            "texto_extraido": texto_pdf[:30000],
             "origem": "Consulta Automatizada / PyAutoGUI",
         }
     except Exception as exc:
-        return {
-            "situacao": "ERRO",
-            "status_processamento": "Erro técnico",
-            "mensagem": "A automação federal não conseguiu concluir o fluxo.",
-            "erro_tecnico": f"{type(exc).__name__}: {exc}",
-            "pendencia": False,
-            "pendencia_detalhes": None,
-            "origem": "Consulta Automatizada / PyAutoGUI",
-        }
+        return _erro_consulta_federal(
+            "A automação federal não conseguiu concluir a consulta. Verifique o navegador, a sessão gráfica e os logs.",
+            f"{type(exc).__name__}: {exc}",
+            texto_tela=texto_tela,
+        )
     finally:
         _fechar_chrome_completo()
-
 
 def _salvar_pdf(conexao, empresa_id: int, origem: str, nome_original: str) -> tuple[int, str, str]:
     origem_path = Path(origem).expanduser().resolve()
