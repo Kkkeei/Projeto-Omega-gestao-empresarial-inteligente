@@ -520,8 +520,8 @@ def _executar_pyautogui(cnpj: str) -> dict[str, Any]:
             )
 
         situacao, pendencia, detalhes = _classificar(texto_pdf)
-        data_emissao = _parse_date(texto_pdf, r"data\\s+de\\s+emiss[aã]o")
-        data_validade = _parse_date(texto_pdf, r"data\\s+de\\s+validade|validade")
+        data_emissao = _parse_date(texto_pdf, r"data\s+de\s+emiss[aã]o")
+        data_validade = _parse_date(texto_pdf, r"data\s+de\s+validade|validade")
         numero = _numero_certidao(texto_pdf)
 
         if situacao == "NAO DISPONIVEL":
