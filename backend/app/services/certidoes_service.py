@@ -30,7 +30,7 @@ def _validade_status(data_validade: str | None) -> str | None:
     if not data_validade:
         return None
     try:
-        validade = date.fromisoformat(data_validade)
+        validade = date.fromisoformat(str(data_validade)[:10])
     except (TypeError, ValueError):
         return None
     hoje = date.today()
