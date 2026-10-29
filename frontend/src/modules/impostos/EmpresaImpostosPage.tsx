@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {ArrowLeft,Building2,CalendarDays,CheckCircle2,ChevronLeft,ChevronRight,Clock3,Download,Edit3,FileText,Landmark,Plus,Settings2,UploadCloud,X} from 'lucide-react';
-import {Link,useNavigate,useParams} from 'react-router-dom';
+import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ErrorState} from '../../components/ui/ErrorState';
 import {Loading} from '../../components/ui/Loading';
 import {atualizarVinculo,gerarPreviaRelatorio,listarConfiguracoesEmpresa,listarTributos,marcarComoPago,obterEmpresaImpostos,type ConfiguracaoEmpresa,type EmpresaImpostos,type Tributo,baixarRelatorioPdf,tokenAtual,vincularTributo} from '../../services/api/impostos';
@@ -15,8 +15,9 @@ function statusLabel(v:string){return ({PAGO:'Pago',A_VENCER:'A vencer',A_PAGAR:
 function Modal({children,onClose,wide=false}:{children:React.ReactNode;onClose:()=>void;wide?:boolean}){return <div className="imp-modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className={`imp-dialog ${wide?'wide':''}`}>{children}</div></div>}
 
 export function EmpresaImpostosPage(){
- const {id}=useParams();const empresaId=Number(id);const nav=useNavigate();const init=hojeAnterior();
- const [ano,setAno]=useState(init.ano),[mes,setMes]=useState(init.mes),[filtro,setFiltro]=useState('TODOS');
+ const {id}=useParams();const empresaId=Number(id);const nav=useNavigate();const [searchParams]=useSearchParams();const init=hojeAnterior();
+ const anoQuery=Number(searchParams.get('ano'));const mesQuery=Number(searchParams.get('mes'));
+ const [ano,setAno]=useState(anoQuery>=2000&&anoQuery<=2100?anoQuery:init.ano),[mes,setMes]=useState(mesQuery>=1&&mesQuery<=12?mesQuery:init.mes),[filtro,setFiltro]=useState('TODOS');
  const [data,setData]=useState<EmpresaImpostos|null>(null),[configs,setConfigs]=useState<ConfiguracaoEmpresa[]>([]),[tributos,setTributos]=useState<Tributo[]>([]),[configOpen,setConfigOpen]=useState(false),[addOpen,setAddOpen]=useState(false),[editOpen,setEditOpen]=useState<ConfiguracaoEmpresa|null>(null),[reportOpen,setReportOpen]=useState(false),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [selectedTax,setSelectedTax]=useState(''),[taxSearch,setTaxSearch]=useState(''),[inicio,setInicio]=useState(`${String(init.mes).padStart(2,'0')}/${init.ano}`),[fim,setFim]=useState('');
  const [rStart,setRStart]=useState('01/2026'),[rEnd,setREnd]=useState(`${String(init.mes).padStart(2,'0')}/${init.ano}`),[report,setReport]=useState<any>(null),[reportLoading,setReportLoading]=useState(false);
