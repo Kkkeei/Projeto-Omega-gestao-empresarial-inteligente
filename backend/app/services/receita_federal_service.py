@@ -572,6 +572,7 @@ def _persistir(empresa_id: int, resultado: dict[str, Any]) -> dict[str, Any]:
                 doc_id, pdf_path, _ = _salvar_pdf(conexao, empresa_id, resultado["arquivo_pdf"], resultado.get("nome_original_arquivo") or "certidao_federal.pdf")
             except Exception as exc:
                 resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                resultado["situacao_detectada"] = resultado.get("situacao")
                 resultado["situacao"] = "ERRO"
                 resultado["status_processamento"] = "Erro técnico"
                 resultado["pendencia"] = bool(resultado.get("pendencia"))
