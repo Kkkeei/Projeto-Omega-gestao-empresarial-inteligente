@@ -185,7 +185,7 @@ export function CertidoesPage(){
           <span className="type-card-top"><span className="type-icon-v2"><Icon size={23}/></span>{selected&&<span className="selected-check"><CheckCircle2 size={17}/> Selecionada</span>}</span>
           <span className="type-card-name">{card.short}</span><strong>{card.title}</strong><small>{card.desc}</small>
           <span className={`type-status ${classeSituacao(statusDaCertidao(item))}`}>{statusDaCertidao(item)}{item?.data_validade?` · validade ${formatarData(item.data_validade)}`:''}</span>
-          <span className="type-card-footer"><em>{card.method}</em><span><Play size={12} fill="currentColor"/> Emitir agora</span></span>
+          <span className="type-card-footer"><em>{card.method}</em><span><ChevronRight size={12}/> Selecionar tipo</span></span>
         </button>})}
       </div>
     </section>
