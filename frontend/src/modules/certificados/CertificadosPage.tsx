@@ -210,7 +210,7 @@ export function CertificadosPage(){
         const documento=(empresas.find(e=>e.id===mode.empresaId)?.cnpj||'').replace(/\D/g,'');
         c=await cadastrarA3(metadata?{
           empresa_id:String(mode.empresaId),titular_tipo:'PJ',documento_titular:documento,
-          nome_titular:detectedA3.nome_titular||empresas.find(e=>e.id===mode.empresaId)?.razao_social||'',
+          nome_titular:detectedA3?.nome_titular||empresas.find(e=>e.id===mode.empresaId)?.razao_social||'',
           ...metadata,
         }:{
           empresa_id:String(mode.empresaId),meio:'CARTAO',titular_tipo:'PJ',documento_titular:documento,
