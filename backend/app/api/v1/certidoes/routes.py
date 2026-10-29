@@ -114,8 +114,12 @@ async def consultar_todas_certidoes_estaduais():
             return await consultar_estadual_todas()
     except AutomationBusyError as exc:
         raise HTTPException(status_code=409, detail=exc.message) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Não foi possível concluir o processamento em lote: {exc}") from exc
+    except Exception:
+        logger.exception("Falha inesperada na consulta em lote de certidões estaduais.")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível concluir o processamento em lote. Consulte os logs do servidor.",
+        )
 
 
 @router.get("/estadual/empresa/{empresa_id}")
