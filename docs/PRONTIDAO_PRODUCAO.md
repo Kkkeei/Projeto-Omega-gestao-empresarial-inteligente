@@ -51,7 +51,7 @@ Este documento registra os controles adicionados na branch `fix/certidoes-produc
 
 ## Testes e aceitação
 
-O workflow `.github/workflows/ci.yml` verifica sintaxe Python, testes do backend e Bridge, auditoria de dependências npm e build/TypeScript do frontend. Na execução validada durante esta revisão, a suíte reportou 132 testes de backend aprovados e 3 testes da Bridge aprovados; a compilação do frontend também passou. A auditoria npm reportou zero vulnerabilidades conhecidas na árvore instalada naquele commit. Uma nova execução é necessária após as alterações finais de limpeza e autorização desta PR. O aceite da parte de certidões exige adicionalmente:
+O workflow `.github/workflows/ci.yml` verifica sintaxe Python, testes do backend e Bridge, auditoria de dependências npm e build/TypeScript do frontend. Na última execução do GitHub Actions (29/10/2026, após os commits finais revisados), a suíte reportou 134 testes do backend aprovados e 3 testes da Bridge aprovados; TypeScript e build de produção do frontend também passaram. A auditoria npm reportou zero vulnerabilidades conhecidas na árvore instalada. O aceite da parte de certidões exige adicionalmente:
 - teste de PDF salvo e baixado via API autenticada;
 - consulta real SEFAZ-PE e RFB/PGFN, conferindo a certidão emitida com o portal;
 - certidão positiva com efeitos de negativa, irregular, vencida, validade ausente e falha técnica;
@@ -75,6 +75,6 @@ O PR #1 contém alterações que não estão automaticamente incluídas no PR #2
 - Os fluxos federais/narrativa são automação visual, não API oficial; a estabilidade depende do portal, desktop e certificado.
 - A integração SMTP depende da configuração e do provedor em produção.
 - A configuração PostgreSQL não foi validada nesta revisão; o banco principal implementado continua usando SQLite.
-- O CI automatizado está passando na última execução observada, mas precisa ser confirmado novamente após os commits finais.
+- CI aprovado no commit revisado em 29/10/2026: 134 testes do backend, 3 testes do Bridge, build TypeScript/Vite de produção e `npm audit` com zero vulnerabilidades reportadas. Cada novo commit deve manter os checks aprovados.
 - A consulta real SEFAZ-PE, a consulta real RFB/PGFN e a certidão narrativa ainda não foram testadas neste turno com certificados/empresas reais.
 - A funcionalidade A3 Bridge depende do driver PKCS#11 e do dispositivo instalado na máquina de uso; SMTP, domínio/CORS, chaves de produção e reinício preservando o banco/storage dependem da configuração do ambiente de implantação.
