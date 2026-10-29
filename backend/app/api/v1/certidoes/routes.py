@@ -25,11 +25,52 @@ logger = logging.getLogger("omega.certidoes")
 
 router = APIRouter(prefix="/api/v1/certidoes", tags=["Certidões"])
 
+def _sanitizar_resultado_certidao(valor):
+    """Remove caminhos locais, texto fiscal integral e exceções internas das respostas HTTP."""
+    if isinstance(valor, list):
+        return [_sanitizar_resultado_certidao(item) for item in valor]
+    if not isinstance(valor, dict):
+        return valor
+
+    resultado = dict(valor)
+    pdf_path = resultado.pop("pdf_path", None)
+    if "pdf_disponivel" not in resultado and (
+        "consulta_id" in resultado or "pdf_path" in valor or "documento_id" in resultado
+    ):
+        resultado["pdf_disponivel"] = bool(pdf_path)
+
+    for campo in ("arquivo_pdf", "texto_extraido", "erro_tecnico", "situacao_detectada"):
+        resultado.pop(campo, None)
+
+    if isinstance(resultado.get("resultados"), list):
+        resultado["resultados"] = _sanitizar_resultado_certidao(resultado["resultados"])
+
+    situacao = str(resultado.get("situacao") or "").upper()
+    status = str(resultado.get("status_processamento") or "").upper()
+    if situacao == "ERRO" or status.startswith("ERRO"):
+        mensagem = str(resultado.get("mensagem") or "")
+        mensagens_seguras = (
+            "Não foi possível concluir",
+            "A consulta falhou",
+            "O portal retornou um resultado, mas o PDF",
+            "O PDF da certidão narrativa",
+            "A automação não conseguiu",
+            "A automação foi encerrada",
+            "A consulta foi concluída, mas",
+        )
+        if not any(mensagem.startswith(prefixo) for prefixo in mensagens_seguras):
+            resultado["mensagem"] = (
+                "A consulta não foi concluída com segurança. "
+                "Consulte o histórico e os logs do servidor antes de repetir a operação."
+            )
+    return resultado
+
+
 
 @router.get("")
 def listar_certidoes(empresa_id: int | None = Query(default=None)):
     itens = listar(empresa_id)
-    return {"total": len(itens), "certidoes": itens}
+    return _sanitizar_resultado_certidao({"total": len(itens), "certidoes": itens})
 
 
 @router.get("/tipos")
@@ -40,7 +81,7 @@ def listar_tipos():
 @router.post("", status_code=201)
 def registrar_certidao(dados: CertidaoCreate):
     try:
-        return registrar(dados.model_dump())
+        return _sanitizar_resultado_certidao(registrar(dados.model_dump()))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -56,7 +97,7 @@ async def consultar_certidao_estadual(empresa_id: int):
         raise HTTPException(status_code=404, detail="Empresa não encontrada.")
     try:
         async with lock_automacao("CONSULTA_CERTIDAO_ESTADUAL", empresa_id, empresa["razao_social"]):
-            return await consultar_estadual(empresa_id)
+            return _sanitizar_resultado_certidao(await consultar_estadual(empresa_id))
     except AutomationBusyError as exc:
         raise HTTPException(status_code=409, detail=exc.message) from exc
     except LookupError as exc:
@@ -76,7 +117,7 @@ async def consultar_certidao_federal(empresa_id: int):
         raise HTTPException(status_code=404, detail="Empresa não encontrada.")
     try:
         async with lock_automacao("CONSULTA_CERTIDAO_FEDERAL", empresa_id, empresa["razao_social"]):
-            return await consultar_federal(empresa_id)
+            return _sanitizar_resultado_certidao(await consultar_federal(empresa_id))
     except AutomationBusyError as exc:
         raise HTTPException(status_code=409, detail=exc.message) from exc
     except LookupError as exc:
@@ -98,7 +139,7 @@ async def consultar_certidao_narrativa(empresa_id: int, certificado_nome: str | 
         async with lock_automacao("CONSULTA_CERTIDAO_NARRATIVA", empresa_id, empresa["razao_social"]):
             # PyAutoGUI é bloqueante e precisa da sessão gráfica do Windows;
             # executamos em thread para não travar o event loop do FastAPI.
-            return await asyncio.to_thread(consultar_narrativa_pyautogui, empresa_id, certificado_nome)
+            return _sanitizar_resultado_certidao(await asyncio.to_thread(consultar_narrativa_pyautogui, empresa_id, certificado_nome))
     except AutomationBusyError as exc:
         raise HTTPException(status_code=409, detail=exc.message) from exc
     except LookupError as exc:
@@ -111,7 +152,7 @@ async def consultar_certidao_narrativa(empresa_id: int, certificado_nome: str | 
 async def consultar_todas_certidoes_estaduais():
     try:
         async with lock_automacao("CONSULTA_CERTIDOES_ESTADUAIS_LOTE", None, "Todas as empresas ativas"):
-            return await consultar_estadual_todas()
+            return _sanitizar_resultado_certidao(await consultar_estadual_todas())
     except AutomationBusyError as exc:
         raise HTTPException(status_code=409, detail=exc.message) from exc
     except Exception:
@@ -128,14 +169,14 @@ def certidao_estadual_atual(empresa_id: int):
     item = next((x for x in itens if x.get("tipo_certidao") == "Estadual - SEFAZ"), None)
     if not item:
         raise HTTPException(status_code=404, detail="Certidão Estadual não encontrada.")
-    return item
+    return _sanitizar_resultado_certidao(item)
 
 
 @router.get("/estadual/empresa/{empresa_id}/historico")
 def historico_estadual(empresa_id: int):
     conexao_itens = historico(empresa_id)
     itens = [x for x in conexao_itens if x.get("tipo_certidao") == "Estadual - SEFAZ"]
-    return {"total": len(itens), "historico": itens}
+    return _sanitizar_resultado_certidao({"total": len(itens), "historico": itens})
 
 
 @router.get("/automacao/status")
@@ -155,6 +196,28 @@ def visualizar_pdf(path: str, download: bool = False):
     return FileResponse(arquivo, media_type="application/pdf", filename=arquivo.name, headers=headers)
 
 
+@router.get("/pdf/consulta/{consulta_id}")
+def visualizar_pdf_consulta(consulta_id: int, download: bool = False):
+    conexao = conectar_banco()
+    try:
+        linha = conexao.execute(
+            "SELECT pdf_path FROM consultas_certidoes WHERE id=?",
+            (consulta_id,),
+        ).fetchone()
+    finally:
+        conexao.close()
+    if not linha or not linha["pdf_path"]:
+        raise HTTPException(status_code=404, detail="PDF não encontrado para esta consulta.")
+    try:
+        arquivo = obter_pdf_path(linha["pdf_path"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="O PDF não está em um diretório de certidões permitido.") from exc
+    if not arquivo.is_file() or arquivo.suffix.lower() != ".pdf":
+        raise HTTPException(status_code=404, detail="PDF não encontrado no armazenamento.")
+    headers = {"Content-Disposition": f'attachment; filename="{arquivo.name}"'} if download else None
+    return FileResponse(arquivo, media_type="application/pdf", filename=arquivo.name, headers=headers)
+
+
 @router.get("/{certidao_id}")
 def consultar_certidao(certidao_id: int):
     itens = listar()
@@ -167,4 +230,4 @@ def consultar_certidao(certidao_id: int):
 @router.get("/empresa/{empresa_id}/historico")
 def historico_certidoes(empresa_id: int, tipo_certidao_id: int | None = Query(default=None)):
     itens = historico(empresa_id, tipo_certidao_id)
-    return {"total": len(itens), "historico": itens}
+    return _sanitizar_resultado_certidao({"total": len(itens), "historico": itens})
