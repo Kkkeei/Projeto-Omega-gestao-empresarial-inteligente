@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {AlertTriangle, CheckCircle2, Download, ExternalLink, FileCheck2, FileText, History, Landmark, RefreshCw, Search, ShieldCheck, Play, Building2, CalendarDays} from 'lucide-react';
 import {listarCertidoes,historicoCertidoes,listarEmpresasParaSelecao,consultarCertidaoEstadual,consultarCertidaoFederal,consultarCertidaoNarrativa,consultarTodasCertidoesEstaduais,abrirPdfCertidaoAutenticado} from '../../services/api/certidoes';
-import type {Certidao,TipoCertidao,Empresa,CertidaoConsultaResultado} from '../../types';
+import type {Certidao,Empresa,CertidaoConsultaResultado} from '../../types';
 import {Loading} from '../../components/ui/Loading';
 import {StatusBadge} from '../../components/status/StatusBadge';
 
@@ -21,9 +21,9 @@ type CertType='federal'|'estadual'|'narrativa';
 
 type TypeCard={key:CertType;title:string;short:string;desc:string;icon:typeof Landmark;className:string;method:string;typeName:string};
 const TYPE_CARDS: TypeCard[] = [
-  {key:'federal',title:'Federal · RFB/PGFN',short:'CND Federal',desc:'Receita Federal e PGFN',icon:Landmark,className:'blue',method:'Emissão integrada',typeName:'Federal - RFB/PGFN'},
-  {key:'estadual',title:'Estadual · SEFAZ-PE',short:'CND Estadual',desc:'Regularidade fiscal em Pernambuco',icon:ShieldCheck,className:'green',method:'Emissão integrada',typeName:'Estadual - SEFAZ'},
-  {key:'narrativa',title:'Narrativa · Débito Fiscal',short:'Narrativa SEFAZ',desc:'Consulta autenticada por certificado',icon:FileText,className:'amber',method:'Emissão integrada',typeName:'Narrativa - Débito Fiscal'},
+  {key:'federal',title:'Federal · RFB/PGFN',short:'CND Federal',desc:'Receita Federal e PGFN',icon:Landmark,className:'blue',method:'Automação visual no Chrome',typeName:'Federal - RFB/PGFN'},
+  {key:'estadual',title:'Estadual · SEFAZ-PE',short:'CND Estadual',desc:'Regularidade fiscal em Pernambuco',icon:ShieldCheck,className:'green',method:'Consulta via Playwright',typeName:'Estadual - SEFAZ'},
+  {key:'narrativa',title:'Narrativa · Débito Fiscal',short:'Narrativa SEFAZ',desc:'Consulta autenticada por certificado',icon:FileText,className:'amber',method:'Sessão gráfica + certificado',typeName:'Narrativa - Débito Fiscal'},
 ];
 
 function validadeCalculada(value?:string|null):string|null {
@@ -175,6 +175,7 @@ export function CertidoesPage(){
 
     {err&&<div className="form-error"><AlertTriangle size={14}/><span>{err}</span></div>}
 
+    <div className="cert-environment-notice"><AlertTriangle size={16}/><span><strong>Requisitos das consultas:</strong> a certidão estadual usa Playwright; a consulta federal e a narrativa dependem de Chrome/Chromium e sessão gráfica ativa na máquina do backend. Em servidor sem interface gráfica, esses dois fluxos não devem ser considerados disponíveis.</span></div>
 
     <section className="cert-type-section">
       <div className="section-title-row"><div><span className="eyebrow">1 · TIPO DE CERTIDÃO</span><h3>Escolha o que deseja emitir</h3></div><span className="section-hint">Emissão e histórico permanentes</span></div>
@@ -233,6 +234,17 @@ export function CertidoesPage(){
       <section className="history-panel panel"><div className="panel-header"><div><span className="eyebrow">HISTÓRICO</span><h3>Consultas realizadas</h3></div><History size={18}/></div>{hist.length===0?<div className="empty compact"><CalendarDays size={24}/><span>Nenhuma consulta registrada.</span></div>:<div className="history-list">{hist.slice(0,20).map((h:any,index:number)=><div className="history-item" key={`${h.id}-${index}`}><strong>{h.tipo_certidao||'Certidão'} · {h.situacao||'—'}</strong><span>{formatarData(h.data_emissao)} → validade {formatarData(h.data_validade)}</span><small>{formatarDataHora(h.consultado_em)}{h.numero_certidao?` · Nº ${h.numero_certidao}`:''}</small></div>)}</div>}</section>
     </section>}
 
-    {lote&&<section className="panel batch-panel"><div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Resultado do processamento em lote</h3></div><StatusBadge value={resultadoLote(lote)}/></div><div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k}</span></div>)}</div></section>}
+    {lote&&<section className="panel batch-panel">
+      <div className="panel-header"><div><span className="eyebrow">PROCESSAMENTO EM LOTE</span><h3>Resultado do processamento em lote</h3></div><StatusBadge value={resultadoLote(lote)}/></div>
+      <div className="batch-grid">{Object.entries(lote.resumo).map(([k,v])=><div key={k}><strong>{v}</strong><span>{k.replaceAll('_',' ')}</span></div>)}</div>
+      {lote.resultados.some(r=>r.situacao!=='REGULAR'||r.status_processamento!=='Sucesso')&&<div className="batch-result-list">
+        <strong>Resultados que precisam de atenção</strong>
+        {lote.resultados.filter(r=>r.situacao!=='REGULAR'||r.status_processamento!=='Sucesso').map((r,index)=><div className="batch-result-row" key={`${r.empresa_id||r.cnpj||'empresa'}-${index}`}>
+          <div><b>{r.empresa||'Empresa não identificada'}</b><small>{r.cnpj||'CNPJ não informado'}</small></div>
+          <StatusBadge value={statusDaCertidao(r)}/>
+          <span>{r.mensagem||'Verifique a certidão e o histórico desta empresa.'}</span>
+        </div>)}
+      </div>}
+    </section>}
   </div>
 }
