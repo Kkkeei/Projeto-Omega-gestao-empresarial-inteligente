@@ -552,3 +552,7 @@ td strong{font-size:12px}
 .login-omega-logo{display:block;width:min(100%,480px);height:auto;max-height:180px;object-fit:contain;margin:0 auto 20px}
 .login-brand>p{margin-top:0}
 @media(max-width:760px){.omega-sidebar-logo{max-width:190px}.topbar-title-group{gap:8px}.topbar-back{width:32px;height:32px;flex-basis:32px}.login-omega-logo{max-width:320px;max-height:120px}}
+
+/* Contraste da marca somente na sidebar; o encaixe do login permanece intacto */
+.sidebar .brand.brand-logo-link{box-sizing:border-box;width:calc(100% - 10px);min-height:0;height:72px;margin:0 5px 18px;padding:9px 11px!important;display:flex;align-items:center;justify-content:center;background:#fff!important;border:1px solid rgba(255,255,255,.85);border-radius:7px;overflow:hidden}
+.sidebar .brand.brand-logo-link .omega-sidebar-logo{display:block;width:100%;max-width:100%;height:100%;max-height:100%;object-fit:contain;object-position:center;opacity:1;filter:none;mix-blend-mode:normal}
