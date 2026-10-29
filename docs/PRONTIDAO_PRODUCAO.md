@@ -2,27 +2,34 @@
 
 ## Estado desta entrega
 
-Este documento registra os controles adicionados na branch `fix/certidoes-producao-hardening`. Ele não equivale a uma certificação de produção: o ambiente de execução desta revisão não teve acesso de rede ao GitHub por `git clone`, e não foi possível executar a suíte nem o build localmente. O CI deve ser usado como validação obrigatória antes de mesclar.
+Este documento registra os controles adicionados na branch `fix/certidoes-producao-hardening`. A suíte e o build são validados pelo GitHub Actions, pois o ambiente de trabalho desta revisão não permite executar um clone local. A aprovação do CI confirma compilação e testes automatizados; não substitui a validação ao vivo dos portais fiscais, certificado, SMTP, banco e armazenamento reais.
 
 ## Certidões
 
 ### SEFAZ-PE (Playwright)
-- Consulta usa o CNPJ cadastrado e classifica texto extraído do PDF.
+- Consulta usa o CNPJ cadastrado e recusa associar um PDF que não contenha o CNPJ esperado.
 - PDFs são armazenados no diretório de certidões configurado e a consulta é gravada no histórico.
-- O caminho servido pela API é validado contra a área de armazenamento de certidões, incluindo a configuração de storage externo.
-- O estado de validade é distinto da situação fiscal; uma certidão regular pode estar vencida ou próxima do vencimento.
+- A rota de PDF permite somente arquivos `.pdf` dentro das raízes de armazenamento de certidões, inclusive quando o storage é externo; a API `/api/v1` exige autenticação.
+- O estado de validade é distinto da situação fiscal; uma certidão regular pode estar vencida, próxima do vencimento ou ter validade não identificada.
 - A classificação e os seletores do portal devem ser confirmados com consulta de teste em conta/ambiente autorizado, porque o e-Fisco pode alterar a interface.
 
 ### Federal RFB/PGFN
 - O classificador exige frases explícitas; título genérico da página não deve ser interpretado como regularidade.
-- Datas são validadas como datas reais.
-- O arquivo capturado precisa ter assinatura PDF e uma estrutura legível por pypdf.
-- A resposta da API não entrega o caminho local absoluto, texto integral do portal nem detalhes internos de exceção.
-- O Chrome é executado com perfil isolado. Em Linux/macOS, o processo é encerrado pelo grupo de processos próprio; o perfil temporário é removido.
+- A situação fiscal, número e datas são extraídos do texto do PDF capturado; não só do texto transitório do navegador.
+- O PDF precisa ter assinatura/estrutura legível por pypdf e conter o CNPJ consultado.
+- A resposta da API não entrega o caminho local absoluto, texto integral do portal nem detalhes internos de exceção; falha de armazenamento não é apresentada como consulta concluída.
+- O Chrome é executado com perfil isolado e diretório temporário de download. Em Windows, Linux e macOS, a automação encerra somente o processo de navegador que ela abriu e remove o perfil temporário.
 - **Limitação operacional:** a automação federal ainda usa PyAutoGUI, clipboard e navegação por teclado. Precisa de uma sessão gráfica ativa, permissões de desktop, navegador instalado e um teste ao vivo no portal da Receita. Um backend headless/serviço sem desktop não deve prometer essa consulta.
 
 ### Certidão Narrativa SEFAZ-PE
-- Também depende de automação gráfica e certificado configurado. Precisa de teste ao vivo com o certificado autorizado e os drivers/sessão operacional corretos.
+- Também depende de automação gráfica, certificado configurado e drivers/sessão operacional corretos.
+- Precisa de teste ao vivo com certificado autorizado antes do uso geral.
+
+### Certificados A1/A3
+- A senha A1 é armazenada criptografada; revelação/baixamento e download do arquivo são ações administrativas e registradas.
+- O PIN do A3 não é armazenado pelo servidor.
+- O cadastro A3 sem dispositivo fica explicitamente como `NAO_VINCULADO` e não é considerado apto para uso.
+- O formulário permite detectar e vincular dispositivo real pelo OMEGA Bridge. A substituição de A3 já vinculado exige detectar o cartão/token novo; um cadastro vazio não pode desativar o vínculo ativo.
 
 ### Processamento em lote
 - O lote deve apresentar o resumo real e os resultados que precisem de atenção; não é correto sempre mostrar um selo verde de sucesso.
@@ -44,7 +51,7 @@ Este documento registra os controles adicionados na branch `fix/certidoes-produc
 
 ## Testes e aceitação
 
-O workflow `.github/workflows/ci.yml` verifica sintaxe Python, testes do backend e bridge, e build/TypeScript do frontend. O aceite da parte de certidões exige adicionalmente:
+O workflow `.github/workflows/ci.yml` verifica sintaxe Python, testes do backend e Bridge, auditoria de dependências npm e build/TypeScript do frontend. Na execução validada durante esta revisão, a suíte reportou 132 testes de backend aprovados e 3 testes da Bridge aprovados; a compilação do frontend também passou. A auditoria npm reportou zero vulnerabilidades conhecidas na árvore instalada naquele commit. Uma nova execução é necessária após as alterações finais de limpeza e autorização desta PR. O aceite da parte de certidões exige adicionalmente:
 - teste de PDF salvo e baixado via API autenticada;
 - consulta real SEFAZ-PE e RFB/PGFN, conferindo a certidão emitida com o portal;
 - certidão positiva com efeitos de negativa, irregular, vencida, validade ausente e falha técnica;
@@ -68,4 +75,6 @@ O PR #1 contém alterações que não estão automaticamente incluídas no PR #2
 - Os fluxos federais/narrativa são automação visual, não API oficial; a estabilidade depende do portal, desktop e certificado.
 - A integração SMTP depende da configuração e do provedor em produção.
 - A configuração PostgreSQL não foi validada nesta revisão; o banco principal implementado continua usando SQLite.
-- Sem build e testes executados no ambiente de CI, a entrega não está formalmente aprovada para produção.
+- O CI automatizado está passando na última execução observada, mas precisa ser confirmado novamente após os commits finais.
+- A consulta real SEFAZ-PE, a consulta real RFB/PGFN e a certidão narrativa ainda não foram testadas neste turno com certificados/empresas reais.
+- A funcionalidade A3 Bridge depende do driver PKCS#11 e do dispositivo instalado na máquina de uso; SMTP, domínio/CORS, chaves de produção e reinício preservando o banco/storage dependem da configuração do ambiente de implantação.
