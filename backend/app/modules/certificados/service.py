@@ -331,6 +331,15 @@ def cadastrar_a3(empresa_id: int, meio: str, titular_tipo: str, documento: str |
     # Cadastro declarativo: o usuário informa que utiliza A3, sem acessar o cartão.
     # Só fica apto para uso após vínculo técnico posterior com o Bridge.
     if not thumbprint:
+        # Permite o cadastro declarativo simplificado ("este titular usa A3")
+        # sem simular que um cartão foi detectado. Se dados técnicos são enviados,
+        # exigimos a impressão SHA-256 para vincular a identidade física correta.
+        dados_tecnicos = (
+            data_emissao, data_validade, emissor, numero_serie, algoritmo,
+            dispositivo_modelo, dispositivo_identificador,
+        )
+        if any(str(value or "").strip() for value in dados_tecnicos):
+            raise ValueError("Thumbprint SHA-256 obrigatório quando há dados técnicos do certificado A3.")
         thumbprint_sha256 = None
         data_emissao = None
         data_validade = None
