@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import logging
 import hashlib
 import io
 import json
@@ -1043,7 +1044,9 @@ def salvar_config(
         agora = datetime.now().astimezone()
         hora, minuto = (int(parte) for parte in horario.split(":"))
         agendada = agora.replace(hour=hora, minute=minuto, second=0, microsecond=0)
-        if agendada <= agora:
+        # Avança em intervalos até encontrar um instante futuro. Sem este loop,
+        # por exemplo, 02:00 + frequência de 6h poderia continuar no passado.
+        while agendada <= agora:
             agendada = agendada + timedelta(hours=frequencia_horas)
         proxima = agendada.isoformat()
     with conectar_banco() as conn:
@@ -1501,4 +1504,128 @@ def importar_eventos_a3(nfse_id: int, thumbprint: str, content_type: str, body_b
         "eventos_encontrados": len(candidates),
         "eventos_importados": imported,
         "content_type": content_type,
+    }
+
+
+def obter_config(origin: str, entity_id: int) -> dict[str, Any]:
+    """Retorna configuração de sincronização por titular, sem ativá-la implicitamente."""
+    origin, entity_id = _subject(origin, entity_id)
+    _entity(origin, entity_id)
+    with conectar_banco() as conn:
+        row = conn.execute(
+            "SELECT * FROM nfse_config WHERE origem=? AND entidade_id=?",
+            (origin, entity_id),
+        ).fetchone()
+    if not row:
+        return {
+            "origem": origin,
+            "entidade_id": entity_id,
+            "sincronizacao_automatica": False,
+            "frequencia_horas": 24,
+            "horario": "02:00",
+            "proxima_execucao_em": None,
+        }
+    result = dict(row)
+    result["sincronizacao_automatica"] = bool(result.get("sincronizacao_automatica"))
+    return result
+
+
+def processar_rotinas_automaticas(agora: datetime | None = None) -> dict[str, Any]:
+    """Processa apenas titulares que optaram pela sincronização e cujo agendamento venceu.
+
+    A chamada é feita pelo lifespan periodicamente. A execução futura é avançada
+    atomicamente antes de consultar o ADN, impedindo que workers concorrentes
+    disparem a mesma rotina ao mesmo tempo. Os certificados A3 continuam a exigir
+    o Bridge local e não são executados automaticamente pelo servidor.
+    """
+    logger = logging.getLogger("omega.nfse")
+    instante = agora or datetime.now().astimezone()
+    if instante.tzinfo is None:
+        instante = instante.astimezone()
+
+    with conectar_banco() as conn:
+        configs = [
+            dict(row) for row in conn.execute(
+                """SELECT id,origem,entidade_id,frequencia_horas,horario,proxima_execucao_em
+                   FROM nfse_config
+                  WHERE sincronizacao_automatica=1
+                    AND proxima_execucao_em IS NOT NULL
+                  ORDER BY proxima_execucao_em, id"""
+            ).fetchall()
+        ]
+
+    resultados: list[dict[str, Any]] = []
+    for config in configs:
+        raw_next = config.get("proxima_execucao_em")
+        try:
+            prevista = datetime.fromisoformat(str(raw_next).replace("Z", "+00:00"))
+            if prevista.tzinfo is None:
+                prevista = prevista.replace(tzinfo=instante.tzinfo)
+            if prevista > instante:
+                continue
+        except (TypeError, ValueError):
+            logger.warning(
+                "Agendamento NFS-e inválido; desabilitando próxima execução | origem=%s entidade_id=%s",
+                config["origem"], config["entidade_id"],
+            )
+            with conectar_banco() as conn:
+                conn.execute(
+                    "UPDATE nfse_config SET proxima_execucao_em=NULL,atualizado_em=CURRENT_TIMESTAMP WHERE id=? AND sincronizacao_automatica=1",
+                    (config["id"],),
+                )
+                conn.commit()
+            resultados.append({
+                "origem": config["origem"],
+                "entidade_id": config["entidade_id"],
+                "status": "CONFIGURACAO_INVALIDA",
+            })
+            continue
+
+        try:
+            frequencia = int(config.get("frequencia_horas") or 24)
+        except (TypeError, ValueError):
+            frequencia = 24
+        frequencia = min(720, max(1, frequencia))
+        proxima = (instante + timedelta(hours=frequencia)).isoformat()
+        # Claim otimista com valor anterior para evitar duplicidade entre workers.
+        with conectar_banco() as conn:
+            claim = conn.execute(
+                """UPDATE nfse_config
+                      SET proxima_execucao_em=?, atualizado_em=CURRENT_TIMESTAMP
+                    WHERE id=? AND sincronizacao_automatica=1 AND proxima_execucao_em=?""",
+                (proxima, config["id"], raw_next),
+            )
+            conn.commit()
+        if claim.rowcount != 1:
+            continue
+
+        item = {
+            "origem": config["origem"],
+            "entidade_id": int(config["entidade_id"]),
+        }
+        try:
+            result = consultar_a1(config["origem"], int(config["entidade_id"]))
+            item.update({
+                "status": "OK",
+                "documentos_encontrados": int(result.get("documentos_encontrados") or 0),
+                "documentos_importados": int(result.get("documentos_importados") or 0),
+                "proxima_execucao_em": proxima,
+            })
+        except Exception as exc:
+            logger.exception(
+                "Falha na rotina automática de NFS-e | origem=%s entidade_id=%s",
+                config["origem"], config["entidade_id"],
+            )
+            item.update({
+                "status": "ERRO",
+                "mensagem": f"{type(exc).__name__}: {exc}",
+                "proxima_execucao_em": proxima,
+            })
+        resultados.append(item)
+
+    return {
+        "processadas": len(resultados),
+        "sucesso": sum(1 for item in resultados if item.get("status") == "OK"),
+        "erros": sum(1 for item in resultados if item.get("status") != "OK"),
+        "resultados": resultados,
     }
