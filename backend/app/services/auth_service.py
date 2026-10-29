@@ -45,6 +45,11 @@ def validar_configuracao_producao() -> None:
         raise RuntimeError("OMEGA_CERTIFICADO_MASTER_KEY não é uma chave Fernet válida.") from exc
     if not os.getenv("CORS_ORIGINS", "").strip():
         raise RuntimeError("Defina CORS_ORIGINS com as origens reais do frontend em produção.")
+    registro_publico = os.getenv("OMEGA_PUBLIC_REGISTRATION", "false").strip().lower() in {"1", "true", "sim", "yes"}
+    if registro_publico:
+        raise RuntimeError(
+            "OMEGA_PUBLIC_REGISTRATION deve ser false em produção; crie contas pelo administrador."
+        )
     with conectar_banco() as conn:
         admin = conn.execute("SELECT 1 FROM usuarios WHERE ativo=1 AND perfil='ADMIN' LIMIT 1").fetchone()
     if not admin:
