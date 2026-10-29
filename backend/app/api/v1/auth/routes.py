@@ -95,13 +95,14 @@ def admin_user(user=Depends(current_user)):
 
 
 @router.post("/registrar", status_code=status.HTTP_201_CREATED)
-def register(data: RegisterIn, request: Request):
+def register(data: RegisterIn, request: Request | None = None):
     producao = os.getenv("OMEGA_ENV", "development").strip().lower() == "production"
     padrao_publico = "false" if producao else "true"
     publico_habilitado = os.getenv("OMEGA_PUBLIC_REGISTRATION", padrao_publico).strip().lower() in {"1", "true", "sim", "yes"}
     if not publico_habilitado:
         raise HTTPException(status_code=403, detail="O cadastro público está desabilitado. Solicite acesso ao administrador.")
-    _check_rate_limit(request, f"register:{request.client.host if request.client else 'unknown'}")
+    if request is not None:
+        _check_rate_limit(request, f"register:{request.client.host if request.client else 'unknown'}")
     if data.senha != data.confirmar_senha:
         raise HTTPException(status_code=400, detail="As senhas não conferem.")
     try:
@@ -115,8 +116,9 @@ def register(data: RegisterIn, request: Request):
 
 
 @router.post("/esqueci-senha")
-def forgot_password(data: ForgotPasswordIn, request: Request):
-    _check_rate_limit(request, f"reset:{request.client.host if request.client else 'unknown'}")
+def forgot_password(data: ForgotPasswordIn, request: Request | None = None):
+    if request is not None:
+        _check_rate_limit(request, f"reset:{request.client.host if request.client else 'unknown'}")
     token, user = criar_token_redefinicao(data.email)
     response = {"ok": True, "mensagem": "Se o e-mail estiver cadastrado, as instruções de redefinição serão disponibilizadas."}
     if token and user:
