@@ -559,3 +559,24 @@ td strong{font-size:12px}
 .sidebar .brand.brand-logo-link{box-sizing:border-box;width:calc(100% - 10px);min-height:0;height:72px;margin:0 5px 18px;padding:9px 11px!important;display:flex;align-items:center;justify-content:center;background:#fff!important;border:1px solid rgba(255,255,255,.85);border-radius:7px;overflow:hidden}
 .sidebar .brand.brand-logo-link .omega-sidebar-logo{display:block;width:100%;max-width:100%;height:100%;max-height:100%;object-fit:contain;object-position:center;opacity:1;filter:none;mix-blend-mode:normal}
 @media(max-width:760px){.login-brand .login-omega-logo{max-width:320px;max-height:120px}}
+
+/* Sidebar em tema claro para harmonizar com o SVG original preto e transparente */
+.sidebar{background:#fff!important;border-right:1px solid #e4e9f1!important;color:#243247;box-shadow:2px 0 12px rgba(18,34,58,.025)}
+.sidebar .brand.brand-logo-link{background:transparent!important;border:0!important;box-shadow:none!important;padding:4px 8px 20px!important;margin:0 0 12px!important;width:100%;height:76px;justify-content:flex-start}
+.sidebar .brand.brand-logo-link .omega-sidebar-logo{object-position:left center;max-width:218px}
+.sidebar .nav-link{color:#59677b}
+.sidebar .nav-link:hover{background:#f2f5fa;color:#1e3558}
+.sidebar .nav-link.active{background:#eaf0fb;color:#234f9c}
+.sidebar .nav-link.active:before{background:#315fba}
+.sidebar .nav-link.active svg,.sidebar .nav-link:hover svg{color:#315fba}
+.sidebar .nav-arrow{color:#8290a3}
+.sidebar .sidebar-user{border-top-color:#e6ebf2}
+.sidebar .sidebar-user strong{color:#243247}
+.sidebar .sidebar-user small{color:#7d899b}
+.sidebar .user-avatar{background:#e8eef9;color:#2d579b}
+.sidebar .sidebar-note{background:#f7f9fc;border-color:#e1e7f0}
+.sidebar .sidebar-note span{color:#7b8ba2}
+.sidebar .sidebar-note strong{color:#27374e}
+.sidebar .sidebar-note small{color:#728197}
+.sidebar .icon-button.dark{background:#f4f6fa;border-color:#e0e6ef;color:#52647c}
+@media(max-width:760px){.sidebar .brand.brand-logo-link{height:68px;padding:4px 6px 16px!important}}
