@@ -63,6 +63,15 @@ def extrair_texto_pdf(caminho: str) -> str:
     return "\n".join((pagina.extract_text() or "") for pagina in reader.pages)
 
 
+def texto_contem_cnpj(texto: str, cnpj: str) -> bool:
+    """Exige que o PDF da certidão identifique a empresa consultada."""
+    alvo = limpar_cnpj(cnpj)
+    if len(alvo) != 14:
+        return False
+    digitos = re.sub(r"\D", "", texto or "")
+    return alvo in digitos
+
+
 def _extrair_datas(texto: str) -> tuple[Optional[str], Optional[str]]:
     normalizado = normalizar_texto(texto)
     padrao = r"(\d{2}/\d{2}/\d{4})"
@@ -333,6 +342,21 @@ async def executar_consulta_playwright(cnpj: str, browser: Optional[Browser] = N
         if not os.path.exists(caminho) or os.path.getsize(caminho) < 100:
             raise RuntimeError("PDF inválido ou não encontrado após o download.")
         texto = extrair_texto_pdf(caminho)
+        if not texto_contem_cnpj(texto, limpo):
+            logger.warning(
+                "PDF SEFAZ-PE não identifica o CNPJ solicitado; resultado recusado | CNPJ=%s",
+                formatar_cnpj(limpo),
+            )
+            base["situacao"] = "ERRO"
+            base["status_processamento"] = "Erro técnico"
+            base["mensagem"] = (
+                "A consulta falhou: o PDF emitido não identifica o CNPJ consultado. "
+                "Nenhuma certidão foi associada à empresa."
+            )
+            base["erro_tecnico"] = "CNPJ esperado não encontrado no texto extraído do PDF."
+            base["texto_pdf"] = texto[:30000]
+            return base
+
         analise = analisar_certidao(texto, nome_original)
         base.update(analise)
         base["arquivo_pdf"] = caminho
