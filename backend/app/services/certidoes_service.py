@@ -498,12 +498,15 @@ async def _consultar_empresa(empresa_id: int, tentativas: int = 3, browser=None)
             except Exception as exc:
                 ultimo["documento_id"] = None
                 ultimo["pdf_path"] = None
-                ultimo["erro_tecnico"] = f"Falha ao armazenar PDF: {exc}"
-                if ultimo.get("situacao") in {"REGULAR", "POSITIVA COM EFEITOS DE NEGATIVA", "IRREGULAR"}:
-                    ultimo["mensagem"] = (
-                        (ultimo.get("mensagem") or "Consulta concluída.")
-                        + " PDF obtido, mas não foi possível armazená-lo no sistema."
-                    )
+                ultimo["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                situacao_detectada = ultimo.get("situacao")
+                ultimo["situacao_detectada"] = situacao_detectada
+                ultimo["situacao"] = "ERRO"
+                ultimo["status_processamento"] = "Erro técnico"
+                ultimo["mensagem"] = (
+                    "O portal retornou um resultado, mas o PDF não foi preservado no armazenamento. "
+                    "A consulta precisa ser repetida antes de considerar a certidão concluída."
+                )
         else:
             ultimo["pdf_path"] = None
             ultimo["documento_id"] = None
