@@ -95,7 +95,7 @@ def admin_user(user=Depends(current_user)):
 
 
 @router.post("/registrar", status_code=status.HTTP_201_CREATED)
-def register(data: RegisterIn, request: Request | None = None):
+def register(data: RegisterIn, request: Request = None):
     producao = os.getenv("OMEGA_ENV", "development").strip().lower() == "production"
     padrao_publico = "false" if producao else "true"
     publico_habilitado = os.getenv("OMEGA_PUBLIC_REGISTRATION", padrao_publico).strip().lower() in {"1", "true", "sim", "yes"}
@@ -116,7 +116,7 @@ def register(data: RegisterIn, request: Request | None = None):
 
 
 @router.post("/esqueci-senha")
-def forgot_password(data: ForgotPasswordIn, request: Request | None = None):
+def forgot_password(data: ForgotPasswordIn, request: Request = None):
     if request is not None:
         _check_rate_limit(request, f"reset:{request.client.host if request.client else 'unknown'}")
     token, user = criar_token_redefinicao(data.email)
