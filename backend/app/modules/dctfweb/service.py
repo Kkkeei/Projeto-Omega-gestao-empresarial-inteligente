@@ -35,8 +35,8 @@ def _status_obrigacao(status: Any, registro_existe: bool) -> tuple[str, bool]:
 
 def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
     hoje = date.today()
-    ano = ano or hoje.year
-    mes = mes or hoje.month
+    ano = hoje.year if ano is None else ano
+    mes = hoje.month if mes is None else mes
     if not 2000 <= ano <= 2100 or not 1 <= mes <= 12:
         raise ValueError("Competência inválida.")
 
