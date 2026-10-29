@@ -245,7 +245,7 @@ def usos(cert_id: int):
 
 
 def _check_replace(conn, empresa_id: int, tipo: str, ignore_id: int | None = None):
-    sql = "SELECT id FROM certificados WHERE empresa_id=? AND tipo=? AND status='ATIVO'"
+    sql = "SELECT id,thumbprint_sha256,apto_para_uso FROM certificados WHERE empresa_id=? AND tipo=? AND status='ATIVO'"
     params=[empresa_id,tipo]
     if ignore_id is not None:
         sql += " AND id<>?"; params.append(ignore_id)
@@ -360,6 +360,10 @@ def cadastrar_a3(empresa_id: int, meio: str, titular_tipo: str, documento: str |
         thumbprint_sha256 = thumbprint
     with conectar_banco() as conn:
         old = _check_replace(conn, empresa_id, "A3")
+        if old and not thumbprint and (old["thumbprint_sha256"] or bool(old["apto_para_uso"])):
+            raise ValueError(
+                "Já existe um A3 ativo vinculado. Detecte o novo cartão/token no Bridge antes de substituí-lo."
+            )
         if old:
             conn.execute("UPDATE certificados SET status='INATIVO', apto_para_uso=0, atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (old["id"],))
             _evento(conn, old["id"], "SUBSTITUIDO", user_id, "Certificado substituído por um novo certificado A3.")
@@ -692,7 +696,7 @@ def usos_pf(cert_id: int):
 
 def _check_replace_pf(conn, pessoa_id: int, tipo: str):
     return conn.execute(
-        "SELECT id FROM certificados_pf WHERE pessoa_id=? AND tipo=? AND status='ATIVO'",
+        "SELECT id,thumbprint_sha256,apto_para_uso FROM certificados_pf WHERE pessoa_id=? AND tipo=? AND status='ATIVO'",
         (pessoa_id, tipo),
     ).fetchone()
 
@@ -758,6 +762,7 @@ def cadastrar_pf_a3(cpf: str, nome: str, meio: str, emissor: str | None, numero_
     thumbprint_sha256 = (thumbprint_sha256 or "").strip().lower()
     if not thumbprint_sha256:
         # Apenas marca o titular como usuário de A3; não consulta Bridge nem guarda PIN.
+        thumbprint_sha256 = None
         emissor = numero_serie = data_emissao = data_validade = algoritmo = None
         dispositivo_modelo = dispositivo_identificador = None
         status = "NAO_VINCULADO"
@@ -771,6 +776,10 @@ def cadastrar_pf_a3(cpf: str, nome: str, meio: str, emissor: str | None, numero_
     with conectar_banco() as conn:
         pessoa_id = _get_or_create_pf(conn, cpf, nome, email, telefone)
         old = _check_replace_pf(conn, pessoa_id, "A3")
+        if old and not thumbprint_sha256 and (old["thumbprint_sha256"] or bool(old["apto_para_uso"])):
+            raise ValueError(
+                "Já existe um A3 ativo vinculado. Detecte o novo cartão/token no Bridge antes de substituí-lo."
+            )
         if old:
             conn.execute("UPDATE certificados_pf SET status='INATIVO',apto_para_uso=0,atualizado_em=CURRENT_TIMESTAMP WHERE id=?", (old["id"],))
             _pf_evento(conn, old["id"], "SUBSTITUIDO", user_id, "Certificado PF A3 substituído por novo certificado.")
