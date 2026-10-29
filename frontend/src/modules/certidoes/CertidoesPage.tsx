@@ -24,7 +24,7 @@ type TypeCard={key:CertType;title:string;short:string;desc:string;icon:typeof La
 const TYPE_CARDS: TypeCard[] = [
   {key:'federal',title:'Federal · RFB/PGFN',short:'CND Federal',desc:'Receita Federal e PGFN',icon:Landmark,className:'blue',method:'Automação visual no Chrome',typeName:'Federal - RFB/PGFN'},
   {key:'estadual',title:'Estadual · SEFAZ-PE',short:'CND Estadual',desc:'Regularidade fiscal em Pernambuco',icon:ShieldCheck,className:'green',method:'Consulta via Playwright',typeName:'Estadual - SEFAZ'},
-  {key:'narrativa',title:'Narrativa · Débito Fiscal',short:'Narrativa SEFAZ',desc:'Consulta autenticada por certificado',icon:FileText,className:'amber',method:'Sessão gráfica + certificado',typeName:'Narrativa - Débito Fiscal'},
+  {key:'narrativa',title:'Narrativa · Débito Fiscal',short:'Narrativa SEFAZ',desc:'Consulta autenticada por certificado',icon:FileText,className:'amber',method:'Sessão gráfica + certificado',typeName:'Narrativa de Débito Fiscal - SEFAZ'},
 ];
 
 function validadeCalculada(value?:string|null):string|null {
