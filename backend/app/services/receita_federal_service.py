@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -199,6 +200,22 @@ def _abrir_chrome() -> None:
             kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         else:
             kwargs["start_new_session"] = True
+        download_dir = (STORAGE_ROOT / "_tmp").resolve()
+        download_dir.mkdir(parents=True, exist_ok=True)
+        default_profile = profile / "Default"
+        default_profile.mkdir(parents=True, exist_ok=True)
+        # Perfil descartável + diretório de download exclusivo impedem que a
+        # automação capture por engano um PDF recente do Downloads pessoal.
+        (default_profile / "Preferences").write_text(
+            json.dumps({
+                "download": {
+                    "default_directory": str(download_dir),
+                    "prompt_for_download": False,
+                    "directory_upgrade": True,
+                }
+            }),
+            encoding="utf-8",
+        )
         _CHROME_PROCESS = subprocess.Popen(
             [chrome, f"--user-data-dir={profile}", "--new-window", "--no-first-run", "--disable-session-crashed-bubble"],
             **kwargs,
@@ -342,12 +359,17 @@ def _salvar_pdf_do_navegador(destino_dir: Path, inicio: float) -> Path | None:
     """Captura PDF baixado automaticamente ou salva o PDF aberto no Chrome."""
     pyautogui, pyperclip = _gui()
     destino_dir.mkdir(parents=True, exist_ok=True)
-    downloads = Path.home() / "Downloads"
+    diretorios_download = [destino_dir, Path.home() / "Downloads"]
 
-    # 1) O portal normalmente dispara um download. Não usamos Ctrl+S como
-    # primeira opção, pois isso pode salvar HTML da SPA em vez da certidão.
+    # 1) O portal normalmente dispara um download. A pasta temporária exclusiva
+    # é priorizada; Downloads é fallback para versões do Chrome que ignorem prefs.
     for _ in range(int(os.getenv("RFB_PDF_DOWNLOAD_POLLS", "20"))):
-        encontrados = _novos_pdfs(downloads, inicio)
+        encontrados = [
+            arquivo
+            for diretorio in diretorios_download
+            for arquivo in _novos_pdfs(diretorio, inicio)
+        ]
+        encontrados.sort(key=lambda arquivo: arquivo.stat().st_mtime, reverse=True)
         origem = next((p for p in encontrados if _pdf_valido(p)), None)
         if origem:
             destino = destino_dir / f"certidao_federal_tmp_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.pdf"
