@@ -223,7 +223,7 @@ def consultar_certidao(certidao_id: int):
     itens = listar()
     for item in itens:
         if item["id"] == certidao_id:
-            return item
+            return _sanitizar_resultado_certidao(item)
     raise HTTPException(status_code=404, detail="Certidão não encontrada.")
 
 
