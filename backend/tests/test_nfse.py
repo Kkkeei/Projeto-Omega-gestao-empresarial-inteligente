@@ -542,3 +542,49 @@ def test_a3_event_response_requires_matching_certificate_and_imports(monkeypatch
     assert result["eventos_importados"] == 1
     events = service.listar_eventos(nfse_id)
     assert any(item["origem"] == "ADN_NFSE_A3_BRIDGE" for item in events)
+
+
+def test_nfse_scheduler_runs_only_explicitly_enabled_due_a1(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    service.salvar_config("PJ", 1, True, 24, "02:00", 1)
+    due = (datetime.now(timezone.utc) - timedelta(minutes=2)).isoformat()
+    with conectar_banco() as conn:
+        conn.execute(
+            "UPDATE nfse_config SET proxima_execucao_em=? WHERE origem='PJ' AND entidade_id=1",
+            (due,),
+        )
+        conn.commit()
+
+    calls = []
+    monkeypatch.setattr(service, "consultar_a1", lambda origin, entity_id: (
+        calls.append((origin, entity_id)) or {
+            "documentos_encontrados": 2, "documentos_importados": 1,
+        }
+    ))
+    result = service.processar_rotinas_automaticas(datetime.now(timezone.utc))
+    assert result["processadas"] == 1
+    assert result["sucesso"] == 1
+    assert calls == [("PJ", 1)]
+
+    # A claim avança a próxima execução; o mesmo ciclo não pode disparar de novo.
+    again = service.processar_rotinas_automaticas(datetime.now(timezone.utc))
+    assert again["processadas"] == 0
+    assert len(calls) == 1
+
+
+def test_nfse_scheduler_ignores_disabled_or_not_due_configs(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    service.salvar_config("PJ", 1, False, 24, "02:00", 1)
+    with conectar_banco() as conn:
+        conn.execute(
+            "UPDATE nfse_config SET proxima_execucao_em=? WHERE origem='PJ' AND entidade_id=1",
+            ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),),
+        )
+        conn.commit()
+    calls = []
+    monkeypatch.setattr(service, "consultar_a1", lambda *args: calls.append(args))
+    result = service.processar_rotinas_automaticas(datetime.now(timezone.utc))
+    assert result["processadas"] == 0
+    assert calls == []
