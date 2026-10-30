@@ -608,3 +608,14 @@ td strong{font-size:12px}
 .nfse-month-arrow{width:38px;height:38px;min-width:38px;display:grid;place-items:center;border:1px solid #d7dee8!important;border-radius:9px;background:#fff!important;color:#475467!important}
 .nfse-month-arrow:hover{background:#f7f9fc!important;border-color:#b8c4d3!important}
 @media(max-width:650px){.nfse-month-control{width:100%;justify-content:space-between}.nfse-month-picker{flex:1;min-width:0}}
+
+
+/* NFS-e: navegação e competência também dentro do detalhe do titular */
+.nfse-company-competence{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding-bottom:10px;border-bottom:1px solid #edf0f4}
+.nfse-company-competence>.button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.nfse-company-competence .nfse-month-control{margin-left:auto}
+.nfse-sync-progress{display:flex;align-items:center;gap:9px;padding:10px 13px;margin:0 0 10px;border:1px solid #d9e3f0;border-radius:9px;background:#f8fafc;color:#344054;font-size:11px}
+.nfse-sync-progress svg{animation:nfse-spin 1s linear infinite;flex:0 0 auto}
+@keyframes nfse-spin{to{transform:rotate(360deg)}}
+@media(max-width:950px){.nfse-company-competence{align-items:flex-start;flex-direction:column}.nfse-company-competence .nfse-month-control{margin-left:0;width:100%;justify-content:flex-start}}
+@media(max-width:650px){.nfse-company-competence .nfse-month-control{justify-content:space-between}.nfse-company-competence>.button{width:100%;justify-content:center}}
