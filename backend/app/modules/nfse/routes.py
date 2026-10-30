@@ -109,9 +109,12 @@ def contexto(origem: str, entidade_id: int, _user=Depends(current_user)):
 
 
 @router.get("")
-def listar(origem: str | None = None, entidade_id: int | None = None, limit: int = 100, offset: int = 0, _user=Depends(current_user)):
-    documents = service.listar(origem, entidade_id, limit, offset)
-    return {"total": len(documents), "nfse": documents}
+def listar(origem: str | None = None, entidade_id: int | None = None, limit: int = 100, offset: int = 0, competencia: str | None = None, _user=Depends(current_user)):
+    try:
+        documents = service.listar(origem, entidade_id, limit, offset, competencia)
+        return {"total": len(documents), "nfse": documents}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/painel")
