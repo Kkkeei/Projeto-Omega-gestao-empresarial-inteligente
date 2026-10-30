@@ -54,7 +54,7 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
                    e.regime_tributario, ei.tributo_id, ei.obrigatorio,
                    t.nome AS tributo_nome, t.sigla AS tributo_sigla, t.esfera,
                    im.id AS mensal_id, im.status AS status_mensal, im.valor,
-                   im.numero_documento,
+                   im.numero_documento, im.data_vencimento, im.data_pagamento,
                    CASE WHEN EXISTS (
                        SELECT 1
                          FROM documentos_impostos di
@@ -119,6 +119,11 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
                 "status": status,
                 "valor": float(item["valor"]) if item.get("valor") is not None else None,
                 "numero_documento": item.get("numero_documento"),
+                "vencimento": item.get("data_vencimento"),
+                "data_pagamento": item.get("data_pagamento"),
+                "guia_confirmada": bool(item.get("guia_confirmada")),
+                "status_origem": item.get("status_mensal"),
+                "motivo_pendencia": (None if finalizada else ("Não existe registro mensal de apuração nesta competência." if item.get("mensal_id") is None else "O registro existe, mas falta confirmar a guia ou informar uma situação de credor/sem movimentação.")),
                 "finalizada": finalizada,
             })
 
