@@ -596,3 +596,15 @@ td strong{font-size:12px}
 .nfse-direction-tabs{display:flex;gap:8px;padding:12px 0;border-bottom:1px solid var(--border-color,#e2e8f0)}
 .nfse-direction-tabs button{border:1px solid var(--border-color,#dbe2ee);border-radius:8px;background:transparent;padding:7px 13px;color:inherit;cursor:pointer}
 .nfse-direction-tabs button.active{background:var(--primary,#172033);border-color:var(--primary,#172033);color:#fff}
+
+
+/* Seletor de competência da NFS-e: controles alinhados e calendário visível */
+.nfse-month-control{display:flex;align-items:center;gap:8px;flex:0 0 auto;white-space:nowrap}
+.nfse-month-picker{display:flex;flex-direction:column;gap:5px;min-width:190px;color:#475467;font-size:10px;font-weight:700}
+.nfse-month-input-wrap{position:relative;display:flex;align-items:center;min-height:40px;border:1px solid #d7dee8;border-radius:9px;background:#fff;color:#667085;padding:0 10px;gap:9px;transition:border-color .15s,box-shadow .15s}
+.nfse-month-input-wrap:focus-within{border-color:#718096;box-shadow:0 0 0 3px #eef1f5}
+.nfse-month-input-wrap>svg{flex:0 0 auto;pointer-events:none}
+.nfse-month-input-wrap input{width:100%;min-width:0;height:38px;border:0!important;outline:0;background:transparent!important;padding:0!important;color:#263244;font:600 12px inherit;cursor:pointer}
+.nfse-month-arrow{width:38px;height:38px;min-width:38px;display:grid;place-items:center;border:1px solid #d7dee8!important;border-radius:9px;background:#fff!important;color:#475467!important}
+.nfse-month-arrow:hover{background:#f7f9fc!important;border-color:#b8c4d3!important}
+@media(max-width:650px){.nfse-month-control{width:100%;justify-content:space-between}.nfse-month-picker{flex:1;min-width:0}}
