@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,Building2,CalendarDays,CheckCircle2,ChevronLeft,ChevronRight,Clock3,Download,Edit3,FileText,Landmark,Plus,Settings2,UploadCloud,X} from 'lucide-react';
 import {Link,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ErrorState} from '../../components/ui/ErrorState';
@@ -15,7 +15,7 @@ function statusLabel(v:string){return ({PAGO:'Pago',A_VENCER:'A vencer',A_PAGAR:
 function Modal({children,onClose,wide=false}:{children:React.ReactNode;onClose:()=>void;wide?:boolean}){return <div className="imp-modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className={`imp-dialog ${wide?'wide':''}`}>{children}</div></div>}
 
 export function EmpresaImpostosPage(){
- const {id}=useParams();const empresaId=Number(id);const nav=useNavigate();const [searchParams]=useSearchParams();const init=hojeAnterior();
+ const {id}=useParams();const empresaId=Number(id);const nav=useNavigate();const [searchParams]=useSearchParams();const autoUploadHandled=useRef(false);const init=hojeAnterior();
  const anoQuery=Number(searchParams.get('ano'));const mesQuery=Number(searchParams.get('mes'));
  const [ano,setAno]=useState(anoQuery>=2000&&anoQuery<=2100?anoQuery:init.ano),[mes,setMes]=useState(mesQuery>=1&&mesQuery<=12?mesQuery:init.mes),[filtro,setFiltro]=useState('TODOS');
  const [data,setData]=useState<EmpresaImpostos|null>(null),[configs,setConfigs]=useState<ConfiguracaoEmpresa[]>([]),[tributos,setTributos]=useState<Tributo[]>([]),[configOpen,setConfigOpen]=useState(false),[addOpen,setAddOpen]=useState(false),[editOpen,setEditOpen]=useState<ConfiguracaoEmpresa|null>(null),[reportOpen,setReportOpen]=useState(false),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -31,6 +31,7 @@ export function EmpresaImpostosPage(){
  async function openConfig(){await loadConfig();setConfigOpen(true);}
  async function addTax(){if(!selectedTax||!inicio){setNotice('Informe o tributo e a competência inicial.');return;}const [m,y]=inicio.split('/').map(Number);setSaving(true);try{await vincularTributo(empresaId,{tributo_id:Number(selectedTax),obrigatorio:true,vigencia_inicio:`${y}-${String(m).padStart(2,'0')}-01`});setAddOpen(false);setSelectedTax('');await loadConfig();await load();setNotice('Imposto configurado com sucesso.');}catch(e){setNotice(e instanceof Error?e.message:'Não foi possível adicionar o imposto.');}finally{setSaving(false);}}
  async function updateConfig(){if(!editOpen)return;if(editOpen.status==='INATIVO'){const ok=window.confirm('Inativar este imposto?\n\nA partir da competência final, ele deixará de gerar novas obrigações para esta empresa, mas todo o histórico será preservado.');if(!ok)return;}setSaving(true);try{const [m,y]=editOpen.vigencia_inicio.slice(0,7).split('-').map(Number);const end=editOpen.status==='INATIVO'?fim?`${fim.split('/')[1]}-${String(Number(fim.split('/')[0])).padStart(2,'0')}-01`:null:null;await atualizarVinculo(editOpen.id,{obrigatorio:!!editOpen.obrigatorio,vigencia_inicio:`${y}-${String(m).padStart(2,'0')}-01`,vigencia_fim:end,status:editOpen.status as 'ATIVO'|'INATIVO',observacao:editOpen.observacao});setEditOpen(null);setFim('');await loadConfig();await load();setNotice('Configuração atualizada.');}catch(e){setNotice(e instanceof Error?e.message:'Não foi possível atualizar a configuração.');}finally{setSaving(false);}}
+ useEffect(()=>{if(searchParams.get('acao')==='anexar'&&!loading&&data&&!autoUploadHandled.current){autoUploadHandled.current=true;openRegisterModal();}},[searchParams,loading,data]);
  async function markPaid(t:any){try{await marcarComoPago(empresaId,t.tributo_id,ano,mes);await load();}catch(e){setNotice(e instanceof Error?e.message:'Não foi possível registrar o pagamento.');}}
  function openReport(){setReport(null);setReportOpen(true);}
  async function generateReport(){const [mi,yi]=rStart.split('/').map(Number),[mf,yf]=rEnd.split('/').map(Number);if(!mi||!yi||!mf||!yf){setNotice('Informe o período no formato MM/AAAA.');return;}setReportLoading(true);try{setReport(await gerarPreviaRelatorio(empresaId,{ano_inicio:yi,mes_inicio:mi,ano_fim:yf,mes_fim:mf}));}catch(e){setNotice(e instanceof Error?e.message:'Não foi possível gerar o relatório.');}finally{setReportLoading(false);}}
