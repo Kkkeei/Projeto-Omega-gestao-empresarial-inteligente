@@ -934,9 +934,11 @@ def importar_resposta_a3(origin: str, entity_id: int, thumbprint: str, content_t
     return {"ok": True, "provider": PROVIDER_NAME, "certificado_tipo": "A3", "documentos_encontrados": len(documents), "documentos_importados": inserted, "ultimo_nsu": ult_nsu, "max_nsu": max_nsu, "content_type": content_type}
 
 
-def listar(origin: str | None = None, entity_id: int | None = None, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
+def listar(origin: str | None = None, entity_id: int | None = None, limit: int = 100, offset: int = 0, competencia: str | None = None) -> list[dict[str, Any]]:
     limit = max(1, min(limit, 500))
     offset = max(0, int(offset))
+    if competencia:
+        competencia = _validar_competencia_nfse(competencia)
     with conectar_banco() as conn:
         sql = "SELECT * FROM nfse_documentos WHERE 1=1"
         params: list[Any] = []
@@ -944,8 +946,18 @@ def listar(origin: str | None = None, entity_id: int | None = None, limit: int =
             sql += " AND origem=?"; params.append(origin.upper())
         if entity_id is not None:
             sql += " AND entidade_id=?"; params.append(entity_id)
+        if competencia:
+            sql += " AND substr(COALESCE(data_emissao, criado_em),1,7)=?"; params.append(competencia)
         sql += " ORDER BY COALESCE(data_emissao, criado_em, '') DESC, id DESC LIMIT ? OFFSET ?"; params.extend([limit, offset])
-        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+        rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    enriched = []
+    for result in rows:
+        if result.get("xml_path"):
+            path = STORAGE_BASE.parent / result["xml_path"]
+            if path.is_file():
+                result["xml"] = path.read_text(encoding="utf-8", errors="replace")
+        enriched.append(_enriquecer_detalhe_nfse(result))
+    return enriched
 
 
 def detalhe(nfse_id: int) -> dict[str, Any]:
