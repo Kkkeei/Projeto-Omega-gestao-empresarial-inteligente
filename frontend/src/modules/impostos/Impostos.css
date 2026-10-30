@@ -45,3 +45,6 @@
   .imp-submodal{align-items:flex-start;padding:8px 12px}
   .imp-submodal-card{max-height:calc(100dvh - 16px)}
 }
+
+
+.imp-howto{padding:15px 17px;border-color:var(--border,#e1e6ed);background:var(--surface,#fff)}.imp-howto-heading{display:flex;align-items:center;gap:10px}.imp-howto-icon{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:9px;background:#eef4ff;color:#315fc0}.imp-howto-heading>div{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}.imp-howto-heading strong{font-size:13px;color:var(--text,#182230)}.imp-howto-heading small{font-size:11px;color:var(--text-muted,#687386)}.imp-howto-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 0;padding-top:13px;border-top:1px solid var(--border,#e1e6ed)}.imp-howto-steps>div{display:flex;flex-direction:column;gap:5px}.imp-howto-steps b{font-size:12px;color:var(--text,#182230)}.imp-howto-steps span{font-size:11px;line-height:1.5;color:var(--text-muted,#687386)}.imp-howto-steps>.button{grid-column:1/-1;justify-self:start}@media(max-width:760px){.imp-howto-steps{grid-template-columns:1fr}.imp-howto-heading{align-items:flex-start;flex-wrap:wrap}.imp-howto-heading>.button{margin-left:44px}}
