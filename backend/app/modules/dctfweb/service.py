@@ -8,6 +8,7 @@ from app.modules.impostos.repository import competencia_iso, competencia_label
 
 REGIMES_DCTFWEB = {"LUCRO PRESUMIDO", "LUCRO REAL"}
 STATUS_SEM_MOVIMENTACAO = {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO"}
+STATUS_COM_GUIA = {"A_PAGAR", "A_VENCER", "EM_ATRASO", "PAGO", "GUIA_REGISTRADA"}
 
 
 def _normalizar_regime(valor: Any) -> str:
@@ -32,7 +33,7 @@ def _status_obrigacao(
         return "SEM_MOVIMENTACAO", True
     if chave == "CREDOR":
         return "CREDOR", True
-    if guia_confirmada:
+    if guia_confirmada and chave in STATUS_COM_GUIA:
         return ("PAGO" if chave == "PAGO" else "VALOR_INFORMADO"), True
     return "PENDENTE", False
 
