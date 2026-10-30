@@ -20,7 +20,7 @@ export type NfseContext={
 export type NfseDocumento={
   id:number;origem:'PJ'|'PF';entidade_id:number;provider:string;nsu?:number|null;schema?:string|null;
   chave_acesso?:string|null;numero?:string|null;data_emissao?:string|null;valor?:number|null;situacao:string;xml_path?:string|null;
-  criado_em:string;atualizado_em:string;xml?:string|null;resposta_json?:string|null;
+  criado_em:string;atualizado_em:string;xml?:string|null;resposta_json?:string|null;direcao?:'PRESTADA'|'TOMADA'|'NAO_IDENTIFICADA';
 };
 
 export const contextoNfse=(origem:'PJ'|'PF',entidadeId:number)=>
@@ -28,8 +28,8 @@ export const contextoNfse=(origem:'PJ'|'PF',entidadeId:number)=>
 
 export const detalheNfse=(id:number)=>apiFetch<NfseDocumento>(`/api/v1/nfse/${id}`);
 
-export const listarNfse=(origem?:'PJ'|'PF',entidadeId?:number,limit=500,offset=0)=>{
-  const q=new URLSearchParams(); if(origem)q.set('origem',origem); if(entidadeId)q.set('entidade_id',String(entidadeId)); q.set('limit',String(Math.min(500,Math.max(1,limit)))); q.set('offset',String(Math.max(0,offset)));
+export const listarNfse=(origem?:'PJ'|'PF',entidadeId?:number,limit=500,offset=0,competencia?:string)=>{
+  const q=new URLSearchParams(); if(origem)q.set('origem',origem); if(entidadeId)q.set('entidade_id',String(entidadeId)); if(competencia)q.set('competencia',competencia); q.set('limit',String(Math.min(500,Math.max(1,limit)))); q.set('offset',String(Math.max(0,offset)));
   const suffix=q.toString()?`?${q.toString()}`:'';
   return apiFetch<{total:number;nfse:NfseDocumento[]}>(`/api/v1/nfse${suffix}`);
 };
