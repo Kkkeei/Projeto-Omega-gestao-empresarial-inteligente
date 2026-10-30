@@ -653,10 +653,9 @@ def _update_cursor(origin: str, subject_id: int, ultimo_nsu: int | None, max_nsu
             ultimo_nsu=CASE WHEN ? IS NULL THEN ultimo_nsu ELSE MAX(ultimo_nsu, ?) END,
             max_nsu=CASE WHEN ? IS NULL THEN max_nsu WHEN max_nsu IS NULL THEN ? ELSE MAX(max_nsu, ?) END,
             ultimo_sync=CURRENT_TIMESTAMP,
-            status=?, mensagem=?, proxima_consulta_em=?
+            status=?, mensagem=?, proxima_consulta_em=NULL
             WHERE origem=? AND entidade_id=? AND provider=?""",
             (ultimo_nsu, ultimo_nsu, max_nsu, max_nsu, max_nsu, status, message,
-             (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat() if status == "SEM_DOCUMENTOS" else None,
              origin, subject_id, PROVIDER_NAME),
         )
         conn.commit()
@@ -678,18 +677,7 @@ def _begin_sync(origin: str, entity_id: int, cursor: dict[str, Any]) -> None:
         if not stale_lock:
             raise ValueError("Já existe uma consulta NFS-e em andamento para este titular. Se ela foi interrompida, aguarde 10 minutos e tente novamente.")
 
-    next_at = cursor.get("proxima_consulta_em")
-    if next_at:
-        try:
-            dt = datetime.fromisoformat(str(next_at).replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            if dt > now:
-                remaining = max(1, int((dt - now).total_seconds() // 60))
-                raise ValueError(f"A fila do ADN está em espera. Tente novamente em aproximadamente {remaining} minuto(s).")
-        except ValueError as exc:
-            if str(exc).startswith("A fila do ADN"):
-                raise
+    # Não há bloqueio por intervalo: o usuário pode consultar novamente assim que a chamada anterior terminar.
 
     with conectar_banco() as conn:
         if stale_lock:
