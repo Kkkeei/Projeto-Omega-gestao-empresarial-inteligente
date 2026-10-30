@@ -72,6 +72,7 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
              WHERE e.ativo = 1
                AND UPPER(COALESCE(t.esfera, '')) = 'FEDERAL'
                AND UPPER(COALESCE(e.regime_tributario, '')) IN ('LUCRO PRESUMIDO', 'LUCRO REAL')
+               AND COALESCE(ei.obrigatorio, 1) = 1
                AND (ei.vigencia_inicio IS NULL OR substr(ei.vigencia_inicio, 1, 7) <= substr(?, 1, 7))
                AND (ei.vigencia_fim IS NULL OR substr(ei.vigencia_fim, 1, 7) >= substr(?, 1, 7))
                AND (ei.status = 'ATIVO' OR ei.vigencia_fim IS NOT NULL)
