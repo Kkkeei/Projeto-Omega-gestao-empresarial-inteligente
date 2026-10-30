@@ -46,7 +46,7 @@ class SalvarConfigRequest(BaseModel):
     entidade_id: int = Field(gt=0)
     sincronizacao_automatica: bool = False
     frequencia_horas: int = Field(default=24, ge=1, le=720)
-    horario: str = Field(default="02:00", pattern=r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+    horario: str = Field(default="02:00", pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
 @router.get("/config")
@@ -77,7 +77,7 @@ class ConfiguracaoNfseRequest(BaseModel):
     entidade_id: int = Field(gt=0)
     sincronizacao_automatica: bool
     frequencia_horas: int = Field(ge=1, le=720)
-    horario: str = Field(pattern=r"^(?:[01]\\d|2[0-3]):[0-5]\\d$")
+    horario: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
 class EventoNfseRequest(BaseModel):
