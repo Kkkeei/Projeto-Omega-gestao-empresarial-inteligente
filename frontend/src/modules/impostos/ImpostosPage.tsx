@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Building2,ChevronRight,Edit3,Landmark,Plus,Search,X,SlidersHorizontal,Bell,Save} from 'lucide-react';
+import {Building2,ChevronRight,Edit3,Landmark,Plus,Search,X,SlidersHorizontal,Bell,Save,ClipboardCheck,Info} from 'lucide-react';
 import {useNavigate} from 'react-router-dom';
 import {ErrorState} from '../../components/ui/ErrorState';
 import {Loading} from '../../components/ui/Loading';
@@ -23,7 +23,7 @@ export function ImpostosPage(){
  const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [catalogOpen,setCatalogOpen]=useState(false); const [notificationsOpen,setNotificationsOpen]=useState(false);
  const [tributos,setTributos]=useState<Tributo[]>([]); const [taxSearch,setTaxSearch]=useState(''); const [taxEsfera,setTaxEsfera]=useState('TODAS'); const [taxForm,setTaxForm]=useState(false); const [editing,setEditing]=useState<Tributo|null>(null);
  const [nome,setNome]=useState(''); const [codigo,setCodigo]=useState(''); const [esfera,setEsfera]=useState(''); const [periodicidade,setPeriodicidade]=useState('Mensal'); const [saving,setSaving]=useState(false); const [notice,setNotice]=useState('');
- const [configs,setConfigs]=useState<NotificacaoConfig[]>([]); const navigate=useNavigate();
+ const [configs,setConfigs]=useState<NotificacaoConfig[]>([]); const [helpOpen,setHelpOpen]=useState(true); const navigate=useNavigate();
  async function load(){setLoading(true);setError('');try{setData(await listarImpostos({regime,q,situacao}));}catch(e){setError(e instanceof Error?e.message:'Erro ao carregar impostos.');}finally{setLoading(false);}}
  useEffect(()=>{void load();},[regime,situacao]);
  useEffect(()=>{const t=setTimeout(()=>void load(),250);return()=>clearTimeout(t);},[q]);
@@ -40,7 +40,11 @@ export function ImpostosPage(){
  if(error&&!data)return <div className="page"><ErrorState message={error} onRetry={()=>void load()}/></div>;
  if(!data)return null;
  return <div className="page impostos-page">
-   <div className="page-heading imp-page-heading"><div><span className="eyebrow">CONTROLE TRIBUTÁRIO</span><h2><Landmark size={24}/> Impostos</h2><p>Gerencie os impostos das empresas, acompanhe vencimentos e envie documentos.</p></div><div className="imp-heading-actions"><button className="button secondary" onClick={()=>void openNotifications()}><Bell size={14}/> Notificações</button><button className="button primary" onClick={()=>void openCatalog()}><Plus size={15}/> Cadastrar impostos</button></div></div>
+   <div className="page-heading imp-page-heading"><div><span className="eyebrow">CONTROLE TRIBUTÁRIO</span><h2><Landmark size={24}/> Impostos</h2><p>Configure as obrigações tributárias, registre apurações e acompanhe guias e vencimentos por empresa.</p></div><div className="imp-heading-actions"><button className="button secondary" onClick={()=>void openNotifications()}><Bell size={14}/> Notificações</button><button className="button primary" onClick={()=>void openCatalog()}><Plus size={15}/> Cadastrar impostos</button></div></div>
+   <section className="imp-howto panel">
+     <div className="imp-howto-heading"><span className="imp-howto-icon"><Info size={17}/></span><div><strong>Como funciona o controle de impostos?</strong><small>O cadastro é feito uma vez; depois você acompanha cada competência.</small></div><button className="button ghost" onClick={()=>setHelpOpen(v=>!v)}>{helpOpen?'Recolher':'Entender o fluxo'}</button></div>
+     {helpOpen&&<div className="imp-howto-steps"><div><b>1. Configure a empresa</b><span>Abra a empresa e vincule os tributos aplicáveis, informando a competência inicial e a vigência.</span></div><div><b>2. Registre a competência</b><span>Abra cada tributo para anexar a guia, revisar os dados extraídos ou informar “Credor”/“Sem movimentação”.</span></div><div><b>3. Confira o fechamento federal</b><span>Para empresas do Lucro Presumido e Lucro Real, a DCTFWeb reúne as obrigações federais e aponta o que ainda falta.</span></div><button className="button secondary" onClick={()=>navigate('/dctfweb')}><ClipboardCheck size={14}/> Abrir DCTFWeb</button></div>}
+   </section>
    {error&&<div className="form-error imp-error">{error}</div>}{notice&&<div className="imp-inline-alert">{notice}<button className="icon-button" onClick={()=>setNotice('')}><X size={13}/></button></div>}
    <div className="imp-regime-grid">{REGIMES.map(r=><button key={r.value} className={`imp-regime-card ${r.className} ${regime===r.value?'active':''}`} onClick={()=>setRegime(r.value)}><span className="imp-regime-icon"><Building2 size={15}/></span><div><strong>{r.label}</strong><small>{data.indicadores.regimes[r.value]||0} empresas</small></div></button>)}</div>
    <div className="panel imp-toolbar"><div className="empresa-search"><Search size={15}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Pesquisar por razão social, nome fantasia ou CNPJ..."/></div><select value={situacao} onChange={e=>setSituacao(e.target.value)}><option>TODAS</option><option>VENCIDO</option><option>VENCENDO</option><option>PENDENTE</option><option>EM_DIA</option></select><button className="button ghost" onClick={()=>{setQ('');setRegime('TODOS');setSituacao('TODAS')}}><SlidersHorizontal size={13}/> Limpar</button></div>
