@@ -1,9 +1,9 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {AlertTriangle,Building2,CheckCircle2,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X} from 'lucide-react';
+import {AlertTriangle,Building2,CheckCircle2,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X,Upload,FileSpreadsheet} from 'lucide-react';
 import {listarEmpresasParaSelecao} from '../../services/api/certidoes';
 import {listarPessoasFisicas,type PessoaFisica} from '../../services/api/certificados';
 import {bridgeCertificates} from '../../services/api/certificados';
-import {bridgeFetchNfseDfe,consultarNfseA1,contextoNfse,detalheNfse,importarNfseA3,listarNfse,baixarNfsePdf,type NfseContext,type NfseDocumento} from '../../services/api/nfse';
+import {bridgeFetchNfseDfe,consultarNfseA1,contextoNfse,detalheNfse,importarNfseA3,listarNfse,baixarNfsePdf,importarXmlNfse,importarEmlNfse,exportarExcelNfse,type NfseContext,type NfseDocumento} from '../../services/api/nfse';
 import type {Empresa} from '../../types';
 
 const ADN_BASE=()=> (import.meta.env.VITE_OMEGA_NFSE_ADN_URL||'https://adn.nfse.gov.br/contribuintes').replace(/\/$/,'');
@@ -179,6 +179,32 @@ export function NfsePage(){
     finally{setBusy(false);}
   }
 
+
+  async function importFile(file:File|undefined,kind:'XML'|'EML'){
+    if(!file)return;
+    if(typeof entityId!=='number'){setError('Selecione o titular antes de importar.');return;}
+    setBusy(true);setError('');setMessage('');
+    try{
+      const result=kind==='XML'
+        ?await importarXmlNfse(origin,entityId,file)
+        :await importarEmlNfse(origin,entityId,file);
+      const count=Number((result as any).importados??(result as any).documentos_importados??0);
+      setMessage(`${kind} importado. ${count} documento(s) novo(s) registrado(s).`);
+      await loadContext(entityId,origin);
+      setOfficeDocs(await listarTodasNfse());
+    }catch(e){setError(e instanceof Error?e.message:`Falha ao importar ${kind}.`);}
+    finally{setBusy(false);}
+  }
+
+  async function downloadExcel(){
+    setBusy(true);setError('');
+    try{
+      const result=await exportarExcelNfse(competence,typeof entityId==='number'?origin:undefined,typeof entityId==='number'?entityId:undefined);
+      const url=URL.createObjectURL(result.blob);const a=document.createElement('a');a.href=url;a.download=`nfse-${competence}.xlsx`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){setError(e instanceof Error?e.message:'Não foi possível exportar o Excel.');}
+    finally{setBusy(false);}
+  }
+
   async function openDetail(doc:NfseDocumento){
     setSelectedDoc(doc);setDetailLoading(true);setDetailError('');
     try{setSelectedDoc(await detalheNfse(doc.id));}
@@ -224,7 +250,13 @@ export function NfsePage(){
     {!context&&typeof entityId==='number'&&!error&&<div className="panel empty"><ShieldCheck size={24}/><strong>Carregando titular</strong><span>O ÔMEGA está carregando o certificado e os documentos existentes.</span></div>}
     {context?.certificado?.tipo==='A3'&&!bridgeReady&&<div className="nfse-a3-note"><Smartphone size={18}/><div><strong>Certificado A3: cartão/token necessário</strong><span>Conecte o leitor no computador em que o OMEGA Bridge está instalado, insira o cartão e clique em Detectar cartão.</span></div></div>}
 
-    <section className="panel nfse-list-panel"><div className="section-title-row"><div><span className="eyebrow">NFS-e IMPORTADAS</span><h3>{filteredDocs.length} documento(s)</h3></div><div className="nfse-list-actions"><button className="button secondary small" onClick={exportCsv} disabled={!filteredDocs.length}><Download size={13}/> Exportar CSV/Excel</button><button className="button secondary small" onClick={()=>void downloadSelectedZip()} disabled={!selectedDocs.length||busy}><Download size={13}/> ZIP dos XMLs ({selectedDocs.length})</button><span className="download-count">NSU atual: {context?.ultimo_nsu??0}</span></div></div>{filteredDocs.length===0?<div className="empty"><ReceiptIcon/><strong>Nenhuma NFS-e importada</strong><span>Selecione um titular para ver os documentos importados. Para novas consultas, é necessário certificado válido.</span></div>:<div className="nfse-table"><div className="nfse-row nfse-head"><span>Selecionar</span><span>NSU</span><span>Número</span><span>Chave</span><span>Emissão</span><span>Valor</span><span>Situação</span><span>Ações</span></div>{filteredDocs.map(d=><div className="nfse-row" key={d.id}><span><input type="checkbox" aria-label={`Selecionar NFS-e ${d.numero||d.id}`} checked={selectedDocs.includes(d.id)} onChange={e=>setSelectedDocs(prev=>e.target.checked?[...prev,d.id]:prev.filter(id=>id!==d.id))}/></span><span>{d.nsu??'—'}</span><span>{d.numero||'—'}</span><span className="truncate" title={d.chave_acesso||''}>{d.chave_acesso||'—'}</span><span>{fmtDate(d.data_emissao)}</span><span>{money(d.valor)}</span><span><span className="badge ok">{d.situacao}</span></span><span><button className="icon-button" title="Detalhes e XML" aria-label={`Detalhes da NFS-e ${d.numero||d.id}`} onClick={()=>void openDetail(d)}><Eye size={15}/></button></span></div>)}</div>}</section>
+    <section className="panel nfse-list-panel"><div className="section-title-row"><div><span className="eyebrow">NFS-e IMPORTADAS</span><h3>{filteredDocs.length} documento(s)</h3></div><div className="nfse-list-actions">
+      {typeof entityId==='number'&&<><label className="button secondary small"><Upload size={13}/> Importar XML<input type="file" accept=".xml,text/xml,application/xml" hidden disabled={busy} onChange={e=>{void importFile(e.target.files?.[0],'XML');e.currentTarget.value='';}}/></label><label className="button secondary small"><Upload size={13}/> Importar EML<input type="file" accept=".eml,message/rfc822" hidden disabled={busy} onChange={e=>{void importFile(e.target.files?.[0],'EML');e.currentTarget.value='';}}/></label></>}
+      <button className="button secondary small" onClick={()=>void downloadExcel()} disabled={busy}><FileSpreadsheet size={13}/> Exportar Excel</button>
+      <button className="button secondary small" onClick={exportCsv} disabled={!filteredDocs.length}><Download size={13}/> CSV</button>
+      <button className="button secondary small" onClick={()=>void downloadSelectedZip()} disabled={!selectedDocs.length||busy}><Download size={13}/> ZIP dos XMLs ({selectedDocs.length})</button>
+      <span className="download-count">NSU atual: {context?.ultimo_nsu??0}</span>
+    </div></div>{filteredDocs.length===0?<div className="empty"><ReceiptIcon/><strong>Nenhuma NFS-e importada</strong><span>Selecione um titular para ver os documentos importados. Para novas consultas, é necessário certificado válido.</span></div>:<div className="nfse-table"><div className="nfse-row nfse-head"><span>Selecionar</span><span>NSU</span><span>Número</span><span>Chave</span><span>Emissão</span><span>Valor</span><span>Situação</span><span>Ações</span></div>{filteredDocs.map(d=><div className="nfse-row" key={d.id}><span><input type="checkbox" aria-label={`Selecionar NFS-e ${d.numero||d.id}`} checked={selectedDocs.includes(d.id)} onChange={e=>setSelectedDocs(prev=>e.target.checked?[...prev,d.id]:prev.filter(id=>id!==d.id))}/></span><span>{d.nsu??'—'}</span><span>{d.numero||'—'}</span><span className="truncate" title={d.chave_acesso||''}>{d.chave_acesso||'—'}</span><span>{fmtDate(d.data_emissao)}</span><span>{money(d.valor)}</span><span><span className="badge ok">{d.situacao}</span></span><span><button className="icon-button" title="Detalhes e XML" aria-label={`Detalhes da NFS-e ${d.numero||d.id}`} onClick={()=>void openDetail(d)}><Eye size={15}/></button></span></div>)}</div>}</section>
 
     {selectedDoc&&<div className="nfse-detail-overlay" role="dialog" aria-modal="true" aria-label="Detalhes da NFS-e" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedDoc(null)}}><section className="panel nfse-detail-dialog"><div className="panel-header"><div><span className="eyebrow">DOCUMENTO FISCAL IMPORTADO</span><h3>NFS-e {selectedDoc.numero||selectedDoc.id}</h3></div><button className="icon-button" onClick={()=>setSelectedDoc(null)} aria-label="Fechar detalhes"><X size={16}/></button></div><div className="nfse-detail-meta"><span><strong>NSU:</strong> {selectedDoc.nsu??'—'}</span><span><strong>Data:</strong> {fmtDate(selectedDoc.data_emissao)}</span><span><strong>Valor:</strong> {money(selectedDoc.valor)}</span><span><strong>Chave:</strong> {selectedDoc.chave_acesso||'—'}</span></div>{detailError&&<div className="form-error">{detailError}</div>}{detailLoading?<div className="empty"><RefreshCw size={20}/><span>Carregando documento...</span></div>:selectedDoc.xml?<><div className="section-title-row"><h4><FileCode2 size={15}/> XML original</h4><div className="actions"><button className="button secondary" onClick={downloadXml}><Download size={14}/> Baixar XML</button><button className="button primary" onClick={()=>void downloadPdf()}><Download size={14}/> Gerar PDF</button></div></div><pre className="nfse-xml-preview">{selectedDoc.xml}</pre></>:<div className="empty"><FileCode2 size={22}/><strong>XML não disponível</strong><span>O registro possui metadados, mas o arquivo XML não está no storage.</span></div>}<div className="form-actions"><button className="button secondary" onClick={()=>setSelectedDoc(null)}>Fechar</button></div></section></div>}
   </div>;
