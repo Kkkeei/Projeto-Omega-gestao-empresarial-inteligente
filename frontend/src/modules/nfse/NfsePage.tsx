@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {AlertTriangle,Building2,CheckCircle2,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X,Upload,FileSpreadsheet} from 'lucide-react';
+import {AlertTriangle,Building2,CheckCircle2,ChevronLeft,ChevronRight,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X,Upload,FileSpreadsheet} from 'lucide-react';
 import {listarEmpresasParaSelecao} from '../../services/api/certidoes';
 import {listarPessoasFisicas,type PessoaFisica} from '../../services/api/certificados';
 import {bridgeCertificates} from '../../services/api/certificados';
@@ -28,7 +28,7 @@ export function NfsePage(){
   const [officeDocs,setOfficeDocs]=useState<NfseDocumento[]>([]);
   const [officeSearch,setOfficeSearch]=useState('');
   const [officeStatus,setOfficeStatus]=useState<'TODAS'|'COM'|'SEM'>('TODAS');
-  const [competence]=useState(previousMonth);
+  const [competence,setCompetence]=useState(previousMonth);
   const [selectedDocs,setSelectedDocs]=useState<number[]>([]);
   const [direction,setDirection]=useState<'PRESTADA'|'TOMADA'|'TODAS'>('TODAS');
   const [origin,setOrigin]=useState<'PJ'|'PF'>('PJ');
@@ -58,6 +58,7 @@ export function NfsePage(){
       listarPessoasFisicas(),
       listarTodasNfse(undefined,undefined,previousMonth()),
     ]);
+    setCompetence(previousMonth());
 
     let empresasCarregadas: Empresa[] = [];
     let pessoasCarregadas: PessoaFisica[] = [];
@@ -108,7 +109,7 @@ export function NfsePage(){
     setError('');setMessage('');setContext(null);setBridgeReady(false);setSelectedDoc(null);setSelectedDocs([]);
     const [ctxResult,listResult]=await Promise.allSettled([
       contextoNfse(currentOrigin,id),
-      listarTodasNfse(currentOrigin,id,previousMonth()).then(nfse=>({nfse})),
+      listarTodasNfse(currentOrigin,id,competence).then(nfse=>({nfse})),
     ]);
     if(sequence!==requestSequence.current)return;
     if(listResult.status==='fulfilled')setDocs(listResult.value.nfse);
@@ -119,7 +120,7 @@ export function NfsePage(){
   }
 
   useEffect(()=>{void loadBase();},[]);
-  useEffect(()=>{if(typeof entityId==='number')void loadContext(entityId,origin);else{setContext(null);setDocs([]);}},[entityId,origin]);
+  useEffect(()=>{if(typeof entityId==='number')void loadContext(entityId,origin);else{setContext(null);setDocs([]);}},[entityId,origin,competence]);
 
   const entities=origin==='PJ'?empresas:pessoas;
   const filteredDocs=useMemo(()=>{
@@ -175,7 +176,7 @@ export function NfsePage(){
         setMessage(`${saved.documentos_importados} NFS-e importada(s) pelo A3. NSU atual: ${saved.ultimo_nsu??context.ultimo_nsu}.`);
       }
       await loadContext(entityId,origin);
-      const refreshed=await listarTodasNfse(undefined,undefined,previousMonth());setOfficeDocs(refreshed);
+      const refreshed=await listarTodasNfse(undefined,undefined,competence);setOfficeDocs(refreshed);
     }catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar a NFS-e.');}
     finally{setBusy(false);}
   }
@@ -192,7 +193,7 @@ export function NfsePage(){
       const count=Number((result as any).importados??(result as any).documentos_importados??0);
       setMessage(`${kind} importado. ${count} documento(s) novo(s) registrado(s).`);
       await loadContext(entityId,origin);
-      setOfficeDocs(await listarTodasNfse(undefined,undefined,previousMonth()));
+      setOfficeDocs(await listarTodasNfse(undefined,undefined,competence));
     }catch(e){setError(e instanceof Error?e.message:`Falha ao importar ${kind}.`);}
     finally{setBusy(false);}
   }
@@ -238,10 +239,10 @@ export function NfsePage(){
   const selectedName=origin==='PJ'?(empresas.find(x=>x.id===entityId)?.razao_social||'Empresa'):(pessoas.find(x=>x.id===entityId)?.nome||'Pessoa Física');
 
   return <div className="page nfse-page">
-    <div className="page-heading"><div><span className="eyebrow">DOCUMENTOS FISCAIS DE SERVIÇO</span><h2>NFS-e</h2><p>Consulte e importe documentos distribuídos pelo ambiente nacional usando o certificado cadastrado no ÔMEGA.</p></div><div className="actions">{typeof entityId==='number'&&<button className="button secondary" onClick={()=>{requestSequence.current++;setEntityId('');setContext(null);setDocs([]);setSelectedDocs([]);setMessage('');setError('');void listarTodasNfse(undefined,undefined,previousMonth()).then(setOfficeDocs).catch(()=>{});}}>Voltar ao painel</button>}<button className="button secondary" onClick={()=>void loadBase()} disabled={loading||busy}><RefreshCw size={15}/> Atualizar titulares</button></div></div>
+    <div className="page-heading"><div><span className="eyebrow">DOCUMENTOS FISCAIS DE SERVIÇO</span><h2>NFS-e</h2><p>Consulte e importe documentos distribuídos pelo ambiente nacional usando o certificado cadastrado no ÔMEGA.</p></div><div className="actions">{typeof entityId==='number'&&<button className="button secondary" onClick={()=>{requestSequence.current++;setEntityId('');setContext(null);setDocs([]);setSelectedDocs([]);setMessage('');setError('');void listarTodasNfse(undefined,undefined,competence).then(setOfficeDocs).catch(()=>{});}}>Voltar ao painel</button>}<button className="button secondary" onClick={()=>void loadBase()} disabled={loading||busy}><RefreshCw size={15}/> Atualizar titulares</button></div></div>
     {error&&<div className="form-error"><AlertTriangle size={15}/>{error}</div>}{message&&<div className="cert-success"><CheckCircle2 size={15}/>{message}</div>}
 
-    {typeof entityId!=='number'&&<section className="panel nfse-office-panel"><div className="nfse-office-top"><div><span className="eyebrow">VISÃO DO ESCRITÓRIO</span><h3>Painel de NFS-e por competência</h3><p>Indicadores calculados a partir dos documentos já importados no ÔMEGA.</p></div><div className="nfse-office-tools"><div className="nfse-fixed-competence"><span>Competência consultada</span><strong>{competence.split('-').reverse().join('/')}</strong></div></div></div><div className="nfse-office-kpis"><div><span>Titulares cadastrados</span><strong>{empresas.length+pessoas.length}</strong></div><div><span>Com documentos no período</span><strong>{officeAllRows.filter(r=>r.count>0).length}</strong></div><div><span>Documentos importados</span><strong>{officeAllRows.reduce((n,r)=>n+r.count,0)}</strong></div><div><span>Valor registrado</span><strong>{money(officeAllRows.reduce((n,r)=>n+r.total,0))}</strong></div></div><div className="nfse-office-filters"><div className="search-box"><Search size={16}/><input value={officeSearch} onChange={e=>setOfficeSearch(e.target.value)} placeholder="Pesquisar empresa, nome ou CPF/CNPJ..."/></div><div className="cert-person-switch" role="group" aria-label="Filtrar titulares"><button className={officeStatus==='TODAS'?'active':''} onClick={()=>setOfficeStatus('TODAS')}>Todas</button><button className={officeStatus==='COM'?'active':''} onClick={()=>setOfficeStatus('COM')}>Com documentos</button><button className={officeStatus==='SEM'?'active':''} onClick={()=>setOfficeStatus('SEM')}>Sem documentos</button></div></div>{loading?<div className="empty"><RefreshCw size={20}/><span>Carregando empresas e documentos...</span></div>:officeRows.length===0?<div className="empty"><Building2 size={22}/><strong>Nenhum titular encontrado</strong><span>Altere a pesquisa ou a competência.</span></div>:<div className="nfse-office-table"><div className="nfse-office-row nfse-office-head"><span>Titular</span><span>Tipo</span><span>Documentos</span><span>Valor registrado</span><span>Situação dos dados</span><span>Ação</span></div>{officeRows.map(r=><div className="nfse-office-row" key={r.key}><span><strong>{r.name}</strong><small>{r.document||'Documento não informado'}</small></span><span>{r.origin==='PJ'?'Pessoa Jurídica':'Pessoa Física'}</span><span>{r.count}</span><span>{money(r.total)}</span><span><span className={`badge ${r.count?'ok':'neutral'}`}>{r.count?'Com documentos':'Sem documentos importados'}</span></span><span><button className="button secondary small" onClick={()=>openOfficeEntity(r.origin,r.id)}>Abrir</button></span></div>)}</div>}<p className="nfse-office-note">“Sem documentos importados” não significa necessariamente ausência de movimento fiscal. Significa apenas que não há documentos importados para o titular e competência selecionados. O painel não presume notas prestadas/tomadas nem calcula retenções que não estejam estruturadas nos dados atuais.</p></section>}
+    {typeof entityId!=='number'&&<section className="panel nfse-office-panel"><div className="nfse-office-top"><div><span className="eyebrow">VISÃO DO ESCRITÓRIO</span><h3>Painel de NFS-e por competência</h3><p>Indicadores calculados a partir dos documentos já importados no ÔMEGA.</p></div><div className="nfse-office-tools"><div className="nfse-month-control" aria-label="Selecionar competência"><button type="button" className="icon-button nfse-month-arrow" title="Mês anterior" aria-label="Mês anterior" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m-2,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronLeft size={17}/></button><label className="nfse-month-picker"><span>Competência</span><input type="month" value={competence} onChange={e=>e.target.value&&setCompetence(e.target.value)} aria-label="Escolher mês e ano"/></label><button type="button" className="icon-button nfse-month-arrow" title="Próximo mês" aria-label="Próximo mês" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronRight size={17}/></button></div></div></div><div className="nfse-office-kpis"><div><span>Titulares cadastrados</span><strong>{empresas.length+pessoas.length}</strong></div><div><span>Com documentos no período</span><strong>{officeAllRows.filter(r=>r.count>0).length}</strong></div><div><span>Documentos importados</span><strong>{officeAllRows.reduce((n,r)=>n+r.count,0)}</strong></div><div><span>Valor registrado</span><strong>{money(officeAllRows.reduce((n,r)=>n+r.total,0))}</strong></div></div><div className="nfse-office-filters"><div className="search-box"><Search size={16}/><input value={officeSearch} onChange={e=>setOfficeSearch(e.target.value)} placeholder="Pesquisar empresa, nome ou CPF/CNPJ..."/></div><div className="cert-person-switch" role="group" aria-label="Filtrar titulares"><button className={officeStatus==='TODAS'?'active':''} onClick={()=>setOfficeStatus('TODAS')}>Todas</button><button className={officeStatus==='COM'?'active':''} onClick={()=>setOfficeStatus('COM')}>Com documentos</button><button className={officeStatus==='SEM'?'active':''} onClick={()=>setOfficeStatus('SEM')}>Sem documentos</button></div></div>{loading?<div className="empty"><RefreshCw size={20}/><span>Carregando empresas e documentos...</span></div>:officeRows.length===0?<div className="empty"><Building2 size={22}/><strong>Nenhum titular encontrado</strong><span>Altere a pesquisa ou a competência.</span></div>:<div className="nfse-office-table"><div className="nfse-office-row nfse-office-head"><span>Titular</span><span>Tipo</span><span>Documentos</span><span>Valor registrado</span><span>Situação dos dados</span><span>Ação</span></div>{officeRows.map(r=><div className="nfse-office-row" key={r.key}><span><strong>{r.name}</strong><small>{r.document||'Documento não informado'}</small></span><span>{r.origin==='PJ'?'Pessoa Jurídica':'Pessoa Física'}</span><span>{r.count}</span><span>{money(r.total)}</span><span><span className={`badge ${r.count?'ok':'neutral'}`}>{r.count?'Com documentos':'Sem documentos importados'}</span></span><span><button className="button secondary small" onClick={()=>openOfficeEntity(r.origin,r.id)}>Abrir</button></span></div>)}</div>}<p className="nfse-office-note">“Sem documentos importados” não significa necessariamente ausência de movimento fiscal. Significa apenas que não há documentos importados para o titular e competência selecionados. O painel não presume notas prestadas/tomadas nem calcula retenções que não estejam estruturadas nos dados atuais.</p></section>}
 
     <section className="panel nfse-toolbar"><label className="nfse-select-label">Titular<select value={entityId} onChange={e=>setEntityId(e.target.value?Number(e.target.value):'')} disabled={loading||busy}><option value="">Selecione...</option>{entities.map(e=><option key={e.id} value={e.id}>{origin==='PJ'?(e as Empresa).razao_social:`${(e as PessoaFisica).nome} · ${(e as PessoaFisica).cpf}`}</option>)}</select></label><div className="search-box"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar NFS-e, NSU ou chave..."/></div></section>
 
