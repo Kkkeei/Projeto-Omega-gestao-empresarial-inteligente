@@ -24,4 +24,4 @@ def test_credor_e_sem_movimentacao_finalizam_sem_guia():
 
 
 def test_status_desconhecido_nao_libera():
-    assert _status_obrigacao("STATUS_NOVO", True, True) == ("VALOR_INFORMADO", True)
+    assert _status_obrigacao("STATUS_NOVO", True, True) == ("PENDENTE", False)
