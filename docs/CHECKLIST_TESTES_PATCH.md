@@ -19,8 +19,9 @@
 ## Certificados
 - [ ] Entrar como administrador e verificar que as ações administrativas continuam disponíveis.
 - [ ] Entrar como usuário comum e abrir um certificado A1.
-- [ ] Clicar na aba "Senha do certificado" e confirmar a visualização.
-- [ ] Conferir no histórico do certificado o evento de visualização da senha.
+- [ ] Confirmar que a aba/ação para revelar senha não aparece para usuário comum.
+- [ ] Tentar chamar diretamente o endpoint de senha com usuário comum e confirmar HTTP 403.
+- [ ] Entrar como administrador, visualizar a senha e conferir o evento de auditoria.
 - [ ] Confirmar que usuário comum não consegue baixar o certificado A1 nem baixar a senha em TXT.
 - [ ] Confirmar que o PIN do A3 não é mostrado nem armazenado.
 

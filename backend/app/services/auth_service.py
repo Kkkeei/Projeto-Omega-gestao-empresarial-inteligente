@@ -3,10 +3,15 @@ import hashlib
 import hmac
 import os
 import secrets
+import smtplib
+import ssl
+from email.message import EmailMessage
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote
 
 import jwt
+from cryptography.fernet import Fernet
 
 from app.db.database import conectar_banco
 
@@ -17,9 +22,83 @@ PASSWORD_ITERATIONS = 310_000
 
 def _secret() -> str:
     secret = os.getenv("OMEGA_JWT_SECRET", "").strip()
-    if len(secret) < 32:
-        raise RuntimeError("OMEGA_JWT_SECRET precisa ter pelo menos 32 caracteres.")
+    placeholder_markers = ("GERE_UMA_CHAVE", "CHANGE_ME", "CHANGEME", "YOUR_SECRET", "YOUR-SECRET")
+    if len(secret) < 32 or any(marker in secret.upper() for marker in placeholder_markers):
+        raise RuntimeError(
+            "OMEGA_JWT_SECRET precisa ser uma chave aleatória própria com pelo menos 32 caracteres; "
+            "não use o valor de exemplo do .env.example."
+        )
     return secret
+
+
+def validar_configuracao_producao() -> None:
+    """Falha no startup em produção quando segredos ou o administrador inicial faltam."""
+    if os.getenv("OMEGA_ENV", "development").strip().lower() != "production":
+        return
+    _secret()
+    key = os.getenv("OMEGA_CERTIFICADO_MASTER_KEY", "").strip()
+    if not key:
+        raise RuntimeError("OMEGA_CERTIFICADO_MASTER_KEY é obrigatória em produção.")
+    try:
+        Fernet(key.encode())
+    except Exception as exc:
+        raise RuntimeError("OMEGA_CERTIFICADO_MASTER_KEY não é uma chave Fernet válida.") from exc
+    if not os.getenv("CORS_ORIGINS", "").strip():
+        raise RuntimeError("Defina CORS_ORIGINS com as origens reais do frontend em produção.")
+    registro_publico = os.getenv("OMEGA_PUBLIC_REGISTRATION", "false").strip().lower() in {"1", "true", "sim", "yes"}
+    if registro_publico:
+        raise RuntimeError(
+            "OMEGA_PUBLIC_REGISTRATION deve ser false em produção; crie contas pelo administrador."
+        )
+    with conectar_banco() as conn:
+        admin = conn.execute("SELECT 1 FROM usuarios WHERE ativo=1 AND perfil='ADMIN' LIMIT 1").fetchone()
+    if not admin:
+        raise RuntimeError(
+            "Não existe administrador ativo. Configure OMEGA_ADMIN_EMAIL e OMEGA_ADMIN_PASSWORD "
+            "para criar o primeiro administrador."
+        )
+
+
+def enviar_email_redefinicao(email_destino: str, nome: str, token: str) -> bool:
+    """Entrega link de redefinição por SMTP. Não retorna o token quando SMTP não está configurado."""
+    host = os.getenv("OMEGA_SMTP_HOST", "").strip()
+    remetente = os.getenv("OMEGA_SMTP_FROM", "").strip()
+    frontend_url = os.getenv("OMEGA_FRONTEND_URL", "").strip().rstrip("/")
+    if not host or not remetente or not frontend_url:
+        return False
+    try:
+        porta = int(os.getenv("OMEGA_SMTP_PORT", "587"))
+    except ValueError as exc:
+        raise RuntimeError("OMEGA_SMTP_PORT precisa ser numérica.") from exc
+    link = f"{frontend_url}/redefinir-senha?token={quote(token)}"
+    mensagem = EmailMessage()
+    mensagem["Subject"] = "Redefinição de senha — Plataforma ÔMEGA"
+    mensagem["From"] = remetente
+    mensagem["To"] = email_destino
+    mensagem.set_content(
+        f"Olá, {nome or 'usuário'}.\n\n"
+        f"Recebemos uma solicitação de redefinição de senha da Plataforma ÔMEGA.\n"
+        f"Use o link abaixo para cadastrar uma nova senha (o link expira em "
+        f"{RESET_TOKEN_MINUTES} minutos e só pode ser usado uma vez):\n\n{link}\n\n"
+        "Se você não solicitou esta alteração, ignore esta mensagem."
+    )
+    usuario = os.getenv("OMEGA_SMTP_USER", "").strip()
+    senha = os.getenv("OMEGA_SMTP_PASSWORD", "")
+    usar_ssl = os.getenv("OMEGA_SMTP_USE_SSL", "false").strip().lower() in {"1", "true", "sim", "yes"} or porta == 465
+    contexto = ssl.create_default_context()
+    if usar_ssl:
+        with smtplib.SMTP_SSL(host, porta, timeout=20, context=contexto) as servidor:
+            if usuario:
+                servidor.login(usuario, senha)
+            servidor.send_message(mensagem)
+    else:
+        with smtplib.SMTP(host, porta, timeout=20) as servidor:
+            if os.getenv("OMEGA_SMTP_STARTTLS", "true").strip().lower() in {"1", "true", "sim", "yes"}:
+                servidor.starttls(context=contexto)
+            if usuario:
+                servidor.login(usuario, senha)
+            servidor.send_message(mensagem)
+    return True
 
 
 def hash_password(password: str) -> str:

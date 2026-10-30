@@ -1,17 +1,22 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import shutil
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
-from app.db.database import conectar_banco, backup_banco_permanente
+from app.db.database import conectar_banco, backup_banco_permanente, STORAGE_BASE
 from app.services.sefaz_pe_service import executar_consulta_playwright, limpar_cnpj, formatar_cnpj
 
+logger = logging.getLogger("omega.certidoes")
+
 BASE_DIR = Path(__file__).resolve().parents[2]
-STORAGE_DIR = BASE_DIR.parent / "storage" / "certidoes" / "estadual"
+PROJECT_ROOT = BASE_DIR.parent.resolve()
+LEGACY_CERTIDOES_ROOT = (PROJECT_ROOT / "storage" / "certidoes").resolve()
+STORAGE_DIR = (Path(STORAGE_BASE).expanduser().resolve() / "certidoes" / "estadual").resolve()
 
 
 def _tipo_estadual_id(conexao):
@@ -28,7 +33,7 @@ def _validade_status(data_validade: str | None) -> str | None:
     if not data_validade:
         return None
     try:
-        validade = date.fromisoformat(data_validade)
+        validade = date.fromisoformat(str(data_validade)[:10])
     except (TypeError, ValueError):
         return None
     hoje = date.today()
@@ -44,6 +49,8 @@ def listar(empresa_id: int | None = None):
     try:
         sql = """
             SELECT c.*, t.nome AS tipo_certidao, e.cnpj, e.razao_social,
+                   (SELECT cc.id FROM consultas_certidoes cc
+                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS consulta_id,
                    (SELECT cc.pdf_path FROM consultas_certidoes cc
                       WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS pdf_path,
                    (SELECT cc.pendencia FROM consultas_certidoes cc
@@ -51,9 +58,7 @@ def listar(empresa_id: int | None = None):
                    (SELECT cc.pendencia_detalhes FROM consultas_certidoes cc
                       WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS pendencia_detalhes,
                    (SELECT cc.nome_arquivo_original FROM consultas_certidoes cc
-                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS nome_arquivo_original,
-                   (SELECT cc.texto_extraido FROM consultas_certidoes cc
-                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS texto_extraido
+                      WHERE cc.certidao_id = c.id ORDER BY cc.id DESC LIMIT 1) AS nome_arquivo_original
             FROM certidoes c
             JOIN tipos_certidao t ON t.id = c.tipo_certidao_id
             JOIN empresas e ON e.id = c.empresa_id
@@ -120,13 +125,18 @@ def _salvar_documento(conexao, empresa_id: int, pdf_origem: str, nome_original: 
 
     agora = datetime.now()
     cnpj = limpar_cnpj(empresa["cnpj"])
-    pasta = BASE_DIR.parent / "storage" / "certidoes" / subpasta / cnpj / str(agora.year)
+    pasta = Path(STORAGE_BASE).expanduser().resolve() / "certidoes" / subpasta / cnpj / str(agora.year)
     pasta.mkdir(parents=True, exist_ok=True)
 
     # Inclui microssegundos para impedir colisão quando várias consultas
     # terminarem no mesmo segundo.
     destino = pasta / f"certidao_{agora.strftime('%Y-%m-%d_%H%M%S_%f')}.pdf"
-    caminho_relativo = str(destino.resolve().relative_to(BASE_DIR.parent.resolve()))
+    try:
+        caminho_relativo = str(destino.resolve().relative_to(PROJECT_ROOT))
+    except ValueError:
+        # Configuração externa de storage: caminhos absolutos ainda serão
+        # validados contra STORAGE_BASE/certidoes antes de servir o PDF.
+        caminho_relativo = str(destino.resolve())
     try:
         shutil.copyfile(pdf_origem, destino)
         tamanho = destino.stat().st_size
@@ -450,15 +460,16 @@ async def _consultar_empresa(empresa_id: int, tentativas: int = 3, browser=None)
         try:
             ultimo = await executar_consulta_playwright(cnpj, browser=browser)
         except Exception as exc:
+            logger.exception("Falha na consulta SEFAZ-PE para empresa_id=%s, tentativa=%s.", empresa_id, tentativa)
             ultimo = {
                 "cnpj": cnpj,
                 "cnpj_formatado": formatar_cnpj(cnpj),
                 "empresa": razao_cadastrada,
                 "situacao": "ERRO",
                 "tipo_certidao": None,
-                "status_processamento": "Erro",
-                "mensagem": str(exc),
-                "erro_tecnico": str(exc),
+                "status_processamento": "Erro técnico",
+                "mensagem": "Não foi possível concluir a consulta à SEFAZ-PE nesta tentativa.",
+                "erro_tecnico": f"{type(exc).__name__}: {exc}",
                 "pendencia": False,
                 "pendencia_detalhes": None,
             }
@@ -489,14 +500,17 @@ async def _consultar_empresa(empresa_id: int, tentativas: int = 3, browser=None)
                 ultimo["documento_id"] = documento_id
                 ultimo["pdf_path"] = pdf_path
             except Exception as exc:
+                logger.exception("Falha ao armazenar PDF da certidão SEFAZ-PE (empresa_id=%s).", empresa_id)
                 ultimo["documento_id"] = None
                 ultimo["pdf_path"] = None
-                ultimo["erro_tecnico"] = f"Falha ao armazenar PDF: {exc}"
-                if ultimo.get("situacao") in {"REGULAR", "POSITIVA COM EFEITOS DE NEGATIVA", "IRREGULAR"}:
-                    ultimo["mensagem"] = (
-                        (ultimo.get("mensagem") or "Consulta concluída.")
-                        + " PDF obtido, mas não foi possível armazená-lo no sistema."
-                    )
+                ultimo["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                ultimo["situacao_detectada"] = ultimo.get("situacao")
+                ultimo["situacao"] = "ERRO"
+                ultimo["status_processamento"] = "Erro técnico"
+                ultimo["mensagem"] = (
+                    "O portal retornou um resultado, mas o PDF não foi preservado no armazenamento. "
+                    "A consulta precisa ser repetida antes de considerar a certidão concluída."
+                )
         else:
             ultimo["pdf_path"] = None
             ultimo["documento_id"] = None
@@ -573,14 +587,15 @@ def consultar_narrativa_pyautogui(empresa_id: int, certificado_nome: str | None 
     try:
         resultado = executar_automacao_pyautogui(cnpj, certificado_nome=certificado_nome)
     except Exception as exc:
+        logger.exception("Falha na consulta de certidão narrativa (empresa_id=%s).", empresa_id)
         resultado = {
             "cnpj": cnpj,
             "empresa": razao,
             "situacao": "ERRO",
             "tipo_certidao": "Narrativa de Débito Fiscal - SEFAZ",
-            "status_processamento": "Erro",
-            "mensagem": str(exc),
-            "erro_tecnico": str(exc),
+            "status_processamento": "Erro técnico",
+            "mensagem": "Não foi possível concluir a consulta narrativa na SEFAZ-PE.",
+            "erro_tecnico": f"{type(exc).__name__}: {exc}",
             "pendencia": False,
         }
 
@@ -601,7 +616,12 @@ def consultar_narrativa_pyautogui(empresa_id: int, certificado_nome: str | None 
                 resultado["documento_id"] = documento_id
                 resultado["pdf_path"] = pdf_path
             except Exception as exc:
-                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {exc}"
+                logger.exception("Falha ao armazenar PDF narrativo (empresa_id=%s).", empresa_id)
+                resultado["situacao_detectada"] = resultado.get("situacao")
+                resultado["situacao"] = "ERRO"
+                resultado["status_processamento"] = "Erro técnico"
+                resultado["erro_tecnico"] = f"Falha ao armazenar PDF: {type(exc).__name__}: {exc}"
+                resultado["mensagem"] = "O PDF da certidão narrativa não pôde ser armazenado. Repita a consulta antes de considerar a operação concluída."
         else:
             resultado["documento_id"] = None
             resultado["pdf_path"] = None
@@ -722,20 +742,24 @@ async def consultar_estadual_todas(tentativas: int = 3) -> dict:
                     resultado = await _consultar_empresa(
                         empresa["id"], tentativas=tentativas, browser=browser
                     )
-                except Exception as exc:
+                except Exception:
                     # Mesmo um erro inesperado de uma empresa não interrompe o lote.
-                    # O erro também é gravado no histórico para não deixar lacunas.
+                    # Detalhes técnicos são registrados no log, não retornados ao browser.
+                    logger.exception("Falha inesperada no lote de certidões (empresa_id=%s).", empresa["id"])
                     try:
-                        resultado = _registrar_falha_empresa(empresa["id"], str(exc))
-                    except Exception as persist_exc:
+                        resultado = _registrar_falha_empresa(
+                            empresa["id"],
+                            "Falha técnica ao consultar a certidão estadual. Consulte o histórico e os logs do servidor.",
+                        )
+                    except Exception:
+                        logger.exception("Falha ao persistir histórico de certidão (empresa_id=%s).", empresa["id"])
                         resultado = {
                             "empresa_id": empresa["id"],
                             "empresa": empresa["razao_social"],
                             "cnpj": formatar_cnpj(empresa["cnpj"]),
                             "situacao": "ERRO",
-                            "status_processamento": "Erro",
-                            "mensagem": str(exc),
-                            "erro_tecnico": f"{exc}; falha ao registrar histórico: {persist_exc}",
+                            "status_processamento": "Erro técnico",
+                            "mensagem": "A consulta falhou e o histórico não pôde ser registrado. Consulte os logs do servidor.",
                             "consulta_registrada": False,
                         }
                 resultado["ordem_lote"] = indice
@@ -824,8 +848,16 @@ def registrar(dados: dict):
 
 
 def obter_pdf_path(path: str) -> Path:
-    base = BASE_DIR.parent.resolve()
-    candidato = (base / path).resolve()
-    if base != candidato and base not in candidato.parents:
+    if not isinstance(path, str) or not path.strip():
         raise ValueError("Caminho de arquivo inválido.")
-    return candidato
+    raw = Path(path).expanduser()
+    candidate = raw.resolve() if raw.is_absolute() else (PROJECT_ROOT / raw).resolve()
+    roots = {
+        LEGACY_CERTIDOES_ROOT,
+        (Path(STORAGE_BASE).expanduser().resolve() / "certidoes").resolve(),
+    }
+    if candidate.suffix.lower() != ".pdf" or not any(
+        candidate == root or root in candidate.parents for root in roots
+    ):
+        raise ValueError("O arquivo solicitado não pertence ao armazenamento de certidões.")
+    return candidate

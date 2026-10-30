@@ -13,9 +13,9 @@ def test_classificacao_conservadora():
     assert analisar_certidao("CERTIDAO DE REGULARIDADE FISCAL", "x.pdf")["situacao"] == "NAO IDENTIFICADO"
 
 
-def test_nome_arquivo_fallback():
-    assert analisar_certidao("CERTIDAO DE REGULARIDADE FISCAL", "RelatorioCertidaoRegularidadeFiscalInscritoRegular.pdf")["situacao"] == "REGULAR"
-    assert analisar_certidao("CERTIDAO DE REGULARIDADE FISCAL", "RelatorioCertidaoRegularidadeFiscalInscritoIrregular.pdf")["situacao"] == "IRREGULAR"
+def test_nome_arquivo_sozinho_nao_comprova_situacao():
+    assert analisar_certidao("CERTIDAO DE REGULARIDADE FISCAL", "RelatorioCertidaoRegularidadeFiscalInscritoRegular.pdf")["situacao"] == "NAO IDENTIFICADO"
+    assert analisar_certidao("CERTIDAO DE REGULARIDADE FISCAL", "RelatorioCertidaoRegularidadeFiscalInscritoIrregular.pdf")["situacao"] == "NAO IDENTIFICADO"
 
 
 def test_leitura_conservadora_narrativa():

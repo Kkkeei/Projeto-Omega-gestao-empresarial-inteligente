@@ -526,6 +526,9 @@ export function ImpostoMensalPage() {
           <button className="button secondary" onClick={() => setReload((value) => value + 1)}>
             <History size={13} /> Atualizar
           </button>
+          <button className="button primary" onClick={openRegisterModal}>
+            <UploadCloud size={13} /> {doc ? 'Substituir guia' : 'Anexar guia'}
+          </button>
           {mensal.status_exibicao !== 'PENDENTE' && (
             <>
               <button className="button secondary" onClick={abrirEdicao}>
@@ -572,7 +575,8 @@ export function ImpostoMensalPage() {
           >
             <UploadCloud size={38} />
             <strong>Arraste a guia do imposto</strong>
-            <span>ou clique para registrar</span>
+            <span>ou clique para selecionar o arquivo</span>
+            <button type="button" className="button primary" onClick={(event) => {event.stopPropagation(); openRegisterModal();}}>Selecionar guia</button>
             <small>PDF, JPG ou PNG (máx. 10MB)</small>
           </div>
 
@@ -631,6 +635,7 @@ export function ImpostoMensalPage() {
 
       {doc && (
         <>
+          <div className="imp-upload-instructions"><strong>Guia anexada nesta competência</strong><span>Você pode visualizar ou baixar o documento atual. Para corrigir ou substituir, use o botão “Substituir guia” no topo.</span></div>
           <div className="panel imp-document-card">
             <div>
               <FileText size={24} />
@@ -755,9 +760,9 @@ export function ImpostoMensalPage() {
                 }}
               >
                 <UploadCloud size={28} />
-                <strong>{file ? file.name : 'Selecione o arquivo da guia'}</strong>
+                <strong>{file ? file.name : 'Arraste a guia do imposto para esta área'}</strong>
                 <span>ou arraste o arquivo aqui</span>
-                <small>PDF, JPG ou PNG (máx. 10MB)</small>
+                <small>PDF, JPG ou PNG · máximo de 10 MB · após selecionar, clique em Processar guia</small>
                 <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onChange={(event) => setFile(event.target.files?.[0] || null)} />
               </div>
             ) : (
@@ -780,7 +785,7 @@ export function ImpostoMensalPage() {
               disabled={busy || (modo === 'GUIA' && !file)}
               onClick={() => modo === 'GUIA' ? void upload() : void saveSituation(modo)}
             >
-              {busy ? 'Processando...' : 'Salvar'}
+              {busy ? 'Processando...' : modo === 'GUIA' ? 'Processar guia e conferir' : 'Salvar situação'}
             </button>
           </div>
         </Modal>

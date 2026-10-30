@@ -9,6 +9,7 @@ import './Dctfweb.css';
 const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function competenciaAnterior(){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return {ano:d.getFullYear(),mes:d.getMonth()+1};}
 function dinheiro(v:number|null|undefined){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));}
+function dataBr(v?:string|null){if(!v)return 'Não informado';const p=v.slice(0,10).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:'Não informado';}
 function regimeKey(v:string){return v.toUpperCase().includes('REAL')?'LUCRO REAL':'LUCRO PRESUMIDO';}
 function statusTexto(o:ObrigacaoDctfweb){if(o.status==='PENDENTE')return 'Pendente';if(o.status==='CREDOR')return 'Credor';if(o.status==='SEM_MOVIMENTACAO')return '—';if(o.status==='PAGO')return `Pago · ${dinheiro(o.valor)}`;return dinheiro(o.valor);}
 function statusClasse(o:ObrigacaoDctfweb){return o.status==='PENDENTE'?'pending':o.status==='CREDOR'?'credit':o.status==='SEM_MOVIMENTACAO'?'no-movement':o.status==='PAGO'?'paid':'reported';}
@@ -17,7 +18,7 @@ export function DctfwebPage(){
  const init=competenciaAnterior();const [ano,setAno]=useState(init.ano);const [mes,setMes]=useState(init.mes);
  const [data,setData]=useState<DashboardDctfweb|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState('');
  const [busca,setBusca]=useState('');const [regime,setRegime]=useState('TODOS');const [situacao,setSituacao]=useState('TODAS');const [somentePendencias,setSomentePendencias]=useState(false);
- const [conferencia,setConferencia]=useState(false);const navigate=useNavigate();
+ const [conferencia,setConferencia]=useState(false);const [pendenciasAbertas,setPendenciasAbertas]=useState(false);const navigate=useNavigate();
  async function load(){setLoading(true);setError('');setData(null);try{setData(await obterDashboardDctfweb(ano,mes));}catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar a DCTFWeb.');}finally{setLoading(false);}}
  useEffect(()=>{void load();},[ano,mes]);
  function mudarMes(delta:number){const d=new Date(ano,mes-1+delta,1);setAno(d.getFullYear());setMes(d.getMonth()+1);setConferencia(false);}
@@ -32,7 +33,7 @@ export function DctfwebPage(){
  if(loading&&!data)return <div className="page"><Loading/></div>;
  if(error&&!data)return <div className="page"><ErrorState message={error} onRetry={()=>void load()}/></div>;
  if(!data)return null;
- const i=data.indicadores;const semObrigacoes=i.total_obrigacoes===0;
+ const i=data.indicadores;const semObrigacoes=i.total_obrigacoes===0;const pendencias=data.empresas.flatMap(e=>e.obrigacoes.filter(o=>!o.finalizada).map(o=>({empresa:e,obrigacao:o})));
  return <div className="page dctf-page">
   <div className="page-heading dctf-heading"><div><span className="eyebrow">FECHAMENTO FISCAL FEDERAL</span><h2><ClipboardCheck size={23}/> DCTFWeb</h2><p>Confira os tributos federais de empresas do Lucro Presumido e Lucro Real antes da próxima etapa.</p></div><button className="button secondary" onClick={()=>void load()} disabled={loading}><RefreshCw size={14}/> Atualizar</button></div>
   <div className="dctf-toolbar">
@@ -46,8 +47,12 @@ export function DctfwebPage(){
    <div className="dctf-close-main"><div className="dctf-close-title"><span className="dctf-state-icon">{semObrigacoes?<AlertTriangle size={19}/>:i.liberada?<CheckCircle2 size={19}/>:<LockKeyhole size={19}/>}</span><div><span className="eyebrow">FECHAMENTO DA DCTFWEB</span><h3>{semObrigacoes?'Nenhuma obrigação encontrada':i.liberada?'Fechamento concluído':'Fechamento em andamento'}</h3><p>{semObrigacoes?'Não há obrigações federais elegíveis para esta competência. Confira os vínculos e a vigência dos tributos.':i.liberada?'Todas as obrigações esperadas foram finalizadas. A competência está liberada para conferência interna.':`${i.pendentes} obrigação(ões) pendente(s) em ${i.empresas_com_pendencias} empresa(s).`}</p></div></div>
     <div className="dctf-progress-label"><strong>{i.finalizadas} / {i.total_obrigacoes}</strong><span>{i.percentual}%</span></div><div className="dctf-progress"><span style={{width:`${i.percentual}%`}}/></div>
    </div>
-   <div className="dctf-close-action">{semObrigacoes?<><AlertTriangle size={24}/><strong>Sem liberação automática</strong><span>É necessário existir ao menos uma obrigação esperada.</span></>:i.liberada?<><ShieldCheck size={25}/><strong>Pronta para conferência</strong><span>Esta etapa não transmite a declaração à Receita Federal.</span><button className="button primary" onClick={()=>setConferencia(v=>!v)}><ClipboardCheck size={15}/>{conferencia?'Ocultar conferência':'Conferir DCTFWeb'}</button></>:<><LockKeyhole size={24}/><strong>DCTFWeb bloqueada</strong><span>Existem obrigações ainda não finalizadas.</span><button className="button secondary" onClick={()=>{setSomentePendencias(true);setSituacao('PENDENTE');}}><AlertTriangle size={14}/> Ver pendências</button></>}</div>
+   <div className="dctf-close-action">{semObrigacoes?<><AlertTriangle size={24}/><strong>Sem liberação automática</strong><span>É necessário existir ao menos uma obrigação esperada.</span></>:i.liberada?<><ShieldCheck size={25}/><strong>Pronta para conferência</strong><span>Esta etapa não transmite a declaração à Receita Federal.</span><button className="button primary" onClick={()=>setConferencia(v=>!v)}><ClipboardCheck size={15}/>{conferencia?'Ocultar conferência':'Conferir DCTFWeb'}</button></>:<><LockKeyhole size={24}/><strong>DCTFWeb bloqueada</strong><span>Existem obrigações ainda não finalizadas.</span><button className="button secondary" onClick={()=>setPendenciasAbertas(v=>!v)}><AlertTriangle size={14}/> {pendenciasAbertas?'Ocultar pendências':'Ver pendências'}</button></>}</div>
   </section>
+  {pendenciasAbertas&&<section className="dctf-pending-panel panel">
+   <div className="dctf-pending-head"><div><strong>Pendências que impedem o fechamento</strong><p>{pendencias.length} obrigação(ões) precisam de ação nesta competência. Selecione uma para abrir o lançamento correspondente em Impostos.</p></div><button className="button ghost" onClick={()=>setPendenciasAbertas(false)}>Fechar</button></div>
+   {pendencias.length===0?<div className="dctf-empty">Não há pendências nesta competência.</div>:<div className="dctf-pending-list">{pendencias.map(({empresa,obrigacao:o})=><div className="dctf-pending-item" key={empresa.id+"-"+o.tributo_id}><div className="dctf-pending-icon"><AlertTriangle size={16}/></div><div className="dctf-pending-info"><strong>{empresa.razao_social}</strong><span>{o.nome}{o.sigla?" · "+o.sigla:""}</span><small>{o.motivo_pendencia||"Obrigação ainda não finalizada."}</small><small>Vencimento: {dataBr(o.vencimento)} · Valor: {o.valor==null?"Não informado":dinheiro(o.valor)}</small></div><button className="button primary" onClick={()=>navigate("/impostos/empresa/"+empresa.id+"/tributo/"+o.tributo_id+"?ano="+ano+"&mes="+mes)}>Resolver no Impostos <ChevronRight size={14}/></button></div>)}</div>}
+  </section>}
   {conferencia&&i.liberada&&<section className="dctf-review panel"><div><CheckCircle2 size={20}/><div><strong>Conferência interna — {data.competencia.label}</strong><p>Os valores abaixo são lidos da aba Impostos. Revise-os no sistema antes de qualquer transmissão oficial.</p></div></div><button className="button secondary" onClick={()=>setConferencia(false)}>Fechar conferência</button></section>}
   <div className="dctf-kpis">
    <div className="dctf-kpi"><span className="dctf-kpi-icon"><Building2 size={17}/></span><div><small>Empresas</small><strong>{i.total_empresas}</strong><span>Lucro Presumido e Real</span></div></div>

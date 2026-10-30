@@ -1,4 +1,4 @@
-import {API_URL,apiFetch} from './client';
+import {API_URL,apiFetch,apiFetchBlob} from './client';
 
 export type NfseContext={
   origem:'PJ'|'PF';
@@ -20,7 +20,7 @@ export type NfseContext={
 export type NfseDocumento={
   id:number;origem:'PJ'|'PF';entidade_id:number;provider:string;nsu?:number|null;schema?:string|null;
   chave_acesso?:string|null;numero?:string|null;data_emissao?:string|null;valor?:number|null;situacao:string;xml_path?:string|null;
-  criado_em:string;atualizado_em:string;xml?:string|null;resposta_json?:string|null;
+  criado_em:string;atualizado_em:string;xml?:string|null;resposta_json?:string|null;direcao?:'PRESTADA'|'TOMADA'|'NAO_IDENTIFICADA';
 };
 
 export const contextoNfse=(origem:'PJ'|'PF',entidadeId:number)=>
@@ -28,8 +28,8 @@ export const contextoNfse=(origem:'PJ'|'PF',entidadeId:number)=>
 
 export const detalheNfse=(id:number)=>apiFetch<NfseDocumento>(`/api/v1/nfse/${id}`);
 
-export const listarNfse=(origem?:'PJ'|'PF',entidadeId?:number,limit=500,offset=0)=>{
-  const q=new URLSearchParams(); if(origem)q.set('origem',origem); if(entidadeId)q.set('entidade_id',String(entidadeId)); q.set('limit',String(Math.min(500,Math.max(1,limit)))); q.set('offset',String(Math.max(0,offset)));
+export const listarNfse=(origem?:'PJ'|'PF',entidadeId?:number,limit=500,offset=0,competencia?:string)=>{
+  const q=new URLSearchParams(); if(origem)q.set('origem',origem); if(entidadeId)q.set('entidade_id',String(entidadeId)); if(competencia)q.set('competencia',competencia); q.set('limit',String(Math.min(500,Math.max(1,limit)))); q.set('offset',String(Math.max(0,offset)));
   const suffix=q.toString()?`?${q.toString()}`:'';
   return apiFetch<{total:number;nfse:NfseDocumento[]}>(`/api/v1/nfse${suffix}`);
 };
@@ -61,4 +61,44 @@ export async function baixarNfsePdf(id:number){
   const response=await fetch(`${API_URL}/api/v1/nfse/${id}/pdf`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
   if(!response.ok){let message='Não foi possível gerar o PDF desta NFS-e.';try{const body=await response.json();if(typeof body?.detail==='string')message=body.detail}catch{}throw new Error(message)}
   return {blob:await response.blob(),name:response.headers.get('content-disposition')||`nfse-${id}.pdf`};
+}
+
+
+export type NfseEvento={id:number;nfse_id:number;tipo_evento:string;descricao:string;data_evento?:string|null;origem:string;criado_em:string};
+export type NfseConfig={origem:'PJ'|'PF';entidade_id:number;sincronizacao_automatica:boolean;frequencia_horas:number;horario:string;proxima_execucao_em?:string|null};
+
+export const obterConfigNfse=(origem:'PJ'|'PF',entidadeId:number)=>
+  apiFetch<NfseConfig>(`/api/v1/nfse/configuracao?origem=${origem}&entidade_id=${entidadeId}`);
+
+export const salvarConfigNfse=(config:NfseConfig)=>
+  apiFetch<NfseConfig>('/api/v1/nfse/configuracao',{method:'PUT',body:JSON.stringify(config)});
+
+async function uploadNfseFile(path:string,origem:'PJ'|'PF',entidadeId:number,arquivo:File){
+  const form=new FormData();form.append('origem',origem);form.append('entidade_id',String(entidadeId));form.append('arquivo',arquivo);
+  return apiFetch<Record<string,unknown>>(path,{method:'POST',body:form,timeoutMs:60000});
+}
+export const importarXmlNfse=(origem:'PJ'|'PF',entidadeId:number,arquivo:File)=>
+  uploadNfseFile('/api/v1/nfse/importar-xml',origem,entidadeId,arquivo);
+export const importarEmlNfse=(origem:'PJ'|'PF',entidadeId:number,arquivo:File)=>
+  uploadNfseFile('/api/v1/nfse/importar-eml',origem,entidadeId,arquivo);
+
+export const listarEventosNfse=(id:number)=>
+  apiFetch<{total:number;eventos:NfseEvento[]}>(`/api/v1/nfse/${id}/eventos`);
+
+export const consultarEventosNfse=(id:number)=>
+  apiFetch<Record<string,number|boolean>>(`/api/v1/nfse/${id}/eventos/consultar-adn`,{method:'POST'});
+
+export const salvarLancamentoNfse=(id:number,data:Record<string,unknown>)=>
+  apiFetch<Record<string,unknown>>(`/api/v1/nfse/${id}/lancamento`,{method:'POST',body:JSON.stringify(data)});
+
+export async function exportarExcelNfse(competencia:string,origem?:'PJ'|'PF',entidadeId?:number){
+  const query=new URLSearchParams({competencia});if(origem)query.set('origem',origem);if(entidadeId)query.set('entidade_id',String(entidadeId));
+  return apiFetchBlob(`/api/v1/nfse/exportar/excel?${query.toString()}`);
+}
+
+export async function exportarZipXmlNfse(ids:number[]){
+  const {blob}=await apiFetchBlob('/api/v1/nfse/exportar/xml-zip',{
+    method:'POST',body:JSON.stringify({nfse_ids:ids}),
+  });
+  return blob;
 }

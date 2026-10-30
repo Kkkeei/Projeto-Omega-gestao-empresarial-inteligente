@@ -7,36 +7,41 @@ from app.db.database import conectar_banco
 from app.modules.impostos.repository import competencia_iso, competencia_label
 
 REGIMES_DCTFWEB = {"LUCRO PRESUMIDO", "LUCRO REAL"}
-STATUS_FINALIZADOS = {
-    "A_PAGAR", "A_VENCER", "EM_ATRASO", "PAGO", "CREDOR",
-    "SEM_MOVIMENTACAO", "SEM_MOVIMENTO", "GUIA_REGISTRADA",
-}
 STATUS_SEM_MOVIMENTACAO = {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO"}
+STATUS_COM_GUIA = {"A_PAGAR", "A_VENCER", "EM_ATRASO", "PAGO", "GUIA_REGISTRADA"}
 
 
 def _normalizar_regime(valor: Any) -> str:
     return " ".join(str(valor or "").strip().upper().split())
 
 
-def _status_obrigacao(status: Any, registro_existe: bool) -> tuple[str, bool]:
-    """Retorna status sem confundir ausência de registro com ausência de movimento."""
+def _status_obrigacao(
+    status: Any,
+    registro_existe: bool,
+    guia_confirmada: bool = False,
+) -> tuple[str, bool]:
+    """Somente evidências fiscais concluídas liberam uma obrigação.
+
+    A existência de um registro mensal ou a digitação de valor/vencimento
+    não significa que a guia foi anexada e confirmada. Para o fechamento,
+    aceitamos guia confirmada, credor ou sem movimentação.
+    """
     chave = str(status or "").strip().upper()
-    if not registro_existe or not chave or chave == "PENDENTE":
+    if not registro_existe:
         return "PENDENTE", False
-    if chave in {"SEM_MOVIMENTACAO", "SEM_MOVIMENTO"}:
+    if chave in STATUS_SEM_MOVIMENTACAO:
         return "SEM_MOVIMENTACAO", True
     if chave == "CREDOR":
         return "CREDOR", True
-    if chave in STATUS_FINALIZADOS:
+    if guia_confirmada and chave in STATUS_COM_GUIA:
         return ("PAGO" if chave == "PAGO" else "VALOR_INFORMADO"), True
-    # Estados desconhecidos não liberam o fechamento silenciosamente.
     return "PENDENTE", False
 
 
 def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
     hoje = date.today()
-    ano = ano or hoje.year
-    mes = mes or hoje.month
+    ano = hoje.year if ano is None else ano
+    mes = hoje.month if mes is None else mes
     if not 2000 <= ano <= 2100 or not 1 <= mes <= 12:
         raise ValueError("Competência inválida.")
 
@@ -49,7 +54,13 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
                    e.regime_tributario, ei.tributo_id, ei.obrigatorio,
                    t.nome AS tributo_nome, t.sigla AS tributo_sigla, t.esfera,
                    im.id AS mensal_id, im.status AS status_mensal, im.valor,
-                   im.numero_documento
+                   im.numero_documento, im.data_vencimento, im.data_pagamento,
+                   CASE WHEN EXISTS (
+                       SELECT 1
+                         FROM documentos_impostos di
+                        WHERE di.imposto_mensal_id = im.id
+                          AND UPPER(COALESCE(di.status_documento, '')) = 'CONFIRMADO'
+                   ) THEN 1 ELSE 0 END AS guia_confirmada
               FROM empresas e
               JOIN empresa_impostos ei ON ei.empresa_id = e.id
               JOIN tributos t ON t.id = ei.tributo_id
@@ -61,6 +72,7 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
              WHERE e.ativo = 1
                AND UPPER(COALESCE(t.esfera, '')) = 'FEDERAL'
                AND UPPER(COALESCE(e.regime_tributario, '')) IN ('LUCRO PRESUMIDO', 'LUCRO REAL')
+               AND COALESCE(ei.obrigatorio, 1) = 1
                AND (ei.vigencia_inicio IS NULL OR substr(ei.vigencia_inicio, 1, 7) <= substr(?, 1, 7))
                AND (ei.vigencia_fim IS NULL OR substr(ei.vigencia_fim, 1, 7) >= substr(?, 1, 7))
                AND (ei.status = 'ATIVO' OR ei.vigencia_fim IS NOT NULL)
@@ -76,7 +88,7 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
             regime = _normalizar_regime(item.get("regime_tributario"))
             if regime not in REGIMES_DCTFWEB:
                 continue
-            # A esfera Federal é a fonte da seleção; cada vínculo vigente é uma obrigação esperada.
+
             tributo_id = int(item["tributo_id"])
             tributos[tributo_id] = {
                 "id": tributo_id,
@@ -95,7 +107,11 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
                     "obrigacoes": [],
                 },
             )
-            status, finalizada = _status_obrigacao(item.get("status_mensal"), item.get("mensal_id") is not None)
+            status, finalizada = _status_obrigacao(
+                item.get("status_mensal"),
+                item.get("mensal_id") is not None,
+                bool(item.get("guia_confirmada")),
+            )
             empresa["obrigacoes"].append({
                 "tributo_id": tributo_id,
                 "nome": item["tributo_nome"],
@@ -103,6 +119,11 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
                 "status": status,
                 "valor": float(item["valor"]) if item.get("valor") is not None else None,
                 "numero_documento": item.get("numero_documento"),
+                "vencimento": item.get("data_vencimento"),
+                "data_pagamento": item.get("data_pagamento"),
+                "guia_confirmada": bool(item.get("guia_confirmada")),
+                "status_origem": item.get("status_mensal"),
+                "motivo_pendencia": (None if finalizada else ("Não existe registro mensal de apuração nesta competência." if item.get("mensal_id") is None else "O registro existe, mas falta confirmar a guia ou informar uma situação de credor/sem movimentação.")),
                 "finalizada": finalizada,
             })
 
@@ -120,7 +141,6 @@ def dashboard(ano: int | None = None, mes: int | None = None) -> dict[str, Any]:
 
         pendentes = total_obrigacoes - finalizadas
         percentual = round(finalizadas / total_obrigacoes * 100, 1) if total_obrigacoes else 0
-        # Zero obrigações é estado vazio, nunca uma liberação automática.
         liberada = total_obrigacoes > 0 and pendentes == 0
         return {
             "competencia": {"ano": ano, "mes": mes, "label": competencia_label(ano, mes)},

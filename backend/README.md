@@ -1,14 +1,12 @@
-# ÔMEGA — Backend MVP
+# ÔMEGA — Backend
 
-Backend inicial funcional da Plataforma ÔMEGA, construído com FastAPI + SQLite3 puro.
+Backend da Plataforma ÔMEGA construído com FastAPI e SQLite3. A aplicação usa autenticação por bearer token e rotas versionadas em `/api/v1`.
 
-## Decisões
-- Sem login/usuários na primeira versão.
-- Sem SQLAlchemy.
-- Sem Alembic.
-- Histórico funcional sem sobrescrever consultas/documentos.
-- API versionada em `/api/v1`.
-- CORS preparado para frontend Vite em `localhost:5173`.
+## Considerações arquiteturais
+- SQLite é o armazenamento implementado/documentado nesta versão; não assuma PostgreSQL sem validar a adaptação.
+- O histórico de certidões e documentos preserva snapshots das consultas.
+- Os caminhos relativos de banco e storage são resolvidos contra a pasta do backend, não contra o diretório de execução.
+- Em produção, o startup valida segredo JWT, chave Fernet dos certificados, CORS e a existência de um administrador ativo.
 
 ## Executar
 
@@ -49,7 +47,7 @@ As consultas de certidões reais, Playwright e outras integrações externas dev
 
 ## Certidão Estadual — SEFAZ-PE
 
-A Plataforma ÔMEGA possui consulta integrada à Certidão de Regularidade Fiscal da SEFAZ Pernambuco (e-Fisco) via Playwright.
+A Plataforma ÔMEGA possui um fluxo de consulta automatizada à Certidão de Regularidade Fiscal da SEFAZ Pernambuco (e-Fisco) via Playwright. A compatibilidade com o portal deve ser confirmada com teste real antes de uso operacional.
 
 ### Instalação
 
@@ -62,7 +60,7 @@ playwright install chromium
 
 `POST /api/v1/certidoes/estadual/consultar/{empresa_id}`
 
-O endpoint consulta o CNPJ cadastrado na empresa, emite a certidão, preserva o PDF em `storage/certidoes/estadual/{cnpj}/{ano}/`, analisa a situação e grava a consulta e seu histórico.
+O endpoint consulta o CNPJ cadastrado na empresa, tenta emitir e preservar o PDF no storage configurado, analisa o documento e grava a consulta e o histórico. O armazenamento só é considerado válido quando o caminho está dentro da área de certidões permitida.
 
 ### Visualização de PDF
 
@@ -78,3 +76,8 @@ O endpoint consulta o CNPJ cadastrado na empresa, emite a certidão, preserva o 
 - `ERRO`
 
 `IRREGULAR` representa uma situação fiscal retornada pela certidão e não um erro técnico.
+
+
+## Configuração para produção
+
+Veja [docs/PRONTIDAO_PRODUCAO.md](../docs/PRONTIDAO_PRODUCAO.md). Defina chaves próprias em `.env`; não use exemplos como segredos reais. A emissão federal e narrativa ainda utilizam automação visual e precisam de sessão gráfica ativa, navegador e validação com certificado/portal autorizado. Configure SMTP real para habilitar a recuperação de senha por e-mail.

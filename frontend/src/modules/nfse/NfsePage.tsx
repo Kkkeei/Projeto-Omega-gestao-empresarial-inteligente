@@ -1,17 +1,17 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {AlertTriangle,Building2,CheckCircle2,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X} from 'lucide-react';
+import {AlertTriangle,ArrowLeft,Building2,CalendarDays,CheckCircle2,ChevronLeft,ChevronRight,Download,Eye,FileCode2,KeyRound,RefreshCw,Search,ShieldCheck,Smartphone,Wifi,X,Upload,FileSpreadsheet} from 'lucide-react';
 import {listarEmpresasParaSelecao} from '../../services/api/certidoes';
 import {listarPessoasFisicas,type PessoaFisica} from '../../services/api/certificados';
 import {bridgeCertificates} from '../../services/api/certificados';
-import {bridgeFetchNfseDfe,consultarNfseA1,contextoNfse,detalheNfse,importarNfseA3,listarNfse,baixarNfsePdf,type NfseContext,type NfseDocumento} from '../../services/api/nfse';
+import {bridgeFetchNfseDfe,consultarNfseA1,contextoNfse,detalheNfse,importarNfseA3,listarNfse,baixarNfsePdf,importarXmlNfse,importarEmlNfse,exportarExcelNfse,type NfseContext,type NfseDocumento} from '../../services/api/nfse';
 import type {Empresa} from '../../types';
 
 const ADN_BASE=()=> (import.meta.env.VITE_OMEGA_NFSE_ADN_URL||'https://adn.nfse.gov.br/contribuintes').replace(/\/$/,'');
-const currentMonth=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`};
+const previousMonth=()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
 function csvCell(value:unknown){return `\"${String(value??'').replace(/\"/g,'\"\"')}\"`;}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1500);}
 function crc32(bytes:Uint8Array){let c=0xffffffff;for(const b of bytes){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
-function zipStore(files:Array<{name:string;data:Uint8Array}>){const enc=new TextEncoder();const local:Uint8Array[]=[];const central:Uint8Array[]=[];let offset=0;for(const f of files){const name=enc.encode(f.name),crc=crc32(f.data);const h=new Uint8Array(30+name.length);const v=new DataView(h.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(8,0,true);v.setUint32(14,crc,true);v.setUint32(18,f.data.length,true);v.setUint32(22,f.data.length,true);v.setUint16(26,name.length,true);h.set(name,30);local.push(h,f.data);const c=new Uint8Array(46+name.length);const cv=new DataView(c.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);cv.setUint32(16,crc,true);cv.setUint32(20,f.data.length,true);cv.setUint32(24,f.data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);c.set(name,46);central.push(c);offset+=h.length+f.data.length;}const centralSize=central.reduce((n,a)=>n+a.length,0);const end=new Uint8Array(22);const ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,centralSize,true);ev.setUint32(16,offset,true);return new Blob([...local,...central,end],{type:'application/zip'});}
+function zipStore(files:Array<{name:string;data:Uint8Array}>){const enc=new TextEncoder();const local:Uint8Array[]=[];const central:Uint8Array[]=[];let offset=0;for(const f of files){const name=enc.encode(f.name),crc=crc32(f.data);const h=new Uint8Array(30+name.length);const v=new DataView(h.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(8,0,true);v.setUint32(14,crc,true);v.setUint32(18,f.data.length,true);v.setUint32(22,f.data.length,true);v.setUint16(26,name.length,true);h.set(name,30);local.push(h,f.data);const c=new Uint8Array(46+name.length);const cv=new DataView(c.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);cv.setUint32(16,crc,true);cv.setUint32(20,f.data.length,true);cv.setUint32(24,f.data.length,true);cv.setUint16(28,name.length,true);cv.setUint32(42,offset,true);c.set(name,46);central.push(c);offset+=h.length+f.data.length;}const centralSize=central.reduce((n,a)=>n+a.length,0);const end=new Uint8Array(22);const ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,centralSize,true);ev.setUint32(16,offset,true);return new Blob([...local,...central,end].map((part)=>{const copy=new ArrayBuffer(part.byteLength);new Uint8Array(copy).set(part);return copy;}),{type:'application/zip'});}
 function fmtDate(value?:string|null){
   if(!value)return '—';
   const raw=String(value);
@@ -20,7 +20,7 @@ function fmtDate(value?:string|null){
   return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('pt-BR');
 }
 function money(value?:number|null){return value==null||!Number.isFinite(Number(value))?'—':Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
-async function listarTodasNfse(origem?:'PJ'|'PF',entidadeId?:number){const all:NfseDocumento[]=[];for(let offset=0;offset<100000;offset+=500){const page=await listarNfse(origem,entidadeId,500,offset);all.push(...page.nfse);if(page.nfse.length<500)break;}return all;}
+async function listarTodasNfse(origem?:'PJ'|'PF',entidadeId?:number,competencia=previousMonth()){const all:NfseDocumento[]=[];for(let offset=0;offset<100000;offset+=500){const page=await listarNfse(origem,entidadeId,500,offset,competencia);all.push(...page.nfse);if(page.nfse.length<500)break;}return all;}
 
 export function NfsePage(){
   const [empresas,setEmpresas]=useState<Empresa[]>([]);
@@ -28,14 +28,16 @@ export function NfsePage(){
   const [officeDocs,setOfficeDocs]=useState<NfseDocumento[]>([]);
   const [officeSearch,setOfficeSearch]=useState('');
   const [officeStatus,setOfficeStatus]=useState<'TODAS'|'COM'|'SEM'>('TODAS');
-  const [competence,setCompetence]=useState(currentMonth);
+  const [competence,setCompetence]=useState(previousMonth);
   const [selectedDocs,setSelectedDocs]=useState<number[]>([]);
+  const [direction,setDirection]=useState<'PRESTADA'|'TOMADA'|'TODAS'>('TODAS');
   const [origin,setOrigin]=useState<'PJ'|'PF'>('PJ');
   const [entityId,setEntityId]=useState<number|''>('');
   const [context,setContext]=useState<NfseContext|null>(null);
   const [docs,setDocs]=useState<NfseDocumento[]>([]);
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);
+  const [syncProgress,setSyncProgress]=useState('');
   const [bridgeLoading,setBridgeLoading]=useState(false);
   const [bridgeReady,setBridgeReady]=useState(false);
   const [message,setMessage]=useState('');
@@ -55,8 +57,9 @@ export function NfsePage(){
     const [empresasResult, pessoasResult, documentosResult] = await Promise.allSettled([
       listarEmpresasParaSelecao(),
       listarPessoasFisicas(),
-      listarTodasNfse(),
+      listarTodasNfse(undefined,undefined,previousMonth()),
     ]);
+    setCompetence(previousMonth());
 
     let empresasCarregadas: Empresa[] = [];
     let pessoasCarregadas: PessoaFisica[] = [];
@@ -97,7 +100,7 @@ export function NfsePage(){
     if (erros.length) {
       setError(`Atualização parcial. ${erros.join(' | ')}`);
     } else {
-      setMessage(`Titulares atualizados: ${empresasCarregadas.length} empresa(s) e ${pessoasCarregadas.length} pessoa(s) física(s).`);
+      setMessage(`Painel sincronizado: ${empresasCarregadas.length} empresa(s) e ${pessoasCarregadas.length} pessoa(s) física(s) carregadas.`);
     }
     setLoading(false);
   }
@@ -107,7 +110,7 @@ export function NfsePage(){
     setError('');setMessage('');setContext(null);setBridgeReady(false);setSelectedDoc(null);setSelectedDocs([]);
     const [ctxResult,listResult]=await Promise.allSettled([
       contextoNfse(currentOrigin,id),
-      listarTodasNfse(currentOrigin,id).then(nfse=>({nfse})),
+      listarTodasNfse(currentOrigin,id,competence).then(nfse=>({nfse})),
     ]);
     if(sequence!==requestSequence.current)return;
     if(listResult.status==='fulfilled')setDocs(listResult.value.nfse);
@@ -118,13 +121,13 @@ export function NfsePage(){
   }
 
   useEffect(()=>{void loadBase();},[]);
-  useEffect(()=>{if(typeof entityId==='number')void loadContext(entityId,origin);else{setContext(null);setDocs([]);}},[entityId,origin]);
+  useEffect(()=>{if(typeof entityId==='number')void loadContext(entityId,origin);else{setContext(null);setDocs([]);}},[entityId,origin,competence]);
 
   const entities=origin==='PJ'?empresas:pessoas;
   const filteredDocs=useMemo(()=>{
     const q=search.trim().toLowerCase();
-    return docs.filter(d=>(!competence||String(d.data_emissao||'').startsWith(competence))&&(!q||[d.chave_acesso,d.numero,d.schema,d.situacao,String(d.nsu??'')].some(v=>String(v||'').toLowerCase().includes(q))));
-  },[docs,search,competence]);
+    return docs.filter(d=>(direction==='TODAS'||d.direcao===direction)&&(!q||[d.chave_acesso,d.numero,d.schema,d.situacao,String(d.nsu??'')].some(v=>String(v||'').toLowerCase().includes(q))));
+  },[docs,search,direction]);
 
   function switchOrigin(next:'PJ'|'PF'){
     requestSequence.current++;
@@ -146,13 +149,34 @@ export function NfsePage(){
     finally{setBridgeLoading(false);}
   }
 
+  async function sincronizarTodas(){
+    if(busy||loading)return;
+    setBusy(true);setError('');setMessage('');setSyncProgress('Preparando sincronização...');
+    let concluidas=0;let documentos=0;let semCertificado=0;let a3=0;const falhas:string[]=[];
+    const titulares=[...empresas.map(e=>({origem:'PJ' as const,id:e.id,nome:e.razao_social})),...pessoas.map(p=>({origem:'PF' as const,id:p.id,nome:p.nome}))];
+    try{
+      for(let i=0;i<titulares.length;i++){
+        const titular=titulares[i];setSyncProgress('Sincronizando '+titular.nome+' ('+(i+1)+'/'+titulares.length+')...');
+        try{
+          const ctx=await contextoNfse(titular.origem,titular.id);
+          if(!ctx.certificado){semCertificado++;continue;}
+          if(ctx.certificado.tipo==='A3'){a3++;continue;}
+          const result=await consultarNfseA1(titular.origem,titular.id);
+          documentos+=Number(result.documentos_importados||0);concluidas++;
+        }catch(e){falhas.push(titular.nome+': '+(e instanceof Error?e.message:'falha na consulta'));}
+      }
+      const refreshed=await listarTodasNfse(undefined,undefined,competence);setOfficeDocs(refreshed);
+      setMessage('Sincronização concluída. '+concluidas+' titular(es) consultado(s), '+documentos+' NFS-e nova(s) importada(s), '+semCertificado+' sem certificado e '+a3+' com A3 (exigem cartão/token e sincronização individual).'+(falhas.length?' Falhas: '+falhas.join(' | '):''));
+      if(falhas.length)setError('Alguns titulares não puderam ser sincronizados. Consulte o resumo acima.');
+    }catch(e){setError(e instanceof Error?e.message:'Falha ao atualizar o painel após a sincronização.');}finally{setSyncProgress('');setBusy(false);}
+  }
   async function consultar(){
     if(typeof entityId!=='number'){
       setError('Selecione uma empresa ou pessoa física antes de consultar.');
       return;
     }
     if(!context){
-      setError('O contexto do titular ainda não foi carregado. Clique em Atualizar titulares e selecione novamente.');
+      setError('O contexto do titular ainda não foi carregado. Volte ao painel e selecione novamente.');
       return;
     }
     if(!context.certificado){
@@ -174,8 +198,34 @@ export function NfsePage(){
         setMessage(`${saved.documentos_importados} NFS-e importada(s) pelo A3. NSU atual: ${saved.ultimo_nsu??context.ultimo_nsu}.`);
       }
       await loadContext(entityId,origin);
-      const refreshed=await listarTodasNfse();setOfficeDocs(refreshed);
+      const refreshed=await listarTodasNfse(undefined,undefined,competence);setOfficeDocs(refreshed);
     }catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar a NFS-e.');}
+    finally{setBusy(false);}
+  }
+
+
+  async function importFile(file:File|undefined,kind:'XML'|'EML'){
+    if(!file)return;
+    if(typeof entityId!=='number'){setError('Selecione o titular antes de importar.');return;}
+    setBusy(true);setError('');setMessage('');
+    try{
+      const result=kind==='XML'
+        ?await importarXmlNfse(origin,entityId,file)
+        :await importarEmlNfse(origin,entityId,file);
+      const count=Number((result as any).importados??(result as any).documentos_importados??0);
+      setMessage(`${kind} importado. ${count} documento(s) novo(s) registrado(s).`);
+      await loadContext(entityId,origin);
+      setOfficeDocs(await listarTodasNfse(undefined,undefined,competence));
+    }catch(e){setError(e instanceof Error?e.message:`Falha ao importar ${kind}.`);}
+    finally{setBusy(false);}
+  }
+
+  async function downloadExcel(){
+    setBusy(true);setError('');
+    try{
+      const result=await exportarExcelNfse(competence,typeof entityId==='number'?origin:undefined,typeof entityId==='number'?entityId:undefined);
+      const url=URL.createObjectURL(result.blob);const a=document.createElement('a');a.href=url;a.download=`nfse-${competence}.xlsx`;document.body.appendChild(a);a.click();a.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){setError(e instanceof Error?e.message:'Não foi possível exportar o Excel.');}
     finally{setBusy(false);}
   }
 
@@ -211,20 +261,26 @@ export function NfsePage(){
   const selectedName=origin==='PJ'?(empresas.find(x=>x.id===entityId)?.razao_social||'Empresa'):(pessoas.find(x=>x.id===entityId)?.nome||'Pessoa Física');
 
   return <div className="page nfse-page">
-    <div className="page-heading"><div><span className="eyebrow">DOCUMENTOS FISCAIS DE SERVIÇO</span><h2>NFS-e</h2><p>Consulte e importe documentos distribuídos pelo ambiente nacional usando o certificado cadastrado no ÔMEGA.</p></div><div className="actions">{typeof entityId==='number'&&<button className="button secondary" onClick={()=>{requestSequence.current++;setEntityId('');setContext(null);setDocs([]);setSelectedDocs([]);setMessage('');setError('');void listarTodasNfse().then(setOfficeDocs).catch(()=>{});}}>Voltar ao painel</button>}<button className="button secondary" onClick={()=>void loadBase()} disabled={loading||busy}><RefreshCw size={15}/> Atualizar titulares</button></div></div>
-    {error&&<div className="form-error"><AlertTriangle size={15}/>{error}</div>}{message&&<div className="cert-success"><CheckCircle2 size={15}/>{message}</div>}
+    <div className="page-heading"><div><span className="eyebrow">DOCUMENTOS FISCAIS DE SERVIÇO</span><h2>NFS-e</h2><p>Consulte e importe documentos distribuídos pelo ambiente nacional usando o certificado cadastrado no ÔMEGA.</p></div><div className="actions"><button className="button primary" onClick={()=>void sincronizarTodas()} disabled={loading||busy||(!empresas.length&&!pessoas.length)}><RefreshCw size={15}/> {busy?'Sincronizando...':'Sincronizar NFS-e'}</button></div></div>
+    {syncProgress&&<div className="nfse-sync-progress"><RefreshCw size={15}/>{syncProgress}</div>}{error&&<div className="form-error"><AlertTriangle size={15}/>{error}</div>}{message&&<div className="cert-success"><CheckCircle2 size={15}/>{message}</div>}
 
-    {typeof entityId!=='number'&&<section className="panel nfse-office-panel"><div className="nfse-office-top"><div><span className="eyebrow">VISÃO DO ESCRITÓRIO</span><h3>Painel de NFS-e por competência</h3><p>Indicadores calculados a partir dos documentos já importados no ÔMEGA.</p></div><div className="nfse-office-tools"><label className="nfse-select-label">Competência<input type="month" value={competence} onChange={e=>setCompetence(e.target.value)}/></label><button className="button secondary" onClick={()=>void loadBase()} disabled={loading||busy}><RefreshCw size={14}/> Atualizar</button></div></div><div className="nfse-office-kpis"><div><span>Titulares cadastrados</span><strong>{empresas.length+pessoas.length}</strong></div><div><span>Com documentos no período</span><strong>{officeAllRows.filter(r=>r.count>0).length}</strong></div><div><span>Documentos importados</span><strong>{officeAllRows.reduce((n,r)=>n+r.count,0)}</strong></div><div><span>Valor registrado</span><strong>{money(officeAllRows.reduce((n,r)=>n+r.total,0))}</strong></div></div><div className="nfse-office-filters"><div className="search-box"><Search size={16}/><input value={officeSearch} onChange={e=>setOfficeSearch(e.target.value)} placeholder="Pesquisar empresa, nome ou CPF/CNPJ..."/></div><div className="cert-person-switch" role="group" aria-label="Filtrar titulares"><button className={officeStatus==='TODAS'?'active':''} onClick={()=>setOfficeStatus('TODAS')}>Todas</button><button className={officeStatus==='COM'?'active':''} onClick={()=>setOfficeStatus('COM')}>Com documentos</button><button className={officeStatus==='SEM'?'active':''} onClick={()=>setOfficeStatus('SEM')}>Sem documentos</button></div></div>{loading?<div className="empty"><RefreshCw size={20}/><span>Carregando empresas e documentos...</span></div>:officeRows.length===0?<div className="empty"><Building2 size={22}/><strong>Nenhum titular encontrado</strong><span>Altere a pesquisa ou a competência.</span></div>:<div className="nfse-office-table"><div className="nfse-office-row nfse-office-head"><span>Titular</span><span>Tipo</span><span>Documentos</span><span>Valor registrado</span><span>Situação dos dados</span><span>Ação</span></div>{officeRows.map(r=><div className="nfse-office-row" key={r.key}><span><strong>{r.name}</strong><small>{r.document||'Documento não informado'}</small></span><span>{r.origin==='PJ'?'Pessoa Jurídica':'Pessoa Física'}</span><span>{r.count}</span><span>{money(r.total)}</span><span><span className={`badge ${r.count?'ok':'neutral'}`}>{r.count?'Com documentos':'Sem documentos importados'}</span></span><span><button className="button secondary small" onClick={()=>openOfficeEntity(r.origin,r.id)}>Abrir</button></span></div>)}</div>}<p className="nfse-office-note">“Sem documentos importados” não significa necessariamente ausência de movimento fiscal. Significa apenas que não há documentos importados para o titular e competência selecionados. O painel não presume notas prestadas/tomadas nem calcula retenções que não estejam estruturadas nos dados atuais.</p></section>}
+    {typeof entityId!=='number'&&<section className="panel nfse-office-panel"><div className="nfse-office-top"><div><span className="eyebrow">VISÃO DO ESCRITÓRIO</span><h3>Painel de NFS-e por competência</h3><p>Indicadores calculados a partir dos documentos já importados no ÔMEGA.</p></div><div className="nfse-office-tools"><div className="nfse-month-control" aria-label="Selecionar competência"><button type="button" className="icon-button nfse-month-arrow" title="Mês anterior" aria-label="Mês anterior" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m-2,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronLeft size={17}/></button><label className="nfse-month-picker"><span>Competência</span><span className="nfse-month-input-wrap"><CalendarDays size={17}/><input type="month" value={competence} onChange={e=>e.target.value&&setCompetence(e.target.value)} aria-label="Abrir calendário e escolher competência"/></span></label><button type="button" className="icon-button nfse-month-arrow" title="Próximo mês" aria-label="Próximo mês" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronRight size={17}/></button></div></div></div><div className="nfse-office-kpis"><div><span>Titulares cadastrados</span><strong>{empresas.length+pessoas.length}</strong></div><div><span>Com documentos no período</span><strong>{officeAllRows.filter(r=>r.count>0).length}</strong></div><div><span>Documentos importados</span><strong>{officeAllRows.reduce((n,r)=>n+r.count,0)}</strong></div><div><span>Valor registrado</span><strong>{money(officeAllRows.reduce((n,r)=>n+r.total,0))}</strong></div></div><div className="nfse-office-filters"><div className="search-box"><Search size={16}/><input value={officeSearch} onChange={e=>setOfficeSearch(e.target.value)} placeholder="Pesquisar empresa, nome ou CPF/CNPJ..."/></div><div className="cert-person-switch" role="group" aria-label="Filtrar titulares"><button className={officeStatus==='TODAS'?'active':''} onClick={()=>setOfficeStatus('TODAS')}>Todas</button><button className={officeStatus==='COM'?'active':''} onClick={()=>setOfficeStatus('COM')}>Com documentos</button><button className={officeStatus==='SEM'?'active':''} onClick={()=>setOfficeStatus('SEM')}>Sem documentos</button></div></div>{loading?<div className="empty"><RefreshCw size={20}/><span>Carregando empresas e documentos...</span></div>:officeRows.length===0?<div className="empty"><Building2 size={22}/><strong>Nenhum titular encontrado</strong><span>Altere a pesquisa ou a competência.</span></div>:<div className="nfse-office-table"><div className="nfse-office-row nfse-office-head"><span>Titular</span><span>Tipo</span><span>Documentos</span><span>Valor registrado</span><span>Situação dos dados</span><span>Ação</span></div>{officeRows.map(r=><div className="nfse-office-row" key={r.key}><span><strong>{r.name}</strong><small>{r.document||'Documento não informado'}</small></span><span>{r.origin==='PJ'?'Pessoa Jurídica':'Pessoa Física'}</span><span>{r.count}</span><span>{money(r.total)}</span><span><span className={`badge ${r.count?'ok':'neutral'}`}>{r.count?'Com documentos':'Sem documentos importados'}</span></span><span><button className="button secondary small" onClick={()=>openOfficeEntity(r.origin,r.id)}>Abrir</button></span></div>)}</div>}<p className="nfse-office-note">“Sem documentos importados” não significa necessariamente ausência de movimento fiscal. Significa apenas que não há documentos importados para o titular e competência selecionados. O painel não presume notas prestadas/tomadas nem calcula retenções que não estejam estruturadas nos dados atuais.</p></section>}
 
-    <section className="panel nfse-toolbar"><div className="cert-person-switch" role="tablist" aria-label="Titular da NFS-e"><button className={origin==='PJ'?'active':''} onClick={()=>switchOrigin('PJ')}><Building2 size={14}/> Pessoa Jurídica</button><button className={origin==='PF'?'active':''} onClick={()=>switchOrigin('PF')}><KeyRound size={14}/> Pessoa Física</button></div><label className="nfse-select-label">Titular<select value={entityId} onChange={e=>setEntityId(e.target.value?Number(e.target.value):'')} disabled={loading||busy}><option value="">Selecione...</option>{entities.map(e=><option key={e.id} value={e.id}>{origin==='PJ'?(e as Empresa).razao_social:`${(e as PessoaFisica).nome} · ${(e as PessoaFisica).cpf}`}</option>)}</select></label><div className="search-box"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar NFS-e, NSU ou chave..."/></div></section>
+    <section className="panel nfse-toolbar">{typeof entityId==='number'&&<div className="nfse-company-competence"><button type="button" className="button secondary small" onClick={()=>{requestSequence.current++;setEntityId('');setContext(null);setDocs([]);setSelectedDocs([]);setMessage('');setError('');}}><ArrowLeft size={14}/> Voltar às empresas</button><div className="nfse-month-control" aria-label="Selecionar competência da empresa"><button type="button" className="icon-button nfse-month-arrow" title="Mês anterior" aria-label="Mês anterior" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m-2,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronLeft size={17}/></button><label className="nfse-month-picker"><span>Competência</span><span className="nfse-month-input-wrap"><CalendarDays size={17}/><input type="month" value={competence} onChange={e=>e.target.value&&setCompetence(e.target.value)} aria-label="Escolher competência da empresa"/></span></label><button type="button" className="icon-button nfse-month-arrow" title="Próximo mês" aria-label="Próximo mês" onClick={()=>{const [y,m]=competence.split('-').map(Number);const d=new Date(y,m,1);setCompetence(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}}><ChevronRight size={17}/></button></div></div>}<label className="nfse-select-label">Titular<select value={entityId} onChange={e=>setEntityId(e.target.value?Number(e.target.value):'')} disabled={loading||busy}><option value="">Selecione...</option>{entities.map(e=><option key={e.id} value={e.id}>{origin==='PJ'?(e as Empresa).razao_social:`${(e as PessoaFisica).nome} · ${(e as PessoaFisica).cpf}`}</option>)}</select></label><div className="search-box"><Search size={16}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar NFS-e, NSU ou chave..."/></div></section>
 
-    {context?.certificado&&<section className="nfse-cert-card"><div className="nfse-cert-main"><div className={`nfse-cert-icon ${context.certificado.tipo==='A3'?'a3':'a1'}`}>{context.certificado.tipo==='A3'?<Smartphone size={21}/>:<KeyRound size={21}/>}</div><div><span className="eyebrow">CERTIFICADO ATIVO</span><h3>{selectedName}</h3><p>{context.certificado.tipo} · {context.certificado.meio_armazenamento} · titular {context.certificado.titular||context.certificado.documento||'não informado'}</p><small>Validade: {fmtDate(context.certificado.validade)} · Ambiente: {context.ambiente}</small></div></div><div className="nfse-cert-actions">{context.certificado.tipo==='A3'&&<button className="button secondary" onClick={()=>void detectA3()} disabled={bridgeLoading||busy}>{bridgeLoading?<><RefreshCw size={14}/> Detectando...</>:<><Wifi size={14}/> Detectar cartão</>}</button>}<button className="button primary" onClick={()=>void consultar()} disabled={busy||(context.certificado.tipo==='A3'&&!bridgeReady)}>{busy?'Consultando...':'Consultar NFS-e'}</button></div></section>}
+    {context?.certificado&&<section className="nfse-cert-card"><div className="nfse-cert-main"><div className={`nfse-cert-icon ${context.certificado.tipo==='A3'?'a3':'a1'}`}>{context.certificado.tipo==='A3'?<Smartphone size={21}/>:<KeyRound size={21}/>}</div><div><span className="eyebrow">CERTIFICADO ATIVO</span><h3>{selectedName}</h3><p>{context.certificado.tipo} · {context.certificado.meio_armazenamento} · titular {context.certificado.titular||context.certificado.documento||'não informado'}</p><small>Validade: {fmtDate(context.certificado.validade)} · Ambiente: {context.ambiente}</small></div></div><div className="nfse-cert-actions">{context.certificado.tipo==='A3'&&<button className="button secondary" onClick={()=>void detectA3()} disabled={bridgeLoading||busy}>{bridgeLoading?<><RefreshCw size={14}/> Detectando...</>:<><Wifi size={14}/> Detectar cartão</>}</button>}</div></section>}
 
     {context&&!context.certificado&&<div className="nfse-a3-note nfse-no-certificate"><ShieldCheck size={18}/><div><strong>{context.certificados_cadastrados?.length?'Certificado cadastrado, mas não disponível para consulta':'Nenhum certificado encontrado para este titular'}</strong><span>{context.mensagem_certificado||'Cadastre ou valide um certificado A1/A3 na aba Certificados. Os documentos já importados continuam disponíveis abaixo.'}</span>{Boolean(context.certificados_cadastrados?.length)&&<div className="nfse-cert-diagnostics">{context.certificados_cadastrados?.map(c=><div key={`${c.tipo}-${c.id}`}><strong>{c.tipo} · #{c.id} · {c.status}</strong><span>Validade: {fmtDate(c.validade)}{c.titular?` · ${c.titular}`:''}{c.documento?` · ${c.documento}`:''}</span>{c.motivo&&<span>{c.motivo}</span>}</div>)}</div>}</div></div>}
     {!context&&typeof entityId==='number'&&!error&&<div className="panel empty"><ShieldCheck size={24}/><strong>Carregando titular</strong><span>O ÔMEGA está carregando o certificado e os documentos existentes.</span></div>}
     {context?.certificado?.tipo==='A3'&&!bridgeReady&&<div className="nfse-a3-note"><Smartphone size={18}/><div><strong>Certificado A3: cartão/token necessário</strong><span>Conecte o leitor no computador em que o OMEGA Bridge está instalado, insira o cartão e clique em Detectar cartão.</span></div></div>}
 
-    <section className="panel nfse-list-panel"><div className="section-title-row"><div><span className="eyebrow">NFS-e IMPORTADAS</span><h3>{filteredDocs.length} documento(s)</h3></div><div className="nfse-list-actions"><button className="button secondary small" onClick={exportCsv} disabled={!filteredDocs.length}><Download size={13}/> Exportar CSV/Excel</button><button className="button secondary small" onClick={()=>void downloadSelectedZip()} disabled={!selectedDocs.length||busy}><Download size={13}/> ZIP dos XMLs ({selectedDocs.length})</button><span className="download-count">NSU atual: {context?.ultimo_nsu??0}</span></div></div>{filteredDocs.length===0?<div className="empty"><ReceiptIcon/><strong>Nenhuma NFS-e importada</strong><span>Selecione um titular para ver os documentos importados. Para novas consultas, é necessário certificado válido.</span></div>:<div className="nfse-table"><div className="nfse-row nfse-head"><span>Selecionar</span><span>NSU</span><span>Número</span><span>Chave</span><span>Emissão</span><span>Valor</span><span>Situação</span><span>Ações</span></div>{filteredDocs.map(d=><div className="nfse-row" key={d.id}><span><input type="checkbox" aria-label={`Selecionar NFS-e ${d.numero||d.id}`} checked={selectedDocs.includes(d.id)} onChange={e=>setSelectedDocs(prev=>e.target.checked?[...prev,d.id]:prev.filter(id=>id!==d.id))}/></span><span>{d.nsu??'—'}</span><span>{d.numero||'—'}</span><span className="truncate" title={d.chave_acesso||''}>{d.chave_acesso||'—'}</span><span>{fmtDate(d.data_emissao)}</span><span>{money(d.valor)}</span><span><span className="badge ok">{d.situacao}</span></span><span><button className="icon-button" title="Detalhes e XML" aria-label={`Detalhes da NFS-e ${d.numero||d.id}`} onClick={()=>void openDetail(d)}><Eye size={15}/></button></span></div>)}</div>}</section>
+    <section className="panel nfse-list-panel"><div className="section-title-row"><div><span className="eyebrow">NFS-e IMPORTADAS</span><h3>{filteredDocs.length} documento(s)</h3></div><div className="nfse-list-actions">
+      {typeof entityId==='number'&&<><label className="button secondary small"><Upload size={13}/> Importar XML<input type="file" accept=".xml,text/xml,application/xml" hidden disabled={busy} onChange={e=>{void importFile(e.target.files?.[0],'XML');e.currentTarget.value='';}}/></label><label className="button secondary small"><Upload size={13}/> Importar EML<input type="file" accept=".eml,message/rfc822" hidden disabled={busy} onChange={e=>{void importFile(e.target.files?.[0],'EML');e.currentTarget.value='';}}/></label></>}
+      <button className="button secondary small" onClick={()=>void downloadExcel()} disabled={busy}><FileSpreadsheet size={13}/> Exportar Excel</button>
+      <button className="button secondary small" onClick={exportCsv} disabled={!filteredDocs.length}><Download size={13}/> CSV</button>
+      <button className="button secondary small" onClick={()=>void downloadSelectedZip()} disabled={!selectedDocs.length||busy}><Download size={13}/> ZIP dos XMLs ({selectedDocs.length})</button>
+      <span className="download-count">NSU atual: {context?.ultimo_nsu??0}</span>
+    </div></div><div className="nfse-direction-tabs" role="tablist" aria-label="Direção das notas"><button className={direction==='TODAS'?'active':''} onClick={()=>setDirection('TODAS')}>Todas</button><button className={direction==='PRESTADA'?'active':''} onClick={()=>setDirection('PRESTADA')}>Prestadas</button><button className={direction==='TOMADA'?'active':''} onClick={()=>setDirection('TOMADA')}>Tomadas</button></div>{filteredDocs.length===0?<div className="empty"><ReceiptIcon/><strong>Nenhuma NFS-e importada</strong><span>Selecione um titular para ver os documentos importados. Para novas consultas, é necessário certificado válido.</span></div>:<div className="nfse-table"><div className="nfse-row nfse-head"><span>Selecionar</span><span>NSU</span><span>Número</span><span>Chave</span><span>Emissão</span><span>Valor</span><span>Situação</span><span>Ações</span></div>{filteredDocs.map(d=><div className="nfse-row" key={d.id}><span><input type="checkbox" aria-label={`Selecionar NFS-e ${d.numero||d.id}`} checked={selectedDocs.includes(d.id)} onChange={e=>setSelectedDocs(prev=>e.target.checked?[...prev,d.id]:prev.filter(id=>id!==d.id))}/></span><span>{d.nsu??'—'}</span><span>{d.numero||'—'}</span><span className="truncate" title={d.chave_acesso||''}>{d.chave_acesso||'—'}</span><span>{fmtDate(d.data_emissao)}</span><span>{money(d.valor)}</span><span><span className="badge ok">{d.situacao}</span></span><span><button className="icon-button" title="Detalhes e XML" aria-label={`Detalhes da NFS-e ${d.numero||d.id}`} onClick={()=>void openDetail(d)}><Eye size={15}/></button></span></div>)}</div>}</section>
 
     {selectedDoc&&<div className="nfse-detail-overlay" role="dialog" aria-modal="true" aria-label="Detalhes da NFS-e" onMouseDown={e=>{if(e.target===e.currentTarget)setSelectedDoc(null)}}><section className="panel nfse-detail-dialog"><div className="panel-header"><div><span className="eyebrow">DOCUMENTO FISCAL IMPORTADO</span><h3>NFS-e {selectedDoc.numero||selectedDoc.id}</h3></div><button className="icon-button" onClick={()=>setSelectedDoc(null)} aria-label="Fechar detalhes"><X size={16}/></button></div><div className="nfse-detail-meta"><span><strong>NSU:</strong> {selectedDoc.nsu??'—'}</span><span><strong>Data:</strong> {fmtDate(selectedDoc.data_emissao)}</span><span><strong>Valor:</strong> {money(selectedDoc.valor)}</span><span><strong>Chave:</strong> {selectedDoc.chave_acesso||'—'}</span></div>{detailError&&<div className="form-error">{detailError}</div>}{detailLoading?<div className="empty"><RefreshCw size={20}/><span>Carregando documento...</span></div>:selectedDoc.xml?<><div className="section-title-row"><h4><FileCode2 size={15}/> XML original</h4><div className="actions"><button className="button secondary" onClick={downloadXml}><Download size={14}/> Baixar XML</button><button className="button primary" onClick={()=>void downloadPdf()}><Download size={14}/> Gerar PDF</button></div></div><pre className="nfse-xml-preview">{selectedDoc.xml}</pre></>:<div className="empty"><FileCode2 size={22}/><strong>XML não disponível</strong><span>O registro possui metadados, mas o arquivo XML não está no storage.</span></div>}<div className="form-actions"><button className="button secondary" onClick={()=>setSelectedDoc(null)}>Fechar</button></div></section></div>}
   </div>;
