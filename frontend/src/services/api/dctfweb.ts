@@ -3,7 +3,7 @@ import {apiFetch} from './client';
 export type ObrigacaoDctfweb = {
   tributo_id:number; nome:string; sigla?:string|null;
   status:'PENDENTE'|'CREDOR'|'SEM_MOVIMENTACAO'|'VALOR_INFORMADO'|'PAGO';
-  valor:number|null; numero_documento?:string|null; finalizada:boolean;
+  valor:number|null; numero_documento?:string|null; vencimento?:string|null; data_pagamento?:string|null; guia_confirmada?:boolean; status_origem?:string|null; motivo_pendencia?:string|null; finalizada:boolean;
 };
 export type EmpresaDctfweb = {
   id:number; razao_social:string; nome_fantasia?:string|null; cnpj:string;

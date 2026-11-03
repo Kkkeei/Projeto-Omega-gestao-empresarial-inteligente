@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import base64
 import gzip
+import logging
+import hashlib
+import io
 import json
 import math
 import os
 import re
 import tempfile
+import zipfile
+from email import policy
+from email.parser import BytesParser
 import xml.etree.ElementTree as ET
 import zlib
 from decimal import Decimal, InvalidOperation
@@ -16,6 +22,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import httpx
+from openpyxl import Workbook
 
 from app.db.database import conectar_banco, STORAGE_BASE
 from app.services.certificado_service import certificate_service
@@ -509,6 +516,7 @@ def _save_documents(origin: str, subject_id: int, documents: list[dict[str, Any]
         with conectar_banco() as conn:
             for doc in documents:
                 nsu = doc.get("nsu")
+                provider = str(doc.get("provider") or PROVIDER_NAME)
                 raw_json = json.dumps(doc.get("raw") or {}, ensure_ascii=False, default=str)
                 if nsu is None and not doc.get("chave_acesso"):
                     raise ValueError("Documento fiscal sem NSU e sem chave de acesso; não é possível importar sem risco de duplicidade.")
@@ -517,12 +525,12 @@ def _save_documents(origin: str, subject_id: int, documents: list[dict[str, Any]
                 if nsu is not None:
                     duplicate = conn.execute(
                         "SELECT id FROM nfse_documentos WHERE origem=? AND entidade_id=? AND provider=? AND nsu=? LIMIT 1",
-                        (origin, subject_id, PROVIDER_NAME, nsu),
+                        (origin, subject_id, provider, nsu),
                     ).fetchone()
                 elif doc.get("chave_acesso"):
                     duplicate = conn.execute(
                         "SELECT id FROM nfse_documentos WHERE origem=? AND entidade_id=? AND provider=? AND chave_acesso=? LIMIT 1",
-                        (origin, subject_id, PROVIDER_NAME, doc["chave_acesso"]),
+                        (origin, subject_id, provider, doc["chave_acesso"]),
                     ).fetchone()
                 else:
                     duplicate = None
@@ -544,7 +552,7 @@ def _save_documents(origin: str, subject_id: int, documents: list[dict[str, Any]
                     (origem, entidade_id, provider, nsu, schema, chave_acesso, numero,
                      data_emissao, valor, situacao, xml_path, resposta_json, criado_em, atualizado_em)
                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""",
-                    (origin, subject_id, PROVIDER_NAME, nsu, doc.get("schema"), doc.get("chave_acesso"), doc.get("numero"),
+                    (origin, subject_id, provider, nsu, doc.get("schema"), doc.get("chave_acesso"), doc.get("numero"),
                      doc.get("data_emissao"), doc.get("valor"), doc.get("situacao"), xml_path, raw_json),
                 )
                 changed = conn.execute("SELECT changes()").fetchone()[0]
@@ -645,10 +653,9 @@ def _update_cursor(origin: str, subject_id: int, ultimo_nsu: int | None, max_nsu
             ultimo_nsu=CASE WHEN ? IS NULL THEN ultimo_nsu ELSE MAX(ultimo_nsu, ?) END,
             max_nsu=CASE WHEN ? IS NULL THEN max_nsu WHEN max_nsu IS NULL THEN ? ELSE MAX(max_nsu, ?) END,
             ultimo_sync=CURRENT_TIMESTAMP,
-            status=?, mensagem=?, proxima_consulta_em=?
+            status=?, mensagem=?, proxima_consulta_em=NULL
             WHERE origem=? AND entidade_id=? AND provider=?""",
             (ultimo_nsu, ultimo_nsu, max_nsu, max_nsu, max_nsu, status, message,
-             (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat() if status == "SEM_DOCUMENTOS" else None,
              origin, subject_id, PROVIDER_NAME),
         )
         conn.commit()
@@ -670,18 +677,7 @@ def _begin_sync(origin: str, entity_id: int, cursor: dict[str, Any]) -> None:
         if not stale_lock:
             raise ValueError("Já existe uma consulta NFS-e em andamento para este titular. Se ela foi interrompida, aguarde 10 minutos e tente novamente.")
 
-    next_at = cursor.get("proxima_consulta_em")
-    if next_at:
-        try:
-            dt = datetime.fromisoformat(str(next_at).replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            if dt > now:
-                remaining = max(1, int((dt - now).total_seconds() // 60))
-                raise ValueError(f"A fila do ADN está em espera. Tente novamente em aproximadamente {remaining} minuto(s).")
-        except ValueError as exc:
-            if str(exc).startswith("A fila do ADN"):
-                raise
+    # Não há bloqueio por intervalo: o usuário pode consultar novamente assim que a chamada anterior terminar.
 
     with conectar_banco() as conn:
         if stale_lock:
@@ -926,9 +922,11 @@ def importar_resposta_a3(origin: str, entity_id: int, thumbprint: str, content_t
     return {"ok": True, "provider": PROVIDER_NAME, "certificado_tipo": "A3", "documentos_encontrados": len(documents), "documentos_importados": inserted, "ultimo_nsu": ult_nsu, "max_nsu": max_nsu, "content_type": content_type}
 
 
-def listar(origin: str | None = None, entity_id: int | None = None, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
+def listar(origin: str | None = None, entity_id: int | None = None, limit: int = 100, offset: int = 0, competencia: str | None = None) -> list[dict[str, Any]]:
     limit = max(1, min(limit, 500))
     offset = max(0, int(offset))
+    if competencia:
+        competencia = _validar_competencia_nfse(competencia)
     with conectar_banco() as conn:
         sql = "SELECT * FROM nfse_documentos WHERE 1=1"
         params: list[Any] = []
@@ -936,8 +934,18 @@ def listar(origin: str | None = None, entity_id: int | None = None, limit: int =
             sql += " AND origem=?"; params.append(origin.upper())
         if entity_id is not None:
             sql += " AND entidade_id=?"; params.append(entity_id)
+        if competencia:
+            sql += " AND substr(COALESCE(data_emissao, criado_em),1,7)=?"; params.append(competencia)
         sql += " ORDER BY COALESCE(data_emissao, criado_em, '') DESC, id DESC LIMIT ? OFFSET ?"; params.extend([limit, offset])
-        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+        rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    enriched = []
+    for result in rows:
+        if result.get("xml_path"):
+            path = STORAGE_BASE.parent / result["xml_path"]
+            if path.is_file():
+                result["xml"] = path.read_text(encoding="utf-8", errors="replace")
+        enriched.append(_enriquecer_detalhe_nfse(result))
+    return enriched
 
 
 def detalhe(nfse_id: int) -> dict[str, Any]:
@@ -950,4 +958,674 @@ def detalhe(nfse_id: int) -> dict[str, Any]:
         path = STORAGE_BASE.parent / result["xml_path"]
         if path.is_file():
             result["xml"] = path.read_text(encoding="utf-8", errors="replace")
+    return _enriquecer_detalhe_nfse(result)
+
+
+# ---------------------------------------------------------------------------
+# Operação interna, importação assistida, eventos e exportação NFS-e
+# ---------------------------------------------------------------------------
+
+def _validar_competencia_nfse(competencia: str) -> str:
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", str(competencia or "")):
+        raise ValueError("Competência inválida. Use o formato AAAA-MM.")
+    return str(competencia)
+
+
+def painel(competencia: str) -> dict[str, Any]:
+    """Painel mensal com todas as entidades ativas, inclusive sem documentos."""
+    competencia = _validar_competencia_nfse(competencia)
+    entidades: list[dict[str, Any]] = []
+    documentos_total = 0
+    valor_total = 0.0
+    with conectar_banco() as conn:
+        pjs = conn.execute(
+            "SELECT id, razao_social nome, nome_fantasia, cnpj documento, municipio, uf FROM empresas WHERE ativo=1 ORDER BY razao_social"
+        ).fetchall()
+        pfs = conn.execute(
+            "SELECT id, nome, NULL nome_fantasia, cpf documento, NULL municipio, NULL uf FROM pessoas_fisicas WHERE ativo=1 ORDER BY nome"
+        ).fetchall()
+        for origem, rows in (("PJ", pjs), ("PF", pfs)):
+            for entity in rows:
+                totals = conn.execute(
+                    """SELECT COUNT(*) quantidade, COALESCE(SUM(valor),0) valor
+                       FROM nfse_documentos
+                      WHERE origem=? AND entidade_id=?
+                        AND substr(COALESCE(data_emissao, criado_em),1,7)=?""",
+                    (origem, entity["id"], competencia),
+                ).fetchone()
+                quantidade = int(totals["quantidade"] or 0)
+                valor = float(totals["valor"] or 0)
+                documentos_total += quantidade
+                valor_total += valor
+                entidades.append({
+                    "origem": origem,
+                    "entidade_id": int(entity["id"]),
+                    "nome": entity["nome"],
+                    "nome_fantasia": entity["nome_fantasia"],
+                    "documento": entity["documento"],
+                    "municipio": entity["municipio"],
+                    "uf": entity["uf"],
+                    "documentos": quantidade,
+                    "valor_total": valor,
+                })
+    return {
+        "competencia": competencia,
+        "resumo": {
+            "entidades": len(entidades),
+            "documentos": documentos_total,
+            "valor_total": round(valor_total, 2),
+            "com_documentos": sum(1 for row in entidades if row["documentos"]),
+            "sem_documentos": sum(1 for row in entidades if not row["documentos"]),
+        },
+        "empresas": entidades,
+    }
+
+
+def salvar_config(
+    origin: str,
+    entity_id: int,
+    sincronizacao_automatica: bool,
+    frequencia_horas: int,
+    horario: str,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    origin, entity_id = _subject(origin, entity_id)
+    _entity(origin, entity_id)
+    try:
+        frequencia_horas = int(frequencia_horas)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("A frequência precisa ser um número de horas.") from exc
+    if not 1 <= frequencia_horas <= 720:
+        raise ValueError("A frequência deve ficar entre 1 e 720 horas.")
+    if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", str(horario or "")):
+        raise ValueError("Informe o horário no formato HH:MM.")
+    proxima = None
+    if sincronizacao_automatica:
+        agora = datetime.now().astimezone()
+        hora, minuto = (int(parte) for parte in horario.split(":"))
+        agendada = agora.replace(hour=hora, minute=minuto, second=0, microsecond=0)
+        # Avança em intervalos até encontrar um instante futuro. Sem este loop,
+        # por exemplo, 02:00 + frequência de 6h poderia continuar no passado.
+        while agendada <= agora:
+            agendada = agendada + timedelta(hours=frequencia_horas)
+        proxima = agendada.isoformat()
+    with conectar_banco() as conn:
+        conn.execute(
+            """INSERT INTO nfse_config
+               (origem,entidade_id,sincronizacao_automatica,frequencia_horas,horario,
+                proxima_execucao_em,atualizado_por,atualizado_em)
+               VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+               ON CONFLICT(origem,entidade_id) DO UPDATE SET
+                sincronizacao_automatica=excluded.sincronizacao_automatica,
+                frequencia_horas=excluded.frequencia_horas,
+                horario=excluded.horario,
+                proxima_execucao_em=excluded.proxima_execucao_em,
+                atualizado_por=excluded.atualizado_por,
+                atualizado_em=CURRENT_TIMESTAMP""",
+            (origin, entity_id, int(bool(sincronizacao_automatica)), frequencia_horas, horario, proxima, user_id),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM nfse_config WHERE origem=? AND entidade_id=?",
+            (origin, entity_id),
+        ).fetchone()
+    saved = dict(row)
+    saved["sincronizacao_automatica"] = bool(saved["sincronizacao_automatica"])
+    return saved
+
+
+def importar_xml_manual(
+    origin: str,
+    entity_id: int,
+    filename: str,
+    data: bytes,
+    user_id: int | None = None,
+    *,
+    origem_documento: str = "Upload XML manual",
+) -> dict[str, Any]:
+    origin, entity_id = _subject(origin, entity_id)
+    _entity(origin, entity_id)
+    if not filename or not str(filename).lower().endswith(".xml"):
+        raise ValueError("Envie um arquivo com extensão .xml.")
+    if not isinstance(data, (bytes, bytearray)) or not data:
+        raise ValueError("O arquivo XML está vazio.")
+    if len(data) > 25 * 1024 * 1024:
+        raise ValueError("O arquivo XML excede o limite de 25 MB.")
+    try:
+        xml_text = bytes(data).decode("utf-8-sig")
+        ET.fromstring(xml_text)
+    except (UnicodeDecodeError, ET.ParseError) as exc:
+        raise ValueError("O arquivo enviado não contém um XML válido em UTF-8.") from exc
+    document = _parse_candidate_document(
+        {"xml": xml_text, "schema": "XML_MANUAL"},
+        origin,
+        entity_id,
+    )
+    if not document.get("chave_acesso"):
+        raise ValueError("O XML não contém uma chave de acesso de 44 dígitos; a importação foi recusada para evitar duplicidade.")
+    document["provider"] = "UPLOAD_XML"
+    document["raw"] = {
+        "nome_arquivo": str(filename),
+        "origem_documento": origem_documento,
+        "usuario_id": user_id,
+    }
+    inserted = _save_documents(origin, entity_id, [document], "")
+    with conectar_banco() as conn:
+        row = conn.execute(
+            """SELECT id FROM nfse_documentos
+               WHERE origem=? AND entidade_id=? AND provider=? AND chave_acesso=?
+               ORDER BY id DESC LIMIT 1""",
+            (origin, entity_id, "UPLOAD_XML", document["chave_acesso"]),
+        ).fetchone()
+    if not row:
+        raise RuntimeError("O XML foi processado, mas o registro não foi localizado no banco.")
+    return {
+        "ok": True,
+        "id": int(row["id"]),
+        "provider": "UPLOAD_XML",
+        "importados": int(inserted),
+        "chave_acesso": document["chave_acesso"],
+        "nome_arquivo": str(filename),
+        "mensagem": "XML importado." if inserted else "Este XML já havia sido importado.",
+    }
+
+
+def importar_email_eml(
+    origin: str,
+    entity_id: int,
+    filename: str,
+    data: bytes,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    origin, entity_id = _subject(origin, entity_id)
+    _entity(origin, entity_id)
+    if not data or len(data) > 25 * 1024 * 1024:
+        raise ValueError("O arquivo EML está vazio ou excede o limite de 25 MB.")
+    try:
+        message = BytesParser(policy=policy.default).parsebytes(bytes(data))
+    except Exception as exc:
+        raise ValueError("Não foi possível ler a mensagem EML.") from exc
+    anexos: list[tuple[str, bytes]] = []
+    for part in message.walk():
+        if part.is_multipart():
+            continue
+        nome = part.get_filename()
+        if nome and str(nome).lower().endswith(".xml"):
+            conteudo = part.get_payload(decode=True)
+            if conteudo:
+                anexos.append((str(nome), bytes(conteudo)))
+    if not anexos:
+        raise ValueError("Não encontrei anexos XML no e-mail informado.")
+    resultados = []
+    importados = 0
+    for nome, conteudo in anexos:
+        resultado = importar_xml_manual(
+            origin, entity_id, nome, conteudo, user_id,
+            origem_documento="E-mail (XML anexado)",
+        )
+        importados += int(resultado.get("importados") or 0)
+        resultados.append(resultado)
+    return {"ok": True, "importados": importados, "resultados": resultados, "nome_arquivo": filename}
+
+
+def _documento_xml(root: ET.Element, pais: tuple[str, ...]) -> str | None:
+    nomes = {nome.casefold() for nome in pais}
+    for parent in root.iter():
+        if _xml_local_name(parent.tag) not in nomes:
+            continue
+        for child in parent.iter():
+            if _xml_local_name(child.tag) in {"cnpj", "cpf"} and (child.text or "").strip():
+                return _normalize_doc(child.text)
+    return None
+
+
+def _enriquecer_detalhe_nfse(result: dict[str, Any]) -> dict[str, Any]:
+    try:
+        raw = json.loads(result.get("resposta_json") or "{}")
+        if not isinstance(raw, dict):
+            raw = {}
+    except (TypeError, json.JSONDecodeError):
+        raw = {}
+    result["origem_documento"] = raw.get("origem_documento") or "ADN"
+    xml_text = result.get("xml")
+    if not xml_text:
+        return result
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return result
+    index = _xml_text_index(root)
+    provider_document = _documento_xml(root, ("prest", "prestador", "emit"))
+    owner_document = None
+    try:
+        with conectar_banco() as conn:
+            if result["origem"] == "PJ":
+                owner = conn.execute("SELECT cnpj documento FROM empresas WHERE id=?", (result["entidade_id"],)).fetchone()
+            else:
+                owner = conn.execute("SELECT cpf documento FROM pessoas_fisicas WHERE id=?", (result["entidade_id"],)).fetchone()
+        owner_document = _normalize_doc(owner["documento"]) if owner else None
+    except Exception:
+        owner_document = None
+    if owner_document and provider_document:
+        result["direcao"] = "PRESTADA" if owner_document == provider_document else "TOMADA"
+    else:
+        result["direcao"] = "NAO_IDENTIFICADA"
+    result["irrf"] = _parse_xml_money(_first_xml_text(index, ("vRetIRRF", "valorIRRF", "vIRRF")))
     return result
+
+
+def registrar_evento(
+    nfse_id: int,
+    tipo_evento: str,
+    descricao: str,
+    user_id: int | None = None,
+    *,
+    origem: str = "SISTEMA",
+    dados: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    tipo = str(tipo_evento or "").strip().upper()
+    descricao = str(descricao or "").strip()
+    if not tipo or not descricao:
+        raise ValueError("Informe o tipo e a descrição do evento.")
+    with conectar_banco() as conn:
+        doc = conn.execute("SELECT id FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone()
+        if not doc:
+            raise LookupError("NFS-e não encontrada.")
+        cur = conn.execute(
+            """INSERT INTO nfse_eventos
+               (nfse_id,tipo_evento,descricao,origem,dados_json,usuario_id)
+               VALUES(?,?,?,?,?,?)""",
+            (nfse_id, tipo, descricao, origem, json.dumps(dados or {}, ensure_ascii=False, default=str), user_id),
+        )
+        if tipo in {"CANCELADA", "CANCELAMENTO"}:
+            conn.execute(
+                "UPDATE nfse_documentos SET situacao='CANCELADA',atualizado_em=CURRENT_TIMESTAMP WHERE id=?",
+                (nfse_id,),
+            )
+        conn.commit()
+        row = conn.execute("SELECT * FROM nfse_eventos WHERE id=?", (cur.lastrowid,)).fetchone()
+    return dict(row)
+
+
+def listar_eventos(nfse_id: int) -> list[dict[str, Any]]:
+    with conectar_banco() as conn:
+        exists = conn.execute("SELECT 1 FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone()
+        if not exists:
+            raise LookupError("NFS-e não encontrada.")
+        return [dict(row) for row in conn.execute(
+            "SELECT * FROM nfse_eventos WHERE nfse_id=? ORDER BY id DESC",
+            (nfse_id,),
+        ).fetchall()]
+
+
+def salvar_lancamento(
+    nfse_id: int,
+    data_lancamento: str,
+    conta_debito: str,
+    conta_credito: str,
+    historico: str,
+    valor: float,
+    observacao: str | None = None,
+    user_id: int | None = None,
+) -> dict[str, Any]:
+    try:
+        valor = float(valor)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Informe um valor numérico para o lançamento.") from exc
+    if not math.isfinite(valor) or valor < 0:
+        raise ValueError("O valor do lançamento deve ser positivo ou zero.")
+    if data_lancamento:
+        _normalize_xml_date(data_lancamento)
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", data_lancamento):
+            raise ValueError("Data do lançamento deve estar no formato AAAA-MM-DD.")
+    conta_debito = str(conta_debito or "").strip()
+    conta_credito = str(conta_credito or "").strip()
+    historico = str(historico or "").strip()
+    if not conta_debito or not conta_credito or not historico:
+        raise ValueError("Informe conta de débito, conta de crédito e histórico.")
+    with conectar_banco() as conn:
+        if not conn.execute("SELECT 1 FROM nfse_documentos WHERE id=?", (nfse_id,)).fetchone():
+            raise LookupError("NFS-e não encontrada.")
+        conn.execute(
+            """INSERT INTO nfse_lancamentos_contabeis
+               (nfse_id,data_lancamento,conta_debito,conta_credito,historico,valor,status,observacao,criado_por)
+               VALUES(?,?,?,?,?,?,'RASCUNHO',?,?)
+               ON CONFLICT(nfse_id) DO UPDATE SET
+                data_lancamento=excluded.data_lancamento,
+                conta_debito=excluded.conta_debito,
+                conta_credito=excluded.conta_credito,
+                historico=excluded.historico,
+                valor=excluded.valor,
+                observacao=excluded.observacao,
+                status='RASCUNHO',
+                atualizado_em=CURRENT_TIMESTAMP""",
+            (nfse_id, data_lancamento, conta_debito, conta_credito, historico, valor, observacao, user_id),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM nfse_lancamentos_contabeis WHERE nfse_id=?", (nfse_id,)).fetchone()
+    return {"ok": True, "lancamento": dict(row)}
+
+
+def exportar_excel(competencia: str, origin: str | None = None, entity_id: int | None = None) -> bytes:
+    competencia = _validar_competencia_nfse(competencia)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "NFS-e"
+    headers = ["Origem", "Titular ID", "Provedor", "NSU", "Chave de acesso", "Número", "Data de emissão", "Valor", "Situação"]
+    sheet.append(headers)
+    sql = """SELECT origem,entidade_id,provider,nsu,chave_acesso,numero,data_emissao,valor,situacao
+             FROM nfse_documentos WHERE substr(COALESCE(data_emissao,criado_em),1,7)=?"""
+    params: list[Any] = [competencia]
+    if origin:
+        normalized_origin, _ = _subject(origin, entity_id or 1)
+        sql += " AND origem=?"
+        params.append(normalized_origin)
+    if entity_id is not None:
+        sql += " AND entidade_id=?"
+        params.append(int(entity_id))
+    sql += " ORDER BY origem,entidade_id,data_emissao,numero"
+    with conectar_banco() as conn:
+        for row in conn.execute(sql, params).fetchall():
+            sheet.append(list(row))
+    for column in sheet.columns:
+        width = max((len(str(cell.value or "")) for cell in column), default=8)
+        sheet.column_dimensions[column[0].column_letter].width = min(max(width + 2, 12), 40)
+    output = io.BytesIO()
+    workbook.save(output)
+    return output.getvalue()
+
+
+def zip_xmls(nfse_ids: list[int]) -> bytes:
+    if not nfse_ids:
+        raise ValueError("Selecione ao menos uma NFS-e para exportar XML.")
+    output = io.BytesIO()
+    usados: set[str] = set()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for nfse_id in nfse_ids:
+            document = detalhe(int(nfse_id))
+            xml_text = document.get("xml")
+            if not xml_text:
+                continue
+            number = re.sub(r"[^A-Za-z0-9_-]", "_", str(document.get("numero") or nfse_id))
+            name = f"nfse-{number}.xml"
+            if name in usados:
+                name = f"nfse-{number}-{nfse_id}.xml"
+            usados.add(name)
+            archive.writestr(name, xml_text.encode("utf-8"))
+    if not usados:
+        raise ValueError("Nenhum XML está disponível nos documentos selecionados.")
+    return output.getvalue()
+
+
+def _request_a1_url(origin: str, cert: dict[str, Any], url: str) -> tuple[int, str, str]:
+    timeout = float(os.getenv("OMEGA_NFSE_TIMEOUT", "60"))
+    with _a1_mtls_files(cert, origin) as (cert_file, key_file):
+        with httpx.Client(
+            timeout=timeout, cert=(str(cert_file), str(key_file)),
+            verify=True, follow_redirects=True,
+        ) as client:
+            response = client.get(url)
+    return response.status_code, response.headers.get("content-type", ""), response.text
+
+
+def _event_xml_candidates(payload: Any) -> list[tuple[str, dict[str, Any]]]:
+    found: list[tuple[str, dict[str, Any]]] = []
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            item = dict(value)
+            raw_xml = _mapping_value(item, "xmlEvento", "eventoXml", "xmlEventoNfse", "docZip", "xml", "conteudo")
+            xml_text = _decode_xml_candidate(raw_xml)
+            if xml_text:
+                found.append((xml_text, item))
+                return
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+    walk(payload)
+    unique: dict[str, tuple[str, dict[str, Any]]] = {}
+    for xml_text, item in found:
+        unique.setdefault(hashlib.sha256(xml_text.encode("utf-8")).hexdigest(), (xml_text, item))
+    return list(unique.values())
+
+
+def _parse_event_xml(xml_text: str) -> dict[str, Any]:
+    root = ET.fromstring(xml_text)
+    index = _xml_text_index(root)
+    tipo = _first_xml_text(index, ("tpEvento", "tipoEvento", "tipo_evento")) or "EVENTO_ADN"
+    descricao = _first_xml_text(index, ("xMotivo", "descricaoEvento", "descricao", "motivo")) or "Evento recebido do ADN."
+    data_evento = _normalize_xml_date(_first_xml_text(index, ("dhEvento", "dataEvento", "dhRegEvento")))
+    sequencia = _first_xml_text(index, ("nSeqEvento", "sequencial", "numeroSequencial"))
+    identificador = _first_xml_text(index, ("idEvento", "chEvento", "Id")) or f"{tipo}:{sequencia or '1'}"
+    fingerprint = hashlib.sha256(xml_text.encode("utf-8")).hexdigest()
+    return {
+        "tipo_evento": str(tipo).strip().upper(),
+        "descricao": str(descricao).strip(),
+        "data_evento": data_evento,
+        "identificador": identificador,
+        "fingerprint": fingerprint,
+    }
+
+
+def _persistir_evento_adn(nfse_id: int, xml_text: str, origem: str) -> bool:
+    try:
+        event = _parse_event_xml(xml_text)
+    except ET.ParseError:
+        return False
+    with conectar_banco() as conn:
+        for row in conn.execute(
+            "SELECT dados_json FROM nfse_eventos WHERE nfse_id=? AND origem=?",
+            (nfse_id, origem),
+        ).fetchall():
+            try:
+                saved = json.loads(row["dados_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                saved = {}
+            if saved.get("fingerprint") == event["fingerprint"]:
+                return False
+        conn.execute(
+            """INSERT INTO nfse_eventos
+               (nfse_id,tipo_evento,descricao,data_evento,origem,dados_json)
+               VALUES(?,?,?,?,?,?)""",
+            (
+                nfse_id, event["tipo_evento"], event["descricao"],
+                event["data_evento"] or datetime.now(timezone.utc).isoformat(),
+                origem, json.dumps(event, ensure_ascii=False),
+            ),
+        )
+        if event["tipo_evento"] in {"101101", "CANCELADA", "CANCELAMENTO"} or "CANCELAMENTO" in event["descricao"].upper():
+            conn.execute(
+                "UPDATE nfse_documentos SET situacao='CANCELADA',atualizado_em=CURRENT_TIMESTAMP WHERE id=?",
+                (nfse_id,),
+            )
+        conn.commit()
+    return True
+
+
+def consultar_eventos_adn(nfse_id: int) -> dict[str, Any]:
+    with conectar_banco() as conn:
+        row = conn.execute(
+            "SELECT id,origem,entidade_id,chave_acesso FROM nfse_documentos WHERE id=?",
+            (nfse_id,),
+        ).fetchone()
+    if not row:
+        raise LookupError("NFS-e não encontrada.")
+    if not row["chave_acesso"]:
+        raise ValueError("A NFS-e não possui chave de acesso para consultar eventos no ADN.")
+    cert = _active_certificate(row["origem"], int(row["entidade_id"]))
+    if cert["tipo"] == "A3":
+        raise ValueError("Para certificado A3, consulte os eventos pelo OMEGA Bridge.")
+    url = f"{_provider_base_url()}/NFSe/{row['chave_acesso']}/Eventos"
+    status_code, content_type, body = _request_a1_url(row["origem"], cert, url)
+    if status_code >= 400:
+        raise ValueError(f"ADN retornou HTTP {status_code} ao consultar eventos.")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("O ADN retornou resposta de eventos inválida.") from exc
+    candidates = _event_xml_candidates(payload)
+    imported = sum(1 for xml_text, _item in candidates if _persistir_evento_adn(nfse_id, xml_text, "ADN_NFSE"))
+    return {
+        "ok": True,
+        "eventos_encontrados": len(candidates),
+        "eventos_importados": imported,
+        "content_type": content_type,
+    }
+
+
+def importar_eventos_a3(nfse_id: int, thumbprint: str, content_type: str, body_b64: str) -> dict[str, Any]:
+    with conectar_banco() as conn:
+        row = conn.execute(
+            "SELECT id,origem,entidade_id,chave_acesso FROM nfse_documentos WHERE id=?",
+            (nfse_id,),
+        ).fetchone()
+    if not row:
+        raise LookupError("NFS-e não encontrada.")
+    cert = _active_certificate(row["origem"], int(row["entidade_id"]))
+    if cert["tipo"] != "A3":
+        raise ValueError("O certificado ativo deste titular não é A3.")
+    if str(cert.get("thumbprint_sha256") or "").lower() != str(thumbprint or "").lower():
+        raise ValueError("O certificado A3 detectado no Bridge não corresponde ao cadastro.")
+    try:
+        body = base64.b64decode(body_b64, validate=True)
+        payload = json.loads(body.decode("utf-8"))
+    except Exception as exc:
+        raise ValueError("Resposta de eventos do Bridge inválida.") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("O Bridge retornou uma estrutura de eventos inesperada.")
+    candidates = _event_xml_candidates(payload)
+    imported = sum(
+        1 for xml_text, _item in candidates
+        if _persistir_evento_adn(nfse_id, xml_text, "ADN_NFSE_A3_BRIDGE")
+    )
+    return {
+        "ok": True,
+        "eventos_encontrados": len(candidates),
+        "eventos_importados": imported,
+        "content_type": content_type,
+    }
+
+
+def obter_config(origin: str, entity_id: int) -> dict[str, Any]:
+    """Retorna configuração de sincronização por titular, sem ativá-la implicitamente."""
+    origin, entity_id = _subject(origin, entity_id)
+    _entity(origin, entity_id)
+    with conectar_banco() as conn:
+        row = conn.execute(
+            "SELECT * FROM nfse_config WHERE origem=? AND entidade_id=?",
+            (origin, entity_id),
+        ).fetchone()
+    if not row:
+        return {
+            "origem": origin,
+            "entidade_id": entity_id,
+            "sincronizacao_automatica": False,
+            "frequencia_horas": 24,
+            "horario": "02:00",
+            "proxima_execucao_em": None,
+        }
+    result = dict(row)
+    result["sincronizacao_automatica"] = bool(result.get("sincronizacao_automatica"))
+    return result
+
+
+def processar_rotinas_automaticas(agora: datetime | None = None) -> dict[str, Any]:
+    """Processa apenas titulares que optaram pela sincronização e cujo agendamento venceu.
+
+    A chamada é feita pelo lifespan periodicamente. A execução futura é avançada
+    atomicamente antes de consultar o ADN, impedindo que workers concorrentes
+    disparem a mesma rotina ao mesmo tempo. Os certificados A3 continuam a exigir
+    o Bridge local e não são executados automaticamente pelo servidor.
+    """
+    logger = logging.getLogger("omega.nfse")
+    instante = agora or datetime.now().astimezone()
+    if instante.tzinfo is None:
+        instante = instante.astimezone()
+
+    with conectar_banco() as conn:
+        configs = [
+            dict(row) for row in conn.execute(
+                """SELECT id,origem,entidade_id,frequencia_horas,horario,proxima_execucao_em
+                   FROM nfse_config
+                  WHERE sincronizacao_automatica=1
+                    AND proxima_execucao_em IS NOT NULL
+                  ORDER BY proxima_execucao_em, id"""
+            ).fetchall()
+        ]
+
+    resultados: list[dict[str, Any]] = []
+    for config in configs:
+        raw_next = config.get("proxima_execucao_em")
+        try:
+            prevista = datetime.fromisoformat(str(raw_next).replace("Z", "+00:00"))
+            if prevista.tzinfo is None:
+                prevista = prevista.replace(tzinfo=instante.tzinfo)
+            if prevista > instante:
+                continue
+        except (TypeError, ValueError):
+            logger.warning(
+                "Agendamento NFS-e inválido; desabilitando próxima execução | origem=%s entidade_id=%s",
+                config["origem"], config["entidade_id"],
+            )
+            with conectar_banco() as conn:
+                conn.execute(
+                    "UPDATE nfse_config SET proxima_execucao_em=NULL,atualizado_em=CURRENT_TIMESTAMP WHERE id=? AND sincronizacao_automatica=1",
+                    (config["id"],),
+                )
+                conn.commit()
+            resultados.append({
+                "origem": config["origem"],
+                "entidade_id": config["entidade_id"],
+                "status": "CONFIGURACAO_INVALIDA",
+            })
+            continue
+
+        try:
+            frequencia = int(config.get("frequencia_horas") or 24)
+        except (TypeError, ValueError):
+            frequencia = 24
+        frequencia = min(720, max(1, frequencia))
+        proxima = (instante + timedelta(hours=frequencia)).isoformat()
+        # Claim otimista com valor anterior para evitar duplicidade entre workers.
+        with conectar_banco() as conn:
+            claim = conn.execute(
+                """UPDATE nfse_config
+                      SET proxima_execucao_em=?, atualizado_em=CURRENT_TIMESTAMP
+                    WHERE id=? AND sincronizacao_automatica=1 AND proxima_execucao_em=?""",
+                (proxima, config["id"], raw_next),
+            )
+            conn.commit()
+        if claim.rowcount != 1:
+            continue
+
+        item = {
+            "origem": config["origem"],
+            "entidade_id": int(config["entidade_id"]),
+        }
+        try:
+            result = consultar_a1(config["origem"], int(config["entidade_id"]))
+            item.update({
+                "status": "OK",
+                "documentos_encontrados": int(result.get("documentos_encontrados") or 0),
+                "documentos_importados": int(result.get("documentos_importados") or 0),
+                "proxima_execucao_em": proxima,
+            })
+        except Exception as exc:
+            logger.exception(
+                "Falha na rotina automática de NFS-e | origem=%s entidade_id=%s",
+                config["origem"], config["entidade_id"],
+            )
+            item.update({
+                "status": "ERRO",
+                "mensagem": f"{type(exc).__name__}: {exc}",
+                "proxima_execucao_em": proxima,
+            })
+        resultados.append(item)
+
+    return {
+        "processadas": len(resultados),
+        "sucesso": sum(1 for item in resultados if item.get("status") == "OK"),
+        "erros": sum(1 for item in resultados if item.get("status") != "OK"),
+        "resultados": resultados,
+    }

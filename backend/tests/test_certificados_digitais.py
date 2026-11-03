@@ -226,3 +226,42 @@ def test_a3_date_only_validity_last_day_is_not_treated_as_midnight_expiry():
     parsed = service._parse_a3_validity(today)
     assert parsed.date().isoformat() == today
     assert parsed.hour == 23 and parsed.minute == 59 and parsed.second == 59
+
+
+def test_unlinked_a3_cannot_replace_an_active_linked_a3():
+    active = service.cadastrar_a3(
+        1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
+        "AC TESTE", "SERIE-ATIVO", "2026-01-01", "2027-01-01",
+        "SHA256withRSA", "d" * 64, "Token Teste", "slot-active", 1,
+    )
+    with pytest.raises(ValueError, match="Detecte o novo cartão/token"):
+        service.cadastrar_a3(
+            1, "CARTAO", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
+            None, None, None, None, None, None, None, None, 1,
+        )
+    current = service.obter(active["id"])
+    assert current["status"] == "ATIVO"
+    assert current["apto_para_uso"] is True
+
+
+def test_pf_unlinked_a3_cannot_replace_an_active_linked_a3():
+    active = service.cadastrar_pf_a3(
+        "52998224725", "MARIA DA SILVA", "CARTAO", "AC TESTE", "SERIE-PF-ACTIVE",
+        "2026-01-01", "2027-01-01", "SHA256withRSA", "e" * 64, "Leitor", "slot-pf-active", 1,
+    )
+    with pytest.raises(ValueError, match="Detecte o novo cartão/token"):
+        service.cadastrar_pf_a3(
+            "52998224725", "MARIA DA SILVA", "CARTAO", None, None,
+            None, None, None, None, None, None, 1,
+        )
+    current = service.obter_pf(active["id"])
+    assert current["status"] == "ATIVO"
+    assert current["apto_para_uso"] is True
+
+
+def test_pf_a3_rejects_partial_technical_data_without_thumbprint():
+    with pytest.raises(ValueError, match="thumbprint SHA-256 válido"):
+        service.cadastrar_pf_a3(
+            "52998224725", "MARIA DA SILVA", "CARTAO", "AC TESTE", None,
+            None, None, None, None, None, None, 1,
+        )

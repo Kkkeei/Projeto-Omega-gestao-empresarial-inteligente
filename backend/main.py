@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 # Carrega configuração antes dos módulos que leem variáveis de ambiente no import.
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-from app.db.database import criar_tabelas
+from app.db.database import criar_tabelas, conectar_banco
+from app.services.auth_service import ensure_admin_user, validar_configuracao_producao
 from app.api.v1.routes import router as api_router
 from app.api.v1.auth.routes import router as auth_router
 from app.services.sincronizacao_inicial import sincronizar_todas_ao_iniciar
@@ -24,6 +25,13 @@ logger = logging.getLogger("omega")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     criar_tabelas()
+    ensure_admin_user()
+    validar_configuracao_producao()
+    if os.getenv("OMEGA_ENV", "development").strip().lower() == "production":
+        with conectar_banco() as conn:
+            tem_smtp = bool(os.getenv("OMEGA_SMTP_HOST") and os.getenv("OMEGA_SMTP_FROM") and os.getenv("OMEGA_FRONTEND_URL"))
+        if not tem_smtp:
+            logger.warning("SMTP de redefinição de senha não está configurado; usuários não receberão links por e-mail.")
 
     async def executar_agenda_nfse():
         # A agenda só processa titulares que habilitaram explicitamente a

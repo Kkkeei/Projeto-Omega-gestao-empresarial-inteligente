@@ -8,11 +8,24 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = BASE_DIR / "omega.db"
 DEFAULT_STORAGE_BASE = BASE_DIR.parent / "storage"
 
+def _resolve_configured_path(value: str, *, base_dir: Path = BASE_DIR) -> Path:
+    """Resolve relative paths against the backend directory, not the process CWD.
+
+    Services may start through Uvicorn, a scheduler, Docker or a Windows service.
+    Their working directory is not guaranteed to be the repository or backend.
+    """
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = base_dir / path
+    return path.resolve()
+
+
 def _configured_db_path() -> Path:
-    return Path(os.getenv("OMEGA_DB_PATH", str(DEFAULT_DB_PATH))).expanduser().resolve()
+    return _resolve_configured_path(os.getenv("OMEGA_DB_PATH", str(DEFAULT_DB_PATH)))
+
 
 def _configured_storage_base() -> Path:
-    return Path(os.getenv("OMEGA_STORAGE_PATH", str(DEFAULT_STORAGE_BASE))).expanduser().resolve()
+    return _resolve_configured_path(os.getenv("OMEGA_STORAGE_PATH", str(DEFAULT_STORAGE_BASE)))
 
 # Mantemos constantes para módulos existentes, mas sempre derivadas do ambiente
 # no momento do import. Testes configuram as variáveis antes de importar este módulo.

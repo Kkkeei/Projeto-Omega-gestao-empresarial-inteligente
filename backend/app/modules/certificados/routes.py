@@ -132,7 +132,7 @@ def testar_pf(cert_id: int, admin=Depends(admin_user)):
 
 
 @router.get("/pf/{cert_id}/senha")
-def senha_pf(cert_id: int, user=Depends(current_user)):
+def senha_pf(cert_id: int, user=Depends(admin_user)):
     try:
         password = service.obter_senha_pf_a1(cert_id, user["id"])
         return {"certificado_id": cert_id, "senha": password, "mensagem": "Credencial recuperada. Trate esta informação como segredo."}
@@ -268,7 +268,7 @@ def testar(cert_id: int, admin=Depends(admin_user)):
 
 
 @router.get("/{cert_id}/senha")
-def senha(cert_id: int, user=Depends(current_user)):
+def senha(cert_id: int, user=Depends(admin_user)):
     try:
         password = service.obter_senha_a1(cert_id, user["id"])
     except LookupError as exc:

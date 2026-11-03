@@ -18,6 +18,39 @@ export const consultarTodasCertidoesEstaduais=()=>apiFetch<{resumo:Record<string
 
 export const statusAutomacaoCertidoes=()=>apiFetch<{ocupada:boolean;tipo?:string;empresa_id?:number|null;empresa?:string;iniciado_em?:string;expira_em?:string;mensagem?:string}>('/api/v1/certidoes/automacao/status');
 
+export async function abrirPdfConsultaAutenticado(consultaId: number, download = false): Promise<void> {
+  if (!Number.isInteger(consultaId) || consultaId <= 0) {
+    throw new Error('Referência de consulta de certidão inválida.');
+  }
+  const target = download ? null : window.open('', '_blank', 'noopener,noreferrer');
+  if (!download && !target) {
+    throw new Error('O navegador bloqueou a nova aba. Permita pop-ups para visualizar o PDF.');
+  }
+  try {
+    const {blob, contentDisposition} = await apiFetchBlob(
+      `/api/v1/certidoes/pdf/consulta/${consultaId}${download ? '?download=true' : ''}`,
+      {timeoutMs: 30000},
+    );
+    const url = URL.createObjectURL(blob);
+    if (download) {
+      const a = document.createElement('a');
+      a.href = url;
+      const match = /filename="?([^";]+)"?/i.exec(contentDisposition);
+      a.download = match?.[1] || 'certidao.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } else if (target) {
+      target.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+  } catch (error) {
+    target?.close();
+    throw error;
+  }
+}
+
 export async function abrirPdfCertidaoAutenticado(path: string, download = false): Promise<void> {
   const target = download ? null : window.open('', '_blank', 'noopener,noreferrer');
   if (!download && !target) throw new Error('O navegador bloqueou a nova aba. Permita pop-ups para visualizar o PDF.');

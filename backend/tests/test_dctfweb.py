@@ -6,25 +6,32 @@ from app.modules.dctfweb import service
 
 
 @pytest.mark.parametrize(
-    ("status", "exists", "expected_status", "finalizada"),
+    ("status", "exists", "guia_confirmada", "expected_status", "finalizada"),
     [
-        (None, False, "PENDENTE", False),
-        ("PENDENTE", True, "PENDENTE", False),
-        ("CREDOR", True, "CREDOR", True),
-        ("SEM_MOVIMENTACAO", True, "SEM_MOVIMENTACAO", True),
-        ("SEM_MOVIMENTO", True, "SEM_MOVIMENTACAO", True),
-        ("A_PAGAR", True, "VALOR_INFORMADO", True),
-        ("A_VENCER", True, "VALOR_INFORMADO", True),
-        ("EM_ATRASO", True, "VALOR_INFORMADO", True),
-        ("PAGO", True, "PAGO", True),
-        ("SEM_APURACAO", True, "PENDENTE", False),
-        ("ESTADO_DESCONHECIDO", True, "PENDENTE", False),
+        (None, False, False, "PENDENTE", False),
+        ("PENDENTE", True, False, "PENDENTE", False),
+        ("CREDOR", True, False, "CREDOR", True),
+        ("SEM_MOVIMENTACAO", True, False, "SEM_MOVIMENTACAO", True),
+        ("SEM_MOVIMENTO", True, False, "SEM_MOVIMENTACAO", True),
+        ("A_PAGAR", True, False, "PENDENTE", False),
+        ("A_VENCER", True, False, "PENDENTE", False),
+        ("EM_ATRASO", True, False, "PENDENTE", False),
+        ("PAGO", True, False, "PENDENTE", False),
+        ("A_PAGAR", True, True, "VALOR_INFORMADO", True),
+        ("A_VENCER", True, True, "VALOR_INFORMADO", True),
+        ("EM_ATRASO", True, True, "VALOR_INFORMADO", True),
+        ("PAGO", True, True, "PAGO", True),
+        ("SEM_APURACAO", True, True, "PENDENTE", False),
+        ("ESTADO_DESCONHECIDO", True, True, "PENDENTE", False),
     ],
 )
-def test_status_obrigacao_nao_confunde_ausencia_com_sem_movimento(
-    status, exists, expected_status, finalizada
+def test_status_obrigacao_exige_evidencia_para_finalizar(
+    status, exists, guia_confirmada, expected_status, finalizada
 ):
-    assert service._status_obrigacao(status, exists) == (expected_status, finalizada)
+    assert service._status_obrigacao(status, exists, guia_confirmada) == (
+        expected_status,
+        finalizada,
+    )
 
 
 def test_competencia_sem_obrigacoes_nao_libera_fechamento(monkeypatch):

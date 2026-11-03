@@ -211,3 +211,26 @@ As operações contábeis, tributárias e fiscais devem ser verificadas pelo pro
 ---
 
 **Plataforma ÔMEGA — Gestão Empresarial**
+
+
+## Preparação para uso operacional
+
+Consulte [docs/PRONTIDAO_PRODUCAO.md](docs/PRONTIDAO_PRODUCAO.md) antes de publicar. A aplicação requer configuração própria de segredos, administrador inicial, origens CORS, backup de banco e armazenamento, e validação real das integrações externas.
+
+### Certidões fiscais
+
+A Central de Certidões armazena os resultados e históricos, mas a execução depende do tipo de consulta:
+- **Estadual — SEFAZ-PE:** automação Playwright/Chromium; requer navegador instalado e validação de seletores frente ao portal oficial.
+- **Federal — RFB/PGFN:** ainda utiliza PyAutoGUI/clipboard e requer uma sessão gráfica ativa com Chrome/Chromium. Não deve ser tratada como consulta headless/API oficial.
+- **Narrativa — SEFAZ-PE:** depende de sessão gráfica, certificado e configuração operacional apropriada.
+
+A situação fiscal, a validade e o sucesso técnico da automação são conceitos diferentes. Um erro de automação ou de armazenamento do PDF não deve ser exibido como certidão regular. Antes do uso diário, valide pelo menos uma consulta de teste de cada integração, confira CNPJ, situação, validade e conteúdo do PDF com o portal oficial.
+
+### Configuração de segredos
+
+- Gere `OMEGA_JWT_SECRET` com `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+- Gere `OMEGA_CERTIFICADO_MASTER_KEY` com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+- Guarde ambas em local seguro. Perder a chave Fernet pode impedir o acesso a certificados/senhas A1 criptografados.
+- Em produção use `OMEGA_ENV=production`, `OMEGA_PUBLIC_REGISTRATION=false`, CORS para as origens reais e SMTP configurado para recuperação de senha.
+
+O workflow GitHub Actions verifica sintaxe Python, testes do backend/Bridge e build TypeScript/Vite. Uma execução verde não substitui o teste ao vivo dos portais fiscais.

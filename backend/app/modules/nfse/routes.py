@@ -15,9 +15,12 @@ from reportlab.lib.units import mm
 from pathlib import Path
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Any
+import io
+from typing import Literal
 
 from app.api.v1.auth.routes import current_user
 from app.modules.nfse import service
@@ -38,6 +41,65 @@ class ImportarA3Request(BaseModel):
     body_b64: str = Field(min_length=1)
 
 
+class SalvarConfigRequest(BaseModel):
+    origem: Literal["PJ", "PF"]
+    entidade_id: int = Field(gt=0)
+    sincronizacao_automatica: bool = False
+    frequencia_horas: int = Field(default=24, ge=1, le=720)
+    horario: str = Field(default="02:00", pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+
+@router.get("/config")
+def obter_config(origem: Literal["PJ", "PF"], entidade_id: int, _user=Depends(current_user)):
+    try:
+        return service.obter_config(origem, entidade_id)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/config")
+def salvar_config(body: SalvarConfigRequest, _user=Depends(current_user)):
+    try:
+        return service.salvar_config(
+            body.origem,
+            body.entidade_id,
+            body.sincronizacao_automatica,
+            body.frequencia_horas,
+            body.horario,
+            _user["id"],
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+class ConfiguracaoNfseRequest(BaseModel):
+    origem: str = Field(min_length=2, max_length=2)
+    entidade_id: int = Field(gt=0)
+    sincronizacao_automatica: bool
+    frequencia_horas: int = Field(ge=1, le=720)
+    horario: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+
+class EventoNfseRequest(BaseModel):
+    tipo_evento: str = Field(min_length=1, max_length=80)
+    descricao: str = Field(min_length=1, max_length=2000)
+    origem: str = Field(default="SISTEMA", max_length=80)
+    dados: dict[str, Any] = Field(default_factory=dict)
+
+
+class LancamentoNfseRequest(BaseModel):
+    data_lancamento: str
+    conta_debito: str = Field(min_length=1, max_length=120)
+    conta_credito: str = Field(min_length=1, max_length=120)
+    historico: str = Field(min_length=1, max_length=500)
+    valor: float = Field(ge=0)
+    observacao: str | None = Field(default=None, max_length=2000)
+
+
+class ZipNfseRequest(BaseModel):
+    nfse_ids: list[int] = Field(min_length=1, max_length=500)
+
+
 @router.get("/contexto")
 def contexto(origem: str, entidade_id: int, _user=Depends(current_user)):
     try:
@@ -47,10 +109,146 @@ def contexto(origem: str, entidade_id: int, _user=Depends(current_user)):
 
 
 @router.get("")
-def listar(origem: str | None = None, entidade_id: int | None = None, limit: int = 100, offset: int = 0, _user=Depends(current_user)):
-    documents = service.listar(origem, entidade_id, limit, offset)
-    return {"total": len(documents), "nfse": documents}
+def listar(origem: str | None = None, entidade_id: int | None = None, limit: int = 100, offset: int = 0, competencia: str | None = None, _user=Depends(current_user)):
+    try:
+        documents = service.listar(origem, entidade_id, limit, offset, competencia)
+        return {"total": len(documents), "nfse": documents}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
+
+@router.get("/painel")
+def painel(competencia: str, _user=Depends(current_user)):
+    try:
+        return service.painel(competencia)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/configuracao")
+def obter_configuracao(origem: str, entidade_id: int, _user=Depends(current_user)):
+    try:
+        return service.obter_config(origem, entidade_id)
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.put("/configuracao")
+def salvar_configuracao(body: ConfiguracaoNfseRequest, user=Depends(current_user)):
+    try:
+        return service.salvar_config(
+            body.origem, body.entidade_id, body.sincronizacao_automatica,
+            body.frequencia_horas, body.horario, user["id"],
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/importar-xml")
+async def importar_xml(
+    origem: str = Form(...),
+    entidade_id: int = Form(..., gt=0),
+    arquivo: UploadFile = File(...),
+    user=Depends(current_user),
+):
+    try:
+        data = await arquivo.read(25 * 1024 * 1024 + 1)
+        if len(data) > 25 * 1024 * 1024:
+            raise HTTPException(413, "O arquivo excede o limite de 25 MB.")
+        return service.importar_xml_manual(origem, entidade_id, arquivo.filename or "", data, user["id"])
+    except HTTPException:
+        raise
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/importar-eml")
+async def importar_eml(
+    origem: str = Form(...),
+    entidade_id: int = Form(..., gt=0),
+    arquivo: UploadFile = File(...),
+    user=Depends(current_user),
+):
+    try:
+        data = await arquivo.read(25 * 1024 * 1024 + 1)
+        if len(data) > 25 * 1024 * 1024:
+            raise HTTPException(413, "O arquivo excede o limite de 25 MB.")
+        return service.importar_email_eml(origem, entidade_id, arquivo.filename or "", data, user["id"])
+    except HTTPException:
+        raise
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/{nfse_id}/eventos")
+def eventos(nfse_id: int, _user=Depends(current_user)):
+    try:
+        items = service.listar_eventos(nfse_id)
+        return {"total": len(items), "eventos": items}
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/eventos")
+def registrar_evento(nfse_id: int, body: EventoNfseRequest, user=Depends(current_user)):
+    try:
+        return service.registrar_evento(
+            nfse_id, body.tipo_evento, body.descricao, user["id"],
+            origem=body.origem, dados=body.dados,
+        )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/eventos/consultar-adn")
+def consultar_eventos_adn(nfse_id: int, _user=Depends(current_user)):
+    try:
+        return service.consultar_eventos_adn(nfse_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/{nfse_id}/lancamento")
+def salvar_lancamento(nfse_id: int, body: LancamentoNfseRequest, user=Depends(current_user)):
+    try:
+        return service.salvar_lancamento(
+            nfse_id, body.data_lancamento, body.conta_debito, body.conta_credito,
+            body.historico, body.valor, body.observacao, user["id"],
+        )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/exportar/excel")
+def exportar_excel(competencia: str, origem: str | None = None, entidade_id: int | None = None, _user=Depends(current_user)):
+    try:
+        content = service.exportar_excel(competencia, origem, entidade_id)
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="nfse-{competencia}.xlsx"'},
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/exportar/xml-zip")
+def exportar_xml_zip(body: ZipNfseRequest, _user=Depends(current_user)):
+    try:
+        content = service.zip_xmls(body.nfse_ids)
+        return Response(
+            content=content,
+            media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="nfse-xmls.zip"'},
+        )
+    except (LookupError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 @router.get("/{nfse_id}")
 def detalhe(nfse_id: int, _user=Depends(current_user)):
