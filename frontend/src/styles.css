@@ -619,3 +619,50 @@ td strong{font-size:12px}
 @keyframes nfse-spin{to{transform:rotate(360deg)}}
 @media(max-width:950px){.nfse-company-competence{align-items:flex-start;flex-direction:column}.nfse-company-competence .nfse-month-control{margin-left:0;width:100%;justify-content:flex-start}}
 @media(max-width:650px){.nfse-company-competence .nfse-month-control{justify-content:space-between}.nfse-company-competence>.button{width:100%;justify-content:center}}
+
+
+/* Identidade ÔMEGA — tamanho e nitidez consistentes no login e na navegação */
+.sidebar .brand.brand-logo-link{
+  height:104px!important;
+  min-height:104px!important;
+  margin:0 0 14px!important;
+  padding:8px 5px 16px!important;
+  justify-content:center!important;
+  overflow:visible!important;
+}
+.sidebar .brand.brand-logo-link .omega-sidebar-logo{
+  width:100%!important;
+  max-width:232px!important;
+  height:88px!important;
+  max-height:88px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  display:block!important;
+  image-rendering:auto;
+  transform:none!important;
+}
+.login-brand{
+  gap:0;
+}
+.login-brand .login-omega-logo{
+  width:min(100%,590px)!important;
+  max-width:590px!important;
+  height:250px!important;
+  max-height:250px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  display:block;
+  image-rendering:auto;
+  margin:0 auto 18px!important;
+}
+.login-brand>p{
+  margin-top:0!important;
+}
+@media(max-width:900px){
+  .login-brand .login-omega-logo{width:min(100%,470px)!important;height:205px!important;max-height:205px!important}
+}
+@media(max-width:760px){
+  .sidebar .brand.brand-logo-link{height:88px!important;min-height:88px!important}
+  .sidebar .brand.brand-logo-link .omega-sidebar-logo{height:76px!important;max-height:76px!important}
+  .login-brand .login-omega-logo{width:min(100%,360px)!important;height:155px!important;max-height:155px!important}
+}
