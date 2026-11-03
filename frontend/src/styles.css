@@ -666,3 +666,10 @@ td strong{font-size:12px}
   .sidebar .brand.brand-logo-link .omega-sidebar-logo{height:76px!important;max-height:76px!important}
   .login-brand .login-omega-logo{width:min(100%,360px)!important;height:155px!important;max-height:155px!important}
 }
+
+
+/* Estado vazio do detalhe de empresa sem certificado digital */
+.cert-no-certificate{margin:18px;padding:30px 24px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;min-height:190px}
+.cert-no-certificate-icon{width:46px;height:46px;border-radius:12px;background:#eef4ff;color:#315fba;display:grid;place-items:center;margin-bottom:3px}
+.cert-no-certificate strong{font-size:14px;color:#263244}
+.cert-no-certificate span{max-width:560px;color:#667085;font-size:11px;line-height:1.6}
