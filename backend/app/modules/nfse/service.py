@@ -181,10 +181,17 @@ def _a1_mtls_files(cert: dict[str, Any], origin: str) -> Iterator[tuple[Path, Pa
         yield paths
 
 
-def _adn_url(nsu: int) -> str:
+def _adn_url(nsu: int, origin: str, entity_id: int) -> str:
     base = _provider_base_url()
-    # Método oficial para contribuintes: GET /DFe/{NSU}.
-    return f"{base}/DFe/{int(nsu)}?tipoNSU=DISTRIBUICAO&lote=true"
+    # O ADN permite informar o CNPJ completo consultado quando o certificado
+    # pertence a outro estabelecimento da mesma raiz (matriz/filial).
+    query = ["lote=true"]
+    if origin == "PJ":
+        document = _normalize_doc(_entity(origin, entity_id).get("documento"))
+        if len(document) != 14:
+            raise ValueError("O CNPJ do titular selecionado não é válido para consulta no ADN.")
+        query.insert(0, f"cnpjConsulta={document}")
+    return f"{base}/DFe/{int(nsu)}?{'&'.join(query)}"
 
 
 def _decode_xml_candidate(raw: Any) -> str | None:
@@ -638,7 +645,7 @@ def contexto(origin: str, entity_id: int) -> dict[str, Any]:
 
 
 def _request_a1(origin: str, entity_id: int, cert: dict[str, Any], nsu: int) -> tuple[int, str, str]:
-    url = _adn_url(nsu)
+    url = _adn_url(nsu, origin, entity_id)
     timeout = float(os.getenv("OMEGA_NFSE_TIMEOUT", "60"))
     with _a1_mtls_files(cert, origin) as (cert_file, key_file):
         with httpx.Client(timeout=timeout, cert=(str(cert_file), str(key_file)), verify=True, follow_redirects=True) as client:
@@ -783,9 +790,8 @@ def consultar_a1(origin: str, entity_id: int) -> dict[str, Any]:
                 origin, entity_id, current_nsu, previous_max,
                 "ERRO_API", f"ADN HTTP {status_code}: {body[:500]}"
             )
-            raise ValueError(
-                f"ADN respondeu HTTP {status_code}. Verifique a mensagem registrada."
-            )
+            detail = body.strip()[:500] or "O ADN não retornou detalhes da rejeição."
+            raise ValueError(f"ADN respondeu HTTP {status_code}: {detail}")
 
         if not items and _has_unparsed_document_batch(payload):
             _update_cursor(
