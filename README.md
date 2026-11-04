@@ -25,7 +25,7 @@ A plataforma tem como objetivo reduzir a fragmentação de processos operacionai
 | NFS-e | Integração com documentos fiscais de serviços, consulta e processamento de XMLs e geração de documentos PDF, conforme as integrações implementadas. |
 | OMEGA A3 Bridge | Componente local para comunicação com certificados A3 em ambiente Windows compatível. |
 
-A disponibilidade das funcionalidades depende da configuração do ambiente, das credenciais, dos certificados e dos serviços externos integrados.
+A disponibilidade das funcionalidades depende da configuração do ambiente, das credenciais, dos certificados e dos serviços externos integrados. O backend atualmente utiliza SQLite diretamente; PostgreSQL não está implementado nem deve ser configurado nesta versão.
 
 ## Arquitetura e tecnologias
 
@@ -36,7 +36,7 @@ A disponibilidade das funcionalidades depende da configuração do ambiente, das
 | Frontend | React |
 | Linguagem do frontend | TypeScript |
 | Ferramenta de build | Vite |
-| Banco de dados | SQLite no ambiente atualmente documentado; PostgreSQL conforme configuração |
+| Banco de dados | SQLite (implementação atual) |
 | Automação de navegador | Playwright |
 | Controle de versão | Git |
 | Repositório | GitHub |
@@ -234,3 +234,8 @@ A situação fiscal, a validade e o sucesso técnico da automação são conceit
 - Em produção use `OMEGA_ENV=production`, `OMEGA_PUBLIC_REGISTRATION=false`, CORS para as origens reais e SMTP configurado para recuperação de senha.
 
 O workflow GitHub Actions verifica sintaxe Python, testes do backend/Bridge e build TypeScript/Vite. Uma execução verde não substitui o teste ao vivo dos portais fiscais.
+
+
+## Banco de dados e implantação
+
+A implementação atual utiliza SQLite (`sqlite3`) com caminhos configuráveis para banco e armazenamento. Não há adaptador PostgreSQL nesta versão. Uma migração para PostgreSQL exige camada de persistência compatível, migrações versionadas, conversão dos dados existentes e testes de concorrência; não basta alterar uma variável de ambiente.
