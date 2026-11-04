@@ -677,8 +677,19 @@ def _begin_sync(origin: str, entity_id: int, cursor: dict[str, Any]) -> None:
         if not stale_lock:
             raise ValueError("Já existe uma consulta NFS-e em andamento para este titular. Se ela foi interrompida, aguarde 10 minutos e tente novamente.")
 
-    # Sem intervalo de espera entre consultas concluídas. A trava abaixo protege somente
-    # contra duas consultas simultâneas para o mesmo titular.
+    next_at = cursor.get("proxima_consulta_em")
+    if next_at:
+        try:
+            dt = datetime.fromisoformat(str(next_at).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if dt > now:
+                remaining = max(1, int((dt - now).total_seconds() // 60))
+                raise ValueError(f"A fila do ADN está em espera. Tente novamente em aproximadamente {remaining} minuto(s).")
+        except ValueError as exc:
+            if str(exc).startswith("A fila do ADN"):
+                raise
+
     with conectar_banco() as conn:
         if stale_lock:
             cur = conn.execute(
