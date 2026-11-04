@@ -675,7 +675,7 @@ def _begin_sync(origin: str, entity_id: int, cursor: dict[str, Any]) -> None:
         except (TypeError, ValueError):
             stale_lock = False
         if not stale_lock:
-            raise ValueError("Já existe uma consulta NFS-e em andamento para este titular. Se ela foi interrompida, aguarde 10 minutos e tente novamente.")
+            raise ValueError("Já existe uma consulta NFS-e em andamento para este titular. Aguarde a conclusão da chamada atual e tente novamente.")
 
     # Não há bloqueio por intervalo: o usuário pode consultar novamente assim que a chamada anterior terminar.
 
