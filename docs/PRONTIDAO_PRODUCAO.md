@@ -27,7 +27,7 @@ Este documento registra os controles adicionados na branch `fix/certidoes-produc
 
 ### Certificados A1/A3
 - A senha A1 é armazenada criptografada; revelação/baixamento e download do arquivo são ações administrativas e registradas.
-- O PIN do A3 não é armazenado pelo servidor.
+- O cadastro A3 é declarativo: o usuário confirma o tipo A3 sem precisar detectar o cartão durante o cadastro. O PIN não é solicitado nem armazenado pelo servidor. A utilização efetiva depende do cartão/token e do OMEGA Bridge no computador local.
 - O cadastro A3 sem dispositivo fica explicitamente como `NAO_VINCULADO` e não é considerado apto para uso.
 - O formulário permite detectar e vincular dispositivo real pelo OMEGA Bridge. A substituição de A3 já vinculado exige detectar o cartão/token novo; um cadastro vazio não pode desativar o vínculo ativo.
 
@@ -74,7 +74,16 @@ O PR #1 contém alterações que não estão automaticamente incluídas no PR #2
 - Não há transmissão oficial da DCTFWeb implementada.
 - Os fluxos federais/narrativa são automação visual, não API oficial; a estabilidade depende do portal, desktop e certificado.
 - A integração SMTP depende da configuração e do provedor em produção.
-- A configuração PostgreSQL não foi validada nesta revisão; o banco principal implementado continua usando SQLite.
+- PostgreSQL não está implementado nesta versão. O backend usa `sqlite3` diretamente; a implantação deve utilizar SQLite até que exista uma migração de arquitetura e dados testada.
 - CI aprovado no commit revisado em 29/10/2026: 134 testes do backend, 3 testes do Bridge, build TypeScript/Vite de produção e `npm audit` com zero vulnerabilidades reportadas. Cada novo commit deve manter os checks aprovados.
 - A consulta real SEFAZ-PE, a consulta real RFB/PGFN e a certidão narrativa ainda não foram testadas neste turno com certificados/empresas reais.
 - A funcionalidade A3 Bridge depende do driver PKCS#11 e do dispositivo instalado na máquina de uso; SMTP, domínio/CORS, chaves de produção e reinício preservando o banco/storage dependem da configuração do ambiente de implantação.
+
+
+## DCTFWeb — escopo atual
+
+A aba DCTFWeb é um painel de conferência interna das obrigações federais cadastradas em Impostos. Ela não transmite, retifica ou consulta recibos diretamente na Receita Federal. Não apresentar o estado `COMPLETA` como declaração entregue: ele significa apenas que as obrigações internas foram conferidas conforme as evidências registradas no ÔMEGA. Uma futura transmissão oficial exige integração/autorização específica, tratamento de recibos, retificações e homologação independente.
+
+## NFS-e — consulta ao ADN
+
+Não existe intervalo de espera/cooldown entre consultas concluídas. O único bloqueio é concorrencial: impede duas consultas simultâneas do mesmo titular para evitar duplicidade e corrupção do cursor NSU. Uma chamada já em andamento não deve criar fila nem impor espera fixa após seu término; o usuário pode consultar novamente assim que a chamada terminar.
