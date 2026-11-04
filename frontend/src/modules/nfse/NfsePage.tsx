@@ -171,7 +171,13 @@ export function NfsePage(){
       }else{
         if(!bridgeReady)throw new Error('Insira o cartão/token e clique em “Detectar cartão” antes de consultar.');
         const thumbprint=context.certificado.thumbprint_sha256||'';
-        const url=`${ADN_BASE()}/DFe/${context.ultimo_nsu||0}?tipoNSU=DISTRIBUICAO&lote=true`;
+        const query=new URLSearchParams({lote:'true'});
+        if(origin==='PJ'){
+          const cnpj=context.entidade.documento.replace(/\D/g,'');
+          if(cnpj.length!==14)throw new Error('O CNPJ da empresa selecionada é inválido para consulta no ADN.');
+          query.set('cnpjConsulta',cnpj);
+        }
+        const url=`${ADN_BASE()}/DFe/${context.ultimo_nsu||0}?${query.toString()}`;
         const r=await bridgeFetchNfseDfe(url,thumbprint);
         if(r.status_code>=400)throw new Error(`ADN respondeu HTTP ${r.status_code}. Verifique o certificado, a autorização do contribuinte e o ambiente.`);
         const saved=await importarNfseA3(origin,entityId,thumbprint,r.content_type,r.body_b64);
