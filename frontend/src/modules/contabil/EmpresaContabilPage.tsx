@@ -185,7 +185,7 @@ export function EmpresaContabilPage() {
     }
   }
 
-  async function salvarCategoria(event: React.FormEvent<HTMLFormElement>) {
+  async function salvarCategoria(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!categoriaNome.trim()) { setErroModal('Informe o nome da pasta.'); return; }
     setSalvando(true);
@@ -239,7 +239,7 @@ export function EmpresaContabilPage() {
     } catch (err) { setErroModal(err instanceof Error ? err.message : 'Não foi possível excluir o arquivo.'); }
   }
 
-  async function confirmarInativacao(event: React.FormEvent<HTMLFormElement>) {
+  async function confirmarInativacao(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!documentoAlvo) return;
     setSalvando(true);
