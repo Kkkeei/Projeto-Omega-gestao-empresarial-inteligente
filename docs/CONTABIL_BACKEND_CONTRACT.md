@@ -144,7 +144,7 @@ Query:
 - `por_pagina`: padrão 100, limite recomendado 200.
 
 Retorno:
-§json
+```json
 {
   "competencia": 202611,
   "resumo": {
@@ -175,7 +175,7 @@ Retorno:
   "pagina": 1,
   "por_pagina": 100
 }
-§
+```
 
 Os valores acima são ilustrativos. O backend calcula os totais com base nas empresas e obrigações reais. A listagem deve ser ordenada por razão social.
 
@@ -191,7 +191,7 @@ Retorno: `{ "empresas": EmpresaContabil[] }`. Cada empresa deve conter os campos
 
 Listar usuários ativos que podem receber empresas e a quantidade de atribuições ativas:
 
-§json
+```json
 {
   "responsaveis": [
     {
@@ -204,7 +204,7 @@ Listar usuários ativos que podem receber empresas e a quantidade de atribuiçõ
     }
   ]
 }
-§
+```
 
 Não criar uma tabela paralela de responsáveis nem usuários fixos. Anderson e Kamily são usuários existentes; os registros reais devem vir de `usuarios`.
 
@@ -213,7 +213,7 @@ Não criar uma tabela paralela de responsáveis nem usuários fixos. Anderson e 
 Aplicar alterações de atribuição dentro de uma única transação. Se uma operação falhar, desfazer o lote inteiro.
 
 Request:
-§json
+```json
 {
   "alteracoes": [
     {
@@ -230,7 +230,7 @@ Request:
     }
   ]
 }
-§
+```
 
 Regras:
 - Validar empresas e usuários.
@@ -256,7 +256,7 @@ Retornar:
 - `competencias_ano` com situação dos doze meses para pintar a timeline.
 
 Exemplo de envelope:
-§json
+```json
 {
   "empresa": {
     "id": 41,
@@ -308,7 +308,7 @@ Exemplo de envelope:
     "nao_recebidos": 1
   }
 }
-§
+```
 
 Os campos `documentos_count`, `obrigacoes_pendentes` e `obrigacoes_recebidas` devem ser calculados para a competência consultada. `competencias_ano` deve conter os doze meses.
 
@@ -329,14 +329,14 @@ Arquivar logicamente. Recusar exclusão quando houver documentos ou histórico v
 #### POST `/empresas/{empresa_id}/documentos`
 
 Request:
-§json
+```json
 {
   "nome": "Banco Sicoob CC 159.522-9",
   "categoria_id": 1,
   "competencia_inicio": 202608,
   "observacao": "Agência 0001"
 }
-§
+```
 
 Criar cadastro e obrigação inicial na competência informada. Demais competências são geradas na consulta. Retornar `DocumentoContabil`.
 
@@ -349,13 +349,13 @@ A competência inicial não é alterada pelo formulário de edição atual. Caso
 #### POST `/documentos/{documento_id}/inativar`
 
 Request:
-§json
+```json
 {
   "competencia_fim": 202610,
   "motivo": "Conta encerrada",
   "observacao": "Encerramento da conta bancária"
 }
-§
+```
 
 A competência final é inclusiva. A partir da competência seguinte, não criar novas obrigações. Preservar o cadastro, as obrigações anteriores, os arquivos e o histórico.
 
@@ -425,13 +425,13 @@ Não enviar valores de `regime_tributario` transformados ou abreviados; preserva
 
 Criar o módulo conforme o padrão atual de módulos FastAPI:
 
-§text
+```text
 backend/app/modules/contabil/
 ├── __init__.py
 ├── routes.py
 ├── schemas.py
 └── service.py
-§
+```
 
 Se o módulo crescer, separar em subpastas `routes/`, `services/`, `models/` e `schemas/`. Não adicionar ORM caso o restante do backend continue usando `sqlite3` diretamente; manter a mesma abstração `conectar_banco()`.
 
