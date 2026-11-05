@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Building2, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, FileText, Filter, Search, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { listarDashboardContabil } from './contabilApi';
+import { listarDashboardContabil, listarResponsaveisContabeis } from './contabilApi';
 import { AtribuicaoModal } from './AtribuicaoModal';
-import type { DashboardContabilResponse, EmpresaContabil } from './types';
+import type { DashboardContabilResponse, ResponsavelContabil } from './types';
 import './contabil.css';
 
 const REGIMES = [
@@ -53,6 +53,7 @@ export function ContabilPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalAtribuicao, setModalAtribuicao] = useState(false);
+  const [responsaveis, setResponsaveis] = useState<ResponsavelContabil[]>([]);
 
   async function carregar() {
     setLoading(true);
@@ -75,14 +76,17 @@ export function ContabilPage() {
   }
 
   useEffect(() => {
+    void listarResponsaveisContabeis().then((result) => setResponsaveis(result.responsaveis.filter((item) => item.ativo))).catch(() => setResponsaveis([]));
+  }, []);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => { void carregar(); }, busca ? 250 : 0);
     return () => window.clearTimeout(timer);
   }, [busca, regime, responsavel, competencia]);
 
   const resumo = data?.resumo;
   const companies = data?.empresas ?? [];
-  const owners = Array.from(new Map(companies.filter((item) => item.responsavel_id && item.responsavel_nome)
-    .map((item) => [item.responsavel_id as number, item.responsavel_nome as string] as const)).entries());
+  const owners = responsaveis.map((item) => [item.id, item.nome] as const);
 
   return <div className="page contabil-page">
     <div className="page-heading contabil-heading">
