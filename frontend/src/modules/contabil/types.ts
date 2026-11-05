@@ -106,6 +106,7 @@ export interface EmpresaDocumentacaoContabilResponse {
   competencia: number;
   categorias: CategoriaContabil[];
   documentos: DocumentoContabil[];
+  competencias_ano?: Array<{ mes: number; status: 'COMPLETA' | 'PARCIAL' | 'SEM_RECEBIMENTO' | 'FUTURA' }>;
   resumo: {
     total: number;
     recebidos: number;
