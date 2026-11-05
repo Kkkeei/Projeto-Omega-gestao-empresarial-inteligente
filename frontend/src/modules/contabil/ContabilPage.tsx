@@ -3,7 +3,7 @@ import { Building2, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, FileTex
 import { Link } from 'react-router-dom';
 import { listarDashboardContabil, listarResponsaveisContabeis } from './contabilApi';
 import { AtribuicaoModal } from './AtribuicaoModal';
-import type { DashboardContabilResponse, ResponsavelContabil } from './types';
+import type { DashboardContabilResponse, EmpresaContabil, ResponsavelContabil } from './types';
 import './contabil.css';
 
 const REGIMES = [
