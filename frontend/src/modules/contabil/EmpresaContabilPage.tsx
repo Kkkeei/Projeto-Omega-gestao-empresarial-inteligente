@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from 'react';
 import { ArrowLeft, Building2, CircleAlert, Download, FileText, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   atualizarDocumentoContabil,
-  arquivarCategoriaContabil,
-  atualizarCategoriaContabil,
   baixarArquivoContabil,
   criarCategoriaContabil,
   criarDocumentoContabil,
@@ -167,7 +165,7 @@ export function EmpresaContabilPage() {
     validarArquivos(Array.from(event.dataTransfer.files));
   }
 
-  async function salvarDocumento(event: React.FormEvent<HTMLFormElement>) {
+  async function salvarDocumento(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!formNome.trim() || !formCategoria) { setErroModal('Informe o nome e a categoria.'); return; }
     setSalvando(true);
@@ -352,7 +350,7 @@ export function EmpresaContabilPage() {
             <Upload size={25} /><strong>Arraste os arquivos aqui ou clique para selecionar</strong><span>PDF, JPG, PNG ou XLSX · máximo de 25 MB por arquivo</span>
             <label className="button secondary">Selecionar arquivos<input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx" multiple hidden onChange={(event) => { if (event.target.files) validarArquivos(Array.from(event.target.files)); event.target.value = ''; }} /></label>
           </div>
-          {arquivosNovos.length > 0 && <div className="contabil-pending-files"><strong>Arquivos prontos para envio ({arquivosNovos.length})</strong>{arquivosNovos.map((file, index) => <div key={file.name + index}><File size={14} /><span>{file.name}<small>{tamanhoArquivo(file.size)}</small></span><button className="icon-button" onClick={() => setArquivosNovos((current) => current.filter((_, i) => i !== index))}><X size={13} /></button></div>)}<button className="button primary" onClick={() => void enviarArquivos()} disabled={salvando}>{salvando ? 'Enviando...' : 'Enviar arquivos'}</button></div>}
+          {arquivosNovos.length > 0 && <div className="contabil-pending-files"><strong>Arquivos prontos para envio ({arquivosNovos.length})</strong>{arquivosNovos.map((file, index) => <div key={file.name + index}><FileText size={14} /><span>{file.name}<small>{tamanhoArquivo(file.size)}</small></span><button className="icon-button" onClick={() => setArquivosNovos((current) => current.filter((_, i) => i !== index))}><X size={13} /></button></div>)}<button className="button primary" onClick={() => void enviarArquivos()} disabled={salvando}>{salvando ? 'Enviando...' : 'Enviar arquivos'}</button></div>}
           <div className="contabil-upload-list"><div className="contabil-subheading"><strong>Arquivos carregados</strong><small>{arquivos.length} arquivos</small></div>
             {!arquivos.length ? <div className="contabil-mini-empty">Ainda não há arquivos recebidos nesta competência.</div> : arquivos.map((file) => <div className="contabil-upload-file" key={file.id}>
               <span className="contabil-file-icon"><FileText size={15} /></span>
