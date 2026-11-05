@@ -3,6 +3,8 @@ import { ArrowLeft, Building2, CircleAlert, Download, FileText, Folder, FolderPl
 import { Link, useParams } from 'react-router-dom';
 import {
   atualizarDocumentoContabil,
+  atualizarCategoriaContabil,
+  arquivarCategoriaContabil,
   baixarArquivoContabil,
   criarCategoriaContabil,
   criarDocumentoContabil,
@@ -61,13 +63,14 @@ export function EmpresaContabilPage() {
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [modal, setModal] = useState<'documento' | 'upload' | 'inativar' | 'categoria' | null>(null);
+  const [modal, setModal] = useState<'documento' | 'upload' | 'inativar' | 'categoria' | 'arquivarCategoria' | null>(null);
   const [documentoAlvo, setDocumentoAlvo] = useState<DocumentoContabil | null>(null);
   const [arquivos, setArquivos] = useState<ArquivoContabil[]>([]);
   const [formNome, setFormNome] = useState('');
   const [formCategoria, setFormCategoria] = useState('');
   const [formInicio, setFormInicio] = useState(mesInput(competenciaAtual()));
   const [formObs, setFormObs] = useState('');
+  const [categoriaAlvoId, setCategoriaAlvoId] = useState<number | null>(null);
   const [categoriaNome, setCategoriaNome] = useState('');
   const [categoriaDescricao, setCategoriaDescricao] = useState('');
   const [fimCompetencia, setFimCompetencia] = useState(mesInput(competenciaAtual()));
@@ -191,13 +194,33 @@ export function EmpresaContabilPage() {
     setSalvando(true);
     setErroModal('');
     try {
-      await criarCategoriaContabil(empresaId, { nome: categoriaNome.trim(), descricao: categoriaDescricao || undefined });
+      if (categoriaAlvoId) {
+        await atualizarCategoriaContabil(categoriaAlvoId, { nome: categoriaNome.trim(), descricao: categoriaDescricao || undefined });
+      } else {
+        await criarCategoriaContabil(empresaId, { nome: categoriaNome.trim(), descricao: categoriaDescricao || undefined });
+      }
       setModal(null);
       setCategoriaNome('');
       setCategoriaDescricao('');
       await carregar();
     } catch (err) {
       setErroModal(err instanceof Error ? err.message : 'Não foi possível criar a pasta.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function confirmarArquivamentoCategoria() {
+    if (!categoriaAlvoId || salvando) return;
+    setSalvando(true);
+    setErroModal('');
+    try {
+      await arquivarCategoriaContabil(categoriaAlvoId);
+      setPasta(null);
+      setModal(null);
+      await carregar();
+    } catch (err) {
+      setErroModal(err instanceof Error ? err.message : 'Não foi possível arquivar a pasta.');
     } finally {
       setSalvando(false);
     }
@@ -287,7 +310,7 @@ export function EmpresaContabilPage() {
       <div className="contabil-timeline-legend"><span><i className="complete" />Completa</span><span><i className="partial" />Competência atual pendente</span><span><i className="missing" />Competência anterior pendente</span><span><i className="future" />Futura</span></div>
     </div>
 
-    <div className="contabil-folder-toolbar"><div><span className="eyebrow">DOCUMENTAÇÕES CADASTRADAS</span><h3>Pastas da empresa</h3></div><div className="actions"><button className="button secondary" onClick={() => { setCategoriaNome(''); setCategoriaDescricao(''); setErroModal(''); setModal('categoria'); }}><FolderPlus size={14} />Cadastrar pasta</button><button className="button primary" onClick={abrirNovoDocumento}><Plus size={14} />Cadastrar documentação</button></div></div>
+    <div className="contabil-folder-toolbar"><div><span className="eyebrow">DOCUMENTAÇÕES CADASTRADAS</span><h3>Pastas da empresa</h3></div><div className="actions"><button className="button secondary" onClick={() => { setCategoriaAlvoId(null); setCategoriaNome(''); setCategoriaDescricao(''); setErroModal(''); setModal('categoria'); }}><FolderPlus size={14} />Cadastrar pasta</button>{pasta !== null && <><button className="button secondary" onClick={() => { const category = categories.find((item) => item.id === pasta); if (!category) return; setCategoriaAlvoId(category.id); setCategoriaNome(category.nome); setCategoriaDescricao(category.descricao || ''); setErroModal(''); setModal('categoria'); }}><Pencil size={13} />Editar pasta</button><button className="button danger" onClick={() => { const category = categories.find((item) => item.id === pasta); if (!category) return; setCategoriaAlvoId(category.id); setCategoriaNome(category.nome); setErroModal(''); setModal('arquivarCategoria'); }}>Inativar pasta</button></>}<button className="button primary" onClick={abrirNovoDocumento}><Plus size={14} />Cadastrar documentação</button></div></div>
     <div className="contabil-folder-grid">
       <button className={'contabil-folder-card all' + (pasta === null ? ' active' : '')} onClick={() => setPasta(null)}>
         <span className="contabil-folder-icon"><Folder size={19} /></span><strong>Tudo</strong><small>{allCount} documentações</small><span className="contabil-folder-state">{data?.resumo.pendentes ? data.resumo.pendentes + ' pendentes' : 'Visão geral'}</span>
@@ -321,7 +344,7 @@ export function EmpresaContabilPage() {
 
     {modal && <div className="contabil-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !salvando) setModal(null); }}>
       <section className={'contabil-form-modal' + (modal === 'upload' ? ' upload' : '')} role="dialog" aria-modal="true">
-        <header className="contabil-modal-header"><div><span className="eyebrow">{modal === 'upload' ? 'RECEBIMENTO DE ARQUIVOS' : 'CONTROLE DE DOCUMENTAÇÃO'}</span><h3>{modal === 'documento' ? (documentoAlvo ? 'Editar documentação' : 'Nova documentação') : modal === 'upload' ? 'Arquivos recebidos' : modal === 'categoria' ? 'Cadastrar pasta' : 'Inativar documentação'}</h3><p>{documentoAlvo?.nome || data?.empresa.razao_social}</p></div><button className="icon-button" onClick={() => setModal(null)} aria-label="Fechar"><X size={17} /></button></header>
+        <header className="contabil-modal-header"><div><span className="eyebrow">{modal === 'upload' ? 'RECEBIMENTO DE ARQUIVOS' : 'CONTROLE DE DOCUMENTAÇÃO'}</span><h3>{modal === 'documento' ? (documentoAlvo ? 'Editar documentação' : 'Nova documentação') : modal === 'upload' ? 'Arquivos recebidos' : modal === 'categoria' ? (categoriaAlvoId ? 'Editar pasta' : 'Cadastrar pasta') : modal === 'arquivarCategoria' ? 'Inativar pasta' : 'Inativar documentação'}</h3><p>{documentoAlvo?.nome || data?.empresa.razao_social}</p></div><button className="icon-button" onClick={() => setModal(null)} aria-label="Fechar"><X size={17} /></button></header>
         {erroModal && <div className="contabil-inline-error">{erroModal}</div>}
 
         {modal === 'documento' && <form onSubmit={(event) => void salvarDocumento(event)}>
@@ -336,9 +359,13 @@ export function EmpresaContabilPage() {
 
         {modal === 'categoria' && <form onSubmit={(event) => void salvarCategoria(event)}>
           <div className="contabil-form-grid"><label>Nome da pasta *<input value={categoriaNome} onChange={(event) => setCategoriaNome(event.target.value)} required placeholder="Ex.: Folha de pagamento" /></label><label className="span-2">Descrição<textarea rows={3} value={categoriaDescricao} onChange={(event) => setCategoriaDescricao(event.target.value)} placeholder="Descrição opcional" /></label></div>
-          <div className="contabil-modal-footer"><span>Pastas com histórico não poderão ser excluídas definitivamente.</span><div><button type="button" className="button secondary" onClick={() => setModal(null)}>Cancelar</button><button className="button primary" disabled={salvando}>{salvando ? 'Salvando...' : 'Criar pasta'}</button></div></div>
+          <div className="contabil-modal-footer"><span>Pastas com histórico não poderão ser excluídas definitivamente.</span><div><button type="button" className="button secondary" onClick={() => setModal(null)}>Cancelar</button><button className="button primary" disabled={salvando}>{salvando ? 'Salvando...' : categoriaAlvoId ? 'Salvar alterações' : 'Criar pasta'}</button></div></div>
         </form>}
 
+        {modal === 'arquivarCategoria' && <div className="contabil-upload-content">
+          <div className="contabil-warning-box"><CircleAlert size={17} /><span>A pasta será inativada e deixará de aparecer para novos cadastros. Documentações, obrigações e arquivos vinculados serão preservados no histórico.</span></div>
+          <div className="contabil-modal-footer"><span>Esta operação não apaga arquivos existentes.</span><div><button className="button secondary" onClick={() => setModal(null)}>Cancelar</button><button className="button danger" disabled={salvando} onClick={() => void confirmarArquivamentoCategoria()}>{salvando ? 'Inativando...' : 'Confirmar inativação'}</button></div></div>
+        </div>}
         {modal === 'inativar' && <form onSubmit={(event) => void confirmarInativacao(event)}>
           <div className="contabil-warning-box"><CircleAlert size={17} /><span>A documentação deixará de gerar novas obrigações após a competência final. O histórico e os arquivos anteriores serão preservados.</span></div>
           <div className="contabil-form-grid"><label>Última competência ativa *<input type="month" value={fimCompetencia} onChange={(event) => setFimCompetencia(event.target.value)} required /></label><label>Motivo *<select value={motivo} onChange={(event) => setMotivo(event.target.value)}>{MOTIVOS.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">Observação<textarea rows={3} value={observacaoInativacao} onChange={(event) => setObservacaoInativacao(event.target.value)} placeholder="Informações adicionais (opcional)" /></label></div>
