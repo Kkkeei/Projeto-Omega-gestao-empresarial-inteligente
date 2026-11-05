@@ -52,8 +52,9 @@ export async function salvarAtribuicoes(alteracoes: AtribuicaoAlteracao[]) {
 }
 
 export async function obterDocumentacaoEmpresa(empresaId: number, competencia: number) {
+  const ano = Math.floor(competencia / 100);
   return apiFetch<EmpresaDocumentacaoContabilResponse>(
-    BASE + '/empresas/' + empresaId + '/documentacao?competencia=' + competencia,
+    BASE + '/empresas/' + empresaId + '/documentacao?competencia=' + competencia + '&ano=' + ano,
   );
 }
 
