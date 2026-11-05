@@ -82,7 +82,7 @@ export function ContabilPage() {
   const resumo = data?.resumo;
   const companies = data?.empresas ?? [];
   const owners = Array.from(new Map(companies.filter((item) => item.responsavel_id && item.responsavel_nome)
-    .map((item) => [item.responsavel_id, item.responsavel_nome])).entries());
+    .map((item) => [item.responsavel_id as number, item.responsavel_nome as string] as const)).entries());
 
   return <div className="page contabil-page">
     <div className="page-heading contabil-heading">
