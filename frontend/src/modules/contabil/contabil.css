@@ -50,10 +50,8 @@
 .contabil-regime-tag.presumido{background:#fff6e6;color:#9d6715}
 .contabil-regime-tag.real{background:#f2edff;color:#704cb0}
 .contabil-doc-count{display:flex;align-items:center;gap:9px;min-width:95px}
-.contabil-progress{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;border:3px solid #e5e9ef;border-radius:50%;position:relative}
-.contabil-progress i{position:absolute;inset:-3px;border:3px solid #22895e;border-radius:50%;clip-path:inset(0 0 0 0);transform:rotate(-45deg);pointer-events:none}
-.contabil-progress.partial i{border-color:#d69b31}
-.contabil-progress.missing i{border-color:#d8dee7}
+.contabil-progress{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;border-radius:50%;position:relative}
+.contabil-progress i{position:absolute;inset:4px;border:0;border-radius:50%;background:#fff;pointer-events:none}
 .contabil-doc-count strong{display:block;font-size:10px;color:#344054}
 .contabil-doc-count small{display:block;font-size:8px;color:#9aa4b2;margin-top:2px}
 .contabil-status-text{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:700;line-height:1.3;white-space:nowrap}
