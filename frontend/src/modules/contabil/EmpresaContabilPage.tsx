@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, CircleAlert, Download, File, FileText, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Building2, CircleAlert, Download, FileText, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   atualizarDocumentoContabil,
@@ -280,7 +280,8 @@ export function EmpresaContabilPage() {
         const month = index + 1;
         const selected = mes === month;
         const period = competencia(ano, month);
-        const status = period > competenciaAtual() ? 'future' : period === competenciaAtual() ? 'partial' : 'missing';
+        const statusMap = data?.competencias_ano?.find((item) => item.mes === month)?.status;
+        const status = period > competenciaAtual() ? 'future' : statusMap === 'COMPLETA' ? 'complete' : statusMap === 'PARCIAL' ? 'partial' : statusMap === 'SEM_RECEBIMENTO' ? 'missing' : 'future';
         return <button key={name} className={'contabil-month-card' + (selected ? ' active' : '')} onClick={() => setMes(month)}>
           <strong>{name}</strong><i className={status} />
         </button>;
