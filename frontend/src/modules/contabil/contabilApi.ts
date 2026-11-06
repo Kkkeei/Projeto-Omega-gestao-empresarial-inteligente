@@ -36,6 +36,20 @@ export async function listarResponsaveisContabeis() {
   return apiFetch<{ responsaveis: ResponsavelContabil[] }>(BASE + '/responsaveis');
 }
 
+export async function adicionarResponsavel(data: { nome: string; email: string; senha: string }) {
+  return apiFetch<ResponsavelContabil>('/api/v1/auth/usuarios', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, perfil: 'USUARIO' }),
+  });
+}
+
+export async function removerResponsavel(responsavelId: number) {
+  return apiFetch<{ ok: boolean }>(`/api/v1/auth/usuarios/${responsavelId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ativo: false }),
+  });
+}
+
 export async function listarEmpresasParaAtribuicao(params: { busca?: string; regime?: string } = {}) {
   const query = new URLSearchParams();
   if (params.busca) query.set('busca', params.busca);

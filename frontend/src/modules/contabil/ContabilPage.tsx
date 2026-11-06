@@ -15,7 +15,9 @@ const REGIMES = [
 
 function competenciaAtual() {
   const now = new Date();
-  return now.getFullYear() * 100 + now.getMonth() + 1;
+  const primeiroDia = new Date(now.getFullYear(), now.getMonth(), 1);
+  primeiroDia.setMonth(primeiroDia.getMonth() - 1);
+  return primeiroDia.getFullYear() * 100 + primeiroDia.getMonth() + 1;
 }
 
 function formatarCnpj(value: string) {

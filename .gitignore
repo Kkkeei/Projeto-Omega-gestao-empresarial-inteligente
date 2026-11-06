@@ -16,3 +16,16 @@ backend/omega.db
 backend/omega.db-shm
 backend/omega.db-wal
 storage/
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+.coverage
+.pytest_cache/
+releases/

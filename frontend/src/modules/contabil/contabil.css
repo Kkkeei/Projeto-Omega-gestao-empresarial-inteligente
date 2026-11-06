@@ -93,6 +93,16 @@
 .contabil-responsible-option>span{flex:1;display:flex;flex-direction:column;gap:3px}
 .contabil-responsible-option strong{font-size:10px}
 .contabil-responsible-option small{font-size:9px;color:#929dac}
+.contabil-responsible-heading{align-items:flex-start}
+.contabil-responsible-heading>span{display:flex;flex-direction:column;gap:3px}
+.contabil-add-responsible{display:inline-flex;align-items:center;gap:4px;padding:6px 8px;font-size:9px}
+.contabil-new-responsible{display:flex;flex-direction:column;gap:7px;margin:10px 0 12px;padding:10px;border:1px solid #dbe7f3;border-radius:8px;background:#f7fbff}
+.contabil-new-responsible strong{font-size:10px;color:#3d668f}
+.contabil-new-responsible input{width:100%;height:31px;min-width:0;font-size:10px}
+.contabil-new-responsible>div{display:flex;justify-content:flex-end;gap:6px}
+.contabil-new-responsible .button{padding:6px 8px;font-size:9px}
+.contabil-remove-responsible{display:inline-flex!important;flex:0 0 auto!important;align-items:center;justify-content:center;width:25px;height:25px;border-radius:5px;color:#a6afbb}
+.contabil-remove-responsible:hover{background:#fff0f1;color:#c04c57}
 .contabil-assignment-companies{min-width:0;display:flex;flex-direction:column;padding:17px 18px;overflow:hidden}
 .contabil-assignment-filters{display:flex;gap:8px;margin-bottom:10px}
 .contabil-search.compact{height:35px}
@@ -177,6 +187,9 @@
 .contabil-form-grid label{display:flex;flex-direction:column;gap:6px;color:#475467;font-size:10px;font-weight:700}
 .contabil-form-grid .span-2{grid-column:span 2}
 .contabil-form-grid input,.contabil-form-grid select,.contabil-form-grid textarea{width:100%;min-width:0}
+.contabil-month-picker{display:flex;align-items:center;gap:6px}
+.contabil-month-picker input{min-width:0;flex:1}
+.contabil-month-picker .icon-button{width:35px;height:39px;flex:0 0 35px}
 .contabil-form-grid textarea{resize:vertical;border:1px solid #d6dde7;border-radius:7px;padding:10px;font:inherit;font-size:11px;outline:none}
 .contabil-form-note{margin:0 20px 15px;padding:10px 12px;background:#f5f8fc;border-radius:7px;color:#6f7f93;font-size:9px}
 .contabil-warning-box{display:flex;gap:9px;margin:17px 20px 0;padding:12px;border:1px solid #efd59e;border-radius:8px;background:#fff9ed;color:#946719;font-size:10px;line-height:1.5}

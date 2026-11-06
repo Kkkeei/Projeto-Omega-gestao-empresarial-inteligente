@@ -1127,6 +1127,12 @@ def criar_tabelas() -> None:
         END;
         """)
         conexao.commit()
+        # Migração idempotente do módulo contábil. O arquivo é mantido fora
+        # desta camada para permitir revisão independente do schema.
+        contabil_schema = BASE_DIR.parent / "docs" / "sql" / "contabil_schema_sqlite.sql"
+        if contabil_schema.exists():
+            conexao.executescript(contabil_schema.read_text(encoding="utf-8"))
+            conexao.commit()
         from app.services.auth_service import ensure_admin_user
         ensure_admin_user()
     finally:

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from 'react';
-import { ArrowLeft, Building2, CircleAlert, Download, FileText, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Building2, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
   atualizarDocumentoContabil,
@@ -23,9 +23,15 @@ const MOTIVOS = ['Conta encerrada', 'Contrato encerrado', 'Empresa deixou de uti
 const ALLOWED = ['pdf', 'jpg', 'jpeg', 'png', 'xlsx'];
 
 function competencia(ano: number, mes: number) { return ano * 100 + mes; }
-function competenciaAtual() { const now = new Date(); return competencia(now.getFullYear(), now.getMonth() + 1); }
+function competenciaAtual() { const now = new Date(); return competencia(now.getFullYear(), now.getMonth()); }
 function mesInput(value: number) { return String(Math.floor(value / 100)) + '-' + String(value % 100).padStart(2, '0'); }
 function inputCompetencia(value: string) { const [ano, mes] = value.split('-').map(Number); return competencia(ano, mes); }
+function deslocarMes(value: string, delta: number) {
+  const [ano, mes] = value.split('-').map(Number);
+  if (!ano || !mes) return value;
+  const data = new Date(ano, mes - 1 + delta, 1);
+  return mesInput(competencia(data.getFullYear(), data.getMonth() + 1));
+}
 function formatarCnpj(value: string) {
   const digits = (value || '').replace(/\D/g, '');
   return digits.length === 14 ? digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : value;
@@ -302,12 +308,12 @@ export function EmpresaContabilPage() {
         const selected = mes === month;
         const period = competencia(ano, month);
         const statusMap = data?.competencias_ano?.find((item) => item.mes === month)?.status;
-        const status = period > competenciaAtual() ? 'future' : statusMap === 'COMPLETA' ? 'complete' : statusMap === 'PARCIAL' ? 'partial' : statusMap === 'SEM_RECEBIMENTO' ? 'missing' : 'future';
+        const status = statusMap === 'COMPLETA' ? 'complete' : statusMap === 'PARCIAL' ? 'partial' : statusMap === 'SEM_RECEBIMENTO' ? 'missing' : 'future';
         return <button key={name} className={'contabil-month-card' + (selected ? ' active' : '')} onClick={() => setMes(month)}>
           <strong>{name}</strong><i className={status} />
         </button>;
       })}</div>
-      <div className="contabil-timeline-legend"><span><i className="complete" />Completa</span><span><i className="partial" />Competência atual pendente</span><span><i className="missing" />Competência anterior pendente</span><span><i className="future" />Futura</span></div>
+      <div className="contabil-timeline-legend"><span><i className="complete" />Completa</span><span><i className="partial" />Competência atual pendente</span><span><i className="missing" />Competência anterior pendente</span><span><i className="future" />Sem documentação cadastrada ou futura</span></div>
     </div>
 
     <div className="contabil-folder-toolbar"><div><span className="eyebrow">DOCUMENTAÇÕES CADASTRADAS</span><h3>Pastas da empresa</h3></div><div className="actions"><button className="button secondary" onClick={() => { setCategoriaAlvoId(null); setCategoriaNome(''); setCategoriaDescricao(''); setErroModal(''); setModal('categoria'); }}><FolderPlus size={14} />Cadastrar pasta</button>{pasta !== null && <><button className="button secondary" onClick={() => { const category = categories.find((item) => item.id === pasta); if (!category) return; setCategoriaAlvoId(category.id); setCategoriaNome(category.nome); setCategoriaDescricao(category.descricao || ''); setErroModal(''); setModal('categoria'); }}><Pencil size={13} />Editar pasta</button><button className="button danger" onClick={() => { const category = categories.find((item) => item.id === pasta); if (!category) return; setCategoriaAlvoId(category.id); setCategoriaNome(category.nome); setErroModal(''); setModal('arquivarCategoria'); }}>Inativar pasta</button></>}<button className="button primary" onClick={abrirNovoDocumento}><Plus size={14} />Cadastrar documentação</button></div></div>
@@ -350,7 +356,7 @@ export function EmpresaContabilPage() {
         {modal === 'documento' && <form onSubmit={(event) => void salvarDocumento(event)}>
           <div className="contabil-form-grid"><label>Nome da documentação *<input value={formNome} onChange={(event) => setFormNome(event.target.value)} required placeholder="Ex.: Banco Sicoob CC 159.522-9" /></label>
             <label>Categoria *<select value={formCategoria} onChange={(event) => setFormCategoria(event.target.value)} required><option value="">Selecione</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</select></label>
-            {!documentoAlvo && <label>Mês e ano de início *<input type="month" value={formInicio} onChange={(event) => setFormInicio(event.target.value)} required /></label>}
+            {!documentoAlvo && <label>Mês e ano de início *<div className="contabil-month-picker"><button type="button" className="icon-button" aria-label="Mês anterior" title="Mês anterior" onClick={() => setFormInicio((current) => deslocarMes(current, -1))}><ChevronLeft size={16} /></button><input type="month" min="1900-01" value={formInicio} onChange={(event) => setFormInicio(event.target.value)} aria-label="Mês e ano de início da documentação" required /><button type="button" className="icon-button" aria-label="Próximo mês" title="Próximo mês" onClick={() => setFormInicio((current) => deslocarMes(current, 1))}><ChevronRight size={16} /></button></div></label>}
             <label className="span-2">Observação<textarea value={formObs} onChange={(event) => setFormObs(event.target.value)} rows={3} placeholder="Informações complementares (opcional)" /></label>
           </div>
           {documentoAlvo && <div className="contabil-form-note">A competência inicial e o histórico de recebimentos serão preservados nesta edição.</div>}
@@ -368,7 +374,7 @@ export function EmpresaContabilPage() {
         </div>}
         {modal === 'inativar' && <form onSubmit={(event) => void confirmarInativacao(event)}>
           <div className="contabil-warning-box"><CircleAlert size={17} /><span>A documentação deixará de gerar novas obrigações após a competência final. O histórico e os arquivos anteriores serão preservados.</span></div>
-          <div className="contabil-form-grid"><label>Última competência ativa *<input type="month" value={fimCompetencia} onChange={(event) => setFimCompetencia(event.target.value)} required /></label><label>Motivo *<select value={motivo} onChange={(event) => setMotivo(event.target.value)}>{MOTIVOS.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">Observação<textarea rows={3} value={observacaoInativacao} onChange={(event) => setObservacaoInativacao(event.target.value)} placeholder="Informações adicionais (opcional)" /></label></div>
+          <div className="contabil-form-grid"><label>Última competência ativa *<input type="month" min="1900-01" value={fimCompetencia} onChange={(event) => setFimCompetencia(event.target.value)} aria-label="Última competência ativa" required /></label><label>Motivo *<select value={motivo} onChange={(event) => setMotivo(event.target.value)}>{MOTIVOS.map((item) => <option key={item}>{item}</option>)}</select></label><label className="span-2">Observação<textarea rows={3} value={observacaoInativacao} onChange={(event) => setObservacaoInativacao(event.target.value)} placeholder="Informações adicionais (opcional)" /></label></div>
           <div className="contabil-modal-footer"><span>O cadastro permanecerá disponível para consulta.</span><div><button type="button" className="button secondary" onClick={() => setModal(null)}>Cancelar</button><button className="button danger" disabled={salvando}>{salvando ? 'Inativando...' : 'Inativar'}</button></div></div>
         </form>}
 

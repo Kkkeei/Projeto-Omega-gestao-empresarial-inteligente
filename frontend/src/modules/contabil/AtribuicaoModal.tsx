@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCircle2, Search, Users, X } from 'lucide-react';
-import { listarEmpresasParaAtribuicao, listarResponsaveisContabeis, salvarAtribuicoes } from './contabilApi';
+import type { FormEvent } from 'react';
+import { Building2, CheckCircle2, Plus, Search, Trash2, Users, X } from 'lucide-react';
+import { adicionarResponsavel, listarEmpresasParaAtribuicao, listarResponsaveisContabeis, removerResponsavel, salvarAtribuicoes } from './contabilApi';
 import type { AtribuicaoAlteracao, EmpresaContabil, ResponsavelContabil } from './types';
 
 export function AtribuicaoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
@@ -15,18 +16,31 @@ export function AtribuicaoModal({ onClose, onSaved }: { onClose: () => void; onS
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [mostrarNovoResponsavel, setMostrarNovoResponsavel] = useState(false);
+  const [novoResponsavel, setNovoResponsavel] = useState({ nome: '', email: '', senha: '' });
+  const [alterandoResponsavel, setAlterandoResponsavel] = useState(false);
 
   async function carregar() {
     setLoading(true);
     setError('');
     try {
       const [users, companies] = await Promise.all([listarResponsaveisContabeis(), listarEmpresasParaAtribuicao()]);
-      const ativos = users.responsaveis.filter((item) => item.ativo);
+      const ativos = users.responsaveis
+        .filter((item) => item.ativo)
+        .sort((a, b) => {
+          const ordem = ['kamily', 'anderson'];
+          const aOrdem = ordem.indexOf(a.nome.trim().toLocaleLowerCase('pt-BR'));
+          const bOrdem = ordem.indexOf(b.nome.trim().toLocaleLowerCase('pt-BR'));
+          return (aOrdem === -1 ? ordem.length : aOrdem) - (bOrdem === -1 ? ordem.length : bOrdem) || a.nome.localeCompare(b.nome, 'pt-BR');
+        });
       setResponsaveis(ativos);
       setEmpresas(companies.empresas);
       if (ativos.length) {
         setResponsavelId(ativos[0].id);
         setSelecionadas(companies.empresas.filter((item) => item.responsavel_id === ativos[0].id).map((item) => item.id));
+      } else {
+        setResponsavelId(null);
+        setSelecionadas([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível carregar responsáveis e empresas.');
@@ -36,6 +50,37 @@ export function AtribuicaoModal({ onClose, onSaved }: { onClose: () => void; onS
   }
 
   useEffect(() => { void carregar(); }, []);
+
+  async function criarResponsavel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (alterandoResponsavel) return;
+    setAlterandoResponsavel(true);
+    setError('');
+    try {
+      await adicionarResponsavel(novoResponsavel);
+      setNovoResponsavel({ nome: '', email: '', senha: '' });
+      setMostrarNovoResponsavel(false);
+      await carregar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível adicionar o responsável.');
+    } finally {
+      setAlterandoResponsavel(false);
+    }
+  }
+
+  async function desativarResponsavel(item: ResponsavelContabil) {
+    if (!window.confirm(`Remover ${item.nome} da lista de responsáveis? O usuário será desativado.`)) return;
+    setAlterandoResponsavel(true);
+    setError('');
+    try {
+      await removerResponsavel(item.id);
+      await carregar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível remover o responsável.');
+    } finally {
+      setAlterandoResponsavel(false);
+    }
+  }
 
   function selecionarResponsavel(id: number) {
     setResponsavelId(id);
@@ -116,9 +161,16 @@ export function AtribuicaoModal({ onClose, onSaved }: { onClose: () => void; onS
       {loading ? <div className="contabil-loading"><span className="spinner" />Carregando responsáveis e empresas...</div> :
       <div className="contabil-assignment-body">
         <aside className="contabil-responsible-list">
-          <div className="contabil-subheading"><strong>Responsáveis</strong><small>{responsaveis.length} ativos</small></div>
+          <div className="contabil-subheading contabil-responsible-heading"><span><strong>Responsáveis</strong><small>{responsaveis.length} ativos</small></span><button type="button" className="button secondary contabil-add-responsible" onClick={() => setMostrarNovoResponsavel(true)}><Plus size={13} />Adicionar</button></div>
+          {mostrarNovoResponsavel && <form className="contabil-new-responsible" onSubmit={(event) => void criarResponsavel(event)}>
+            <strong>Novo responsável</strong>
+            <input required minLength={2} maxLength={120} value={novoResponsavel.nome} onChange={(event) => setNovoResponsavel({ ...novoResponsavel, nome: event.target.value })} placeholder="Nome completo" />
+            <input required type="email" value={novoResponsavel.email} onChange={(event) => setNovoResponsavel({ ...novoResponsavel, email: event.target.value })} placeholder="E-mail" />
+            <input required minLength={8} type="password" value={novoResponsavel.senha} onChange={(event) => setNovoResponsavel({ ...novoResponsavel, senha: event.target.value })} placeholder="Senha inicial" />
+            <div><button type="button" className="button secondary" onClick={() => setMostrarNovoResponsavel(false)}>Cancelar</button><button type="submit" className="button primary" disabled={alterandoResponsavel}>{alterandoResponsavel ? 'Adicionando...' : 'Adicionar'}</button></div>
+          </form>}
           {responsaveis.map((item) => <button key={item.id} className={'contabil-responsible-option' + (responsavelId === item.id ? ' active' : '')} onClick={() => selecionarResponsavel(item.id)}>
-            <i>{item.nome.slice(0, 1).toUpperCase()}</i><span><strong>{item.nome}</strong><small>{item.empresas_atribuidas} empresas</small></span>{responsavelId === item.id && <CheckCircle2 size={16} />}
+            <i>{item.nome.slice(0, 1).toUpperCase()}</i><span><strong>{item.nome}</strong><small>{item.empresas_atribuidas} empresas</small></span>{responsavelId === item.id && <CheckCircle2 size={16} />}<span role="button" tabIndex={0} className="contabil-remove-responsible" title={`Remover ${item.nome}`} onClick={(event) => { event.stopPropagation(); void desativarResponsavel(item); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.stopPropagation(); void desativarResponsavel(item); } }}><Trash2 size={13} /></span>
           </button>)}
           {!responsaveis.length && <div className="contabil-mini-empty"><Users size={20} />Nenhum usuário ativo disponível. Cadastre ou ative usuários no módulo Usuários.</div>}
         </aside>
