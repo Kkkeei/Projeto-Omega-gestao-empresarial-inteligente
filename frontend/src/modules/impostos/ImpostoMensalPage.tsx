@@ -322,6 +322,7 @@ export function ImpostoMensalPage() {
   const [baseObs, setBaseObs] = useState('');
   const [reload, setReload] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const autoUploadHandled = useRef(false);
 
   async function load() {
     setLoading(true);
@@ -469,6 +470,21 @@ export function ImpostoMensalPage() {
     setDraft({observacao: mensal?.observacao || ''});
     setModal(true);
   }
+
+  useEffect(() => {
+    if (
+      params.get('acao') !== 'anexar' ||
+      loading ||
+      !data ||
+      !mensal ||
+      autoUploadHandled.current
+    ) {
+      return;
+    }
+
+    autoUploadHandled.current = true;
+    openRegisterModal();
+  }, [params, loading, data, mensal]);
 
   if (loading && !data) return <div className="page"><Loading /></div>;
   if (error && !data) return <div className="page"><ErrorState message={error} onRetry={() => void load()} /></div>;

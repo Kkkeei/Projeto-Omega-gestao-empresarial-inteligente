@@ -1,0 +1,222 @@
+.nav-sublist{display:flex;flex-direction:column;gap:3px;margin:-1px 0 5px 27px;padding:4px 0 4px 12px;border-left:1px solid #344258}
+.nav-sub-link{display:flex;align-items:center;min-height:32px;padding:7px 10px;border-radius:6px;color:#91a0b5;font-size:11px}
+.nav-sub-link:hover,.nav-sub-link.active{background:#202c40;color:#fff}
+.contabil-page{max-width:1600px}
+.contabil-heading{align-items:center}
+.contabil-heading h2{margin-top:5px}
+.contabil-period-chip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e7ee;border-radius:8px;padding:9px 12px;color:#526174;font-size:11px;font-weight:700}
+.contabil-live-dot{width:7px;height:7px;border-radius:50%;background:#16a36a;box-shadow:0 0 0 3px #e7f7ef}
+.contabil-regime-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin:0 0 15px}
+.contabil-regime-card{position:relative;min-width:0;min-height:78px;display:flex;align-items:center;gap:11px;text-align:left;padding:13px 14px;border:1px solid #e1e7ef;border-radius:10px;background:#fff;color:#263244;transition:border-color .15s,box-shadow .15s}
+.contabil-regime-card:hover{border-color:#aab8ca;box-shadow:0 3px 12px rgba(16,24,40,.05)}
+.contabil-regime-card.active{border-color:#8cb5e8;box-shadow:inset 0 0 0 1px #8cb5e8;background:#fbfdff}
+.contabil-regime-card.assign{background:#f8fbff;border-color:#d3e2f4}
+.contabil-regime-icon{width:36px;height:36px;flex:0 0 36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#f1f5fa;color:#47729c}
+.contabil-regime-icon.simple{background:#eaf8f0;color:#138657}
+.contabil-regime-icon.presumido{background:#f4efff;color:#7651bf}
+.contabil-regime-icon.real{background:#fff0f0;color:#be5157}
+.contabil-regime-icon.responsible{background:#edf5ff;color:#3378bd}
+.contabil-regime-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+.contabil-regime-copy strong{font-size:11px;line-height:1.25}
+.contabil-regime-copy small{font-size:9px;color:#8793a4;line-height:1.3}
+.contabil-regime-selected{position:absolute;right:9px;top:9px;color:#347fc2}
+.contabil-card-arrow{margin-left:auto;color:#72849b;flex:0 0 auto}
+.contabil-toolbar{display:flex;align-items:end;gap:9px;margin:0 0 14px}
+.contabil-search{height:39px;display:flex;align-items:center;gap:9px;min-width:160px;flex:1;padding:0 11px;border:1px solid #d8e0ea;border-radius:7px;background:#fff;color:#8c98a9}
+.contabil-search:focus-within{border-color:#9ab7d8;box-shadow:0 0 0 2px #eef5fc}
+.contabil-search input{height:35px;min-width:0;flex:1;border:0!important;box-shadow:none!important;padding:0;background:transparent;font-size:11px}
+.contabil-search button{border:0;background:transparent;color:#8995a5;display:flex;padding:4px}
+.contabil-select{display:flex;flex-direction:column;gap:5px;min-width:155px;color:#748196;font-size:9px;font-weight:700}
+.contabil-select select,.contabil-assignment-filters select{height:39px;font-size:10px}
+.contabil-clear{height:39px;white-space:nowrap}
+.contabil-table-panel{border-radius:10px}
+.contabil-table-heading{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid #edf0f4}
+.contabil-table-heading>div{display:flex;align-items:center;gap:10px}
+.contabil-table-heading strong{font-size:13px;color:#263244}
+.contabil-table-heading small{font-size:10px;color:#8b96a5}
+.contabil-table-heading .button{padding:7px 10px}
+.contabil-table{min-width:950px}
+.contabil-table th{padding:11px 14px;font-size:9px;white-space:nowrap}
+.contabil-table td{padding:12px 14px;font-size:10px}
+.contabil-company-cell,.contabil-document-cell{display:flex;align-items:center;gap:10px;min-width:210px}
+.contabil-company-cell>span:last-child,.contabil-document-cell>span:last-child{min-width:0}
+.contabil-company-cell strong,.contabil-document-cell strong{font-size:10px;color:#263244;white-space:normal;line-height:1.35}
+.contabil-company-cell small,.contabil-document-cell small{font-size:9px;color:#97a1af;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contabil-company-icon{width:30px;height:30px;flex:0 0 30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:#edf5ff;color:#4282bd}
+.contabil-company-icon.large{width:43px;height:43px;flex-basis:43px;border-radius:9px}
+.contabil-cnpj{font-variant-numeric:tabular-nums;white-space:nowrap;color:#69778a!important}
+.contabil-regime-tag,.contabil-category-tag{display:inline-flex;padding:5px 8px;border-radius:20px;background:#f1f4f7;color:#667085;font-size:9px;font-weight:700;white-space:nowrap}
+.contabil-regime-tag.simple{background:#eaf8f0;color:#168052}
+.contabil-regime-tag.presumido{background:#fff6e6;color:#9d6715}
+.contabil-regime-tag.real{background:#f2edff;color:#704cb0}
+.contabil-doc-count{display:flex;align-items:center;gap:9px;min-width:95px}
+.contabil-progress{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 34px;border-radius:50%;position:relative}
+.contabil-progress i{position:absolute;inset:4px;border:0;border-radius:50%;background:#fff;pointer-events:none}
+.contabil-doc-count strong{display:block;font-size:10px;color:#344054}
+.contabil-doc-count small{display:block;font-size:8px;color:#9aa4b2;margin-top:2px}
+.contabil-status-text{display:inline-flex;align-items:center;gap:7px;font-size:9px;font-weight:700;line-height:1.3;white-space:nowrap}
+.contabil-status-text i,.contabil-timeline-legend i{width:8px;height:8px;display:inline-block;flex:0 0 8px;border-radius:50%;background:#c5ccd5}
+.contabil-status-text.complete{color:#148456}
+.contabil-status-text.complete i,.contabil-timeline-legend i.complete{background:#1b9a67}
+.contabil-status-text.partial{color:#a46b11}
+.contabil-status-text.partial i,.contabil-timeline-legend i.partial{background:#dda43e}
+.contabil-status-text.missing{color:#bd454f}
+.contabil-status-text.missing i,.contabil-timeline-legend i.missing{background:#d65b62}
+.contabil-status-text.future{color:#8d98a8}
+.contabil-status-text.future i,.contabil-timeline-legend i.future{background:#c6ced8}
+.contabil-owner{display:inline-flex;align-items:center;gap:7px;color:#536174;font-size:10px;white-space:nowrap}
+.contabil-owner i{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#e9f1fb;color:#3975b1;font-size:9px;font-style:normal;font-weight:800}
+.contabil-unassigned{color:#9aa3b0;font-size:10px}
+.contabil-access-link{display:inline-flex;align-items:center;gap:3px;color:#397bb7;font-size:10px;font-weight:800;white-space:nowrap}
+.contabil-access-link:hover{text-decoration:underline}
+.contabil-table-footer{display:flex;justify-content:space-between;gap:10px;padding:11px 16px;border-top:1px solid #edf0f4;color:#9aa3b1;font-size:9px}
+.contabil-loading,.contabil-empty,.contabil-error-state{min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:24px;text-align:center;color:#8793a4;font-size:11px}
+.contabil-empty strong,.contabil-error-state strong{color:#344054;font-size:13px}
+.contabil-empty span,.contabil-error-state span{max-width:600px;line-height:1.5}
+.contabil-error-state{color:#b54750}
+.contabil-error-state small{color:#8d98a8;font-size:10px}
+.contabil-error-state .button{margin-top:4px}
+.contabil-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(16,24,40,.48);backdrop-filter:blur(2px)}
+.contabil-assignment-modal,.contabil-form-modal{width:min(1060px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border-radius:13px;background:#fff;box-shadow:0 24px 70px rgba(16,24,40,.22)}
+.contabil-modal-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px 22px;border-bottom:1px solid #edf0f4}
+.contabil-modal-header h3{margin:5px 0;font-size:17px;color:#263244}
+.contabil-modal-header p{margin:0;color:#8793a4;font-size:10px;line-height:1.5}
+.contabil-assignment-body{min-height:400px;display:grid;grid-template-columns:245px minmax(0,1fr);overflow:hidden}
+.contabil-responsible-list{padding:17px 13px;border-right:1px solid #edf0f4;background:#fbfcfe;overflow:auto}
+.contabil-subheading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.contabil-subheading strong{font-size:11px;color:#344054}
+.contabil-subheading small{font-size:9px;color:#929dac}
+.contabil-responsible-option{width:100%;display:flex;align-items:center;gap:9px;padding:10px;border:1px solid transparent;border-radius:8px;background:transparent;text-align:left;color:#536174;margin-bottom:5px}
+.contabil-responsible-option:hover{background:#f2f6fb}
+.contabil-responsible-option.active{background:#edf5ff;border-color:#c6dcf4;color:#2e70ad}
+.contabil-responsible-option>i{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#e5edf8;color:#3977b5;font-style:normal;font-size:11px;font-weight:800}
+.contabil-responsible-option>span{flex:1;display:flex;flex-direction:column;gap:3px}
+.contabil-responsible-option strong{font-size:10px}
+.contabil-responsible-option small{font-size:9px;color:#929dac}
+.contabil-responsible-heading{align-items:flex-start}
+.contabil-responsible-heading>span{display:flex;flex-direction:column;gap:3px}
+.contabil-add-responsible{display:inline-flex;align-items:center;gap:4px;padding:6px 8px;font-size:9px}
+.contabil-new-responsible{display:flex;flex-direction:column;gap:7px;margin:10px 0 12px;padding:10px;border:1px solid #dbe7f3;border-radius:8px;background:#f7fbff}
+.contabil-new-responsible strong{font-size:10px;color:#3d668f}
+.contabil-new-responsible input{width:100%;height:31px;min-width:0;font-size:10px}
+.contabil-new-responsible>div{display:flex;justify-content:flex-end;gap:6px}
+.contabil-new-responsible .button{padding:6px 8px;font-size:9px}
+.contabil-remove-responsible{display:inline-flex!important;flex:0 0 auto!important;align-items:center;justify-content:center;width:25px;height:25px;border-radius:5px;color:#a6afbb}
+.contabil-remove-responsible:hover{background:#fff0f1;color:#c04c57}
+.contabil-assignment-companies{min-width:0;display:flex;flex-direction:column;padding:17px 18px;overflow:hidden}
+.contabil-assignment-filters{display:flex;gap:8px;margin-bottom:10px}
+.contabil-search.compact{height:35px}
+.contabil-search.compact input{height:32px}
+.contabil-assignment-company-list{min-height:240px;overflow:auto;border:1px solid #edf0f4;border-radius:8px}
+.contabil-assignment-company{display:flex;align-items:center;gap:9px;min-height:54px;padding:8px 10px;border-bottom:1px solid #f0f2f5;cursor:pointer}
+.contabil-assignment-company:last-child{border-bottom:0}
+.contabil-assignment-company:hover{background:#fafcff}
+.contabil-assignment-company>input{width:15px;height:15px;flex:0 0 15px;accent-color:#347fc2}
+.contabil-assignment-company-name{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.contabil-assignment-company-name strong{font-size:10px;color:#344054}
+.contabil-assignment-company-name small{font-size:9px;color:#929dac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contabil-owner-conflict,.contabil-owner-selected{font-size:8px;white-space:nowrap;border-radius:20px;padding:4px 7px;background:#fff5e7;color:#a66e16}
+.contabil-owner-selected{background:#eaf7f0;color:#158252}
+.contabil-transfer-confirm{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px;border:1px solid #efd39d;border-radius:8px;background:#fff9ed}
+.contabil-transfer-confirm>div{flex:1;display:flex;flex-direction:column;gap:3px}
+.contabil-transfer-confirm strong{font-size:10px;color:#80540d}
+.contabil-transfer-confirm span{font-size:9px;color:#8b6a35}
+.contabil-transfer-confirm .button{padding:7px 9px;font-size:9px}
+.contabil-modal-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid #edf0f4;color:#929dac;font-size:9px}
+.contabil-modal-footer>div{display:flex;gap:7px}
+.contabil-modal-footer .button{min-width:92px}
+.contabil-inline-error{margin:12px 20px 0;padding:9px 11px;border:1px solid #ffd1d5;border-radius:7px;background:#fff3f4;color:#b4232e;font-size:10px;line-height:1.5}
+.contabil-mini-empty{display:flex;flex-direction:column;align-items:center;gap:7px;padding:22px;color:#929dac;font-size:10px;text-align:center;line-height:1.5}
+.contabil-roadmap-card{display:flex;align-items:flex-start;gap:15px;padding:22px}
+.contabil-roadmap-card>span{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:#edf5ff;color:#3678b8}
+.contabil-roadmap-card h3{margin:1px 0 7px;font-size:14px}
+.contabil-roadmap-card p{max-width:720px;margin:0 0 10px;color:#768397;font-size:11px;line-height:1.6}
+.contabil-roadmap-card small{display:flex;align-items:center;gap:6px;color:#8b97a7;font-size:9px}
+.contabil-back-link{display:inline-flex;align-items:center;gap:6px;margin:0 0 14px;color:#65758b;font-size:10px;font-weight:700}
+.contabil-back-link:hover{color:#2c76b7}
+.contabil-company-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:16px 18px;margin-bottom:15px;border:1px solid #e2e7ee;border-radius:10px;background:#fff}
+.contabil-company-title{display:flex;align-items:center;gap:12px;min-width:0}
+.contabil-company-title h2{margin:4px 0;font-size:16px;overflow-wrap:anywhere}
+.contabil-company-title p{margin:0;color:#8994a4;font-size:10px}
+.contabil-company-title p b{color:#5a687b}
+.contabil-company-title p span{padding:0 4px}
+.contabil-timeline{padding:13px 15px 10px;margin-bottom:17px;border:1px solid #e2e7ee;border-radius:10px;background:#fff}
+.contabil-year-control{display:flex;justify-content:center;align-items:center;gap:14px;margin:0 0 12px}
+.contabil-year-control strong{min-width:52px;text-align:center;font-size:15px}
+.contabil-month-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:7px}
+.contabil-month-card{height:53px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid #e9edf2;border-radius:7px;background:#fbfcfd;color:#5a687a}
+.contabil-month-card strong{font-size:10px}
+.contabil-month-card i{width:6px;height:6px;border-radius:50%;background:#c4ccd6}
+.contabil-month-card i.complete{background:#1b9a67}
+.contabil-month-card i.partial{background:#dda43e}
+.contabil-month-card i.missing{background:#d65b62}
+.contabil-month-card.active{border-color:#347fc2;background:#347fc2;color:#fff;box-shadow:0 2px 6px rgba(52,127,194,.18)}
+.contabil-month-card.active i{background:#fff}
+.contabil-timeline-legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12px;margin-top:10px}
+.contabil-timeline-legend span{display:flex;align-items:center;gap:5px;color:#929dac;font-size:8px}
+.contabil-timeline-legend i{width:6px;height:6px;flex-basis:6px}
+.contabil-folder-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 11px}
+.contabil-folder-toolbar h3{margin:4px 0;font-size:14px}
+.contabil-folder-toolbar .actions{flex-wrap:wrap}
+.contabil-folder-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px;margin-bottom:16px}
+.contabil-folder-card{min-height:118px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:12px;border:1px solid #e2e7ee;border-radius:9px;background:#fff;color:#536174;text-align:left}
+.contabil-folder-card:hover{border-color:#a9bfd8}
+.contabil-folder-card.active{border-color:#8cb5e8;box-shadow:inset 0 0 0 1px #8cb5e8;background:#fbfdff}
+.contabil-folder-icon{width:31px;height:31px;display:flex;align-items:center;justify-content:center;border-radius:7px;background:#edf5ff;color:#4382bc}
+.contabil-folder-card strong{font-size:10px;color:#344054;line-height:1.3}
+.contabil-folder-card small{font-size:9px;color:#929dac}
+.contabil-folder-state{font-size:8px;color:#929dac;font-weight:700}
+.contabil-folder-state.complete{color:#148456}
+.contabil-folder-state.partial{color:#a46b11}
+.contabil-folder-state.missing{color:#bd454f}
+.contabil-documents-panel{border-radius:10px}
+.contabil-documents-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 17px;border-bottom:1px solid #edf0f4}
+.contabil-documents-heading h3{margin:4px 0 3px;font-size:14px}
+.contabil-documents-heading small{color:#929dac;font-size:9px}
+.contabil-documents-heading .contabil-search{width:300px;flex:0 1 300px}
+.contabil-doc-table{min-width:850px}
+.contabil-doc-table tr{cursor:default}
+.contabil-file-icon{width:29px;height:29px;display:flex;align-items:center;justify-content:center;flex:0 0 29px;border-radius:7px;background:#eef5fc;color:#4a84b8}
+.contabil-file-summary{display:flex;flex-direction:column;gap:3px;border:0;background:transparent;text-align:left;padding:0}
+.contabil-file-summary strong{font-size:9px;color:#506176}
+.contabil-file-summary small{font-size:8px;color:#99a3b1}
+.contabil-category-tag{background:#eff4fa;color:#55718d}
+.contabil-form-modal{width:min(650px,95vw)}
+.contabil-form-modal.upload{width:min(780px,95vw)}
+.contabil-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:20px}
+.contabil-form-grid label{display:flex;flex-direction:column;gap:6px;color:#475467;font-size:10px;font-weight:700}
+.contabil-form-grid .span-2{grid-column:span 2}
+.contabil-form-grid input,.contabil-form-grid select,.contabil-form-grid textarea{width:100%;min-width:0}
+.contabil-month-picker{display:flex;align-items:center;gap:6px}
+.contabil-month-picker input{min-width:0;flex:1}
+.contabil-month-picker .icon-button{width:35px;height:39px;flex:0 0 35px}
+.contabil-form-grid textarea{resize:vertical;border:1px solid #d6dde7;border-radius:7px;padding:10px;font:inherit;font-size:11px;outline:none}
+.contabil-form-note{margin:0 20px 15px;padding:10px 12px;background:#f5f8fc;border-radius:7px;color:#6f7f93;font-size:9px}
+.contabil-warning-box{display:flex;gap:9px;margin:17px 20px 0;padding:12px;border:1px solid #efd59e;border-radius:8px;background:#fff9ed;color:#946719;font-size:10px;line-height:1.5}
+.contabil-upload-content{padding:17px 20px;overflow:auto}
+.contabil-dropzone{min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:18px;border:1px dashed #b9c8d9;border-radius:9px;background:#f9fbfd;color:#6d8197;text-align:center}
+.contabil-dropzone.active{border-color:#347fc2;background:#f0f7ff}
+.contabil-dropzone strong{font-size:11px;color:#47586c}
+.contabil-dropzone span{font-size:9px;color:#929dac}
+.contabil-dropzone .button{position:relative;overflow:hidden}
+.contabil-pending-files{display:flex;flex-direction:column;gap:8px;margin-top:14px;padding:12px;border:1px solid #d6e7fa;border-radius:8px;background:#f8fbff}
+.contabil-pending-files>strong{font-size:10px;color:#3d668f}
+.contabil-pending-files>div{display:flex;align-items:center;gap:8px;font-size:10px;color:#536174}
+.contabil-pending-files>div span{flex:1;display:flex;flex-direction:column;gap:2px}
+.contabil-pending-files small{font-size:8px;color:#929dac}
+.contabil-pending-files>.button{align-self:flex-end}
+.contabil-upload-list{margin-top:17px}
+.contabil-upload-file{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #edf0f4}
+.contabil-upload-file-name{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.contabil-upload-file-name strong{font-size:10px;color:#344054;overflow-wrap:anywhere}
+.contabil-upload-file-name small{font-size:8px;color:#929dac}
+.contabil-upload-file-name input{height:31px}
+.contabil-delete-confirm{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px;border:1px solid #f1c6c9;border-radius:8px;background:#fff6f6;font-size:9px;color:#8e4047}
+.contabil-delete-confirm span{flex:1}
+.contabil-delete-confirm .button{padding:7px 9px;font-size:9px}
+.button.small{padding:6px 8px;font-size:9px}
+.button.danger{background:#fff;color:#b42318;border:1px solid #f0c5c1}
+.icon-button.danger{color:#b42318;border-color:#f1d3d3}
+@media(max-width:1300px){.contabil-regime-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.contabil-folder-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:900px){.contabil-toolbar{flex-wrap:wrap}.contabil-search{flex-basis:100%}.contabil-select{flex:1}.contabil-assignment-body{grid-template-columns:190px minmax(0,1fr)}.contabil-month-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.contabil-folder-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.contabil-regime-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.contabil-regime-card.assign{grid-column:span 2}.contabil-heading,.contabil-company-header,.contabil-folder-toolbar,.contabil-documents-heading{align-items:flex-start;flex-direction:column}.contabil-period-chip{align-self:flex-start}.contabil-select{min-width:100%}.contabil-clear{width:100%}.contabil-assignment-modal,.contabil-form-modal{max-height:95vh}.contabil-assignment-body{grid-template-columns:1fr;overflow:auto}.contabil-responsible-list{border-right:0;border-bottom:1px solid #edf0f4;max-height:190px}.contabil-assignment-companies{overflow:visible}.contabil-assignment-company-list{max-height:320px}.contabil-modal-footer{align-items:flex-start;flex-direction:column}.contabil-modal-footer>div{width:100%;justify-content:flex-end}.contabil-transfer-confirm{flex-wrap:wrap}.contabil-transfer-confirm>div{flex-basis:100%}.contabil-folder-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.contabil-documents-heading .contabil-search{width:100%;flex-basis:100%}.contabil-timeline-legend{justify-content:flex-start}.contabil-company-title h2{font-size:14px}.contabil-form-grid{grid-template-columns:1fr}.contabil-form-grid .span-2{grid-column:auto}.contabil-delete-confirm{align-items:flex-start;flex-wrap:wrap}.contabil-delete-confirm span{flex-basis:100%}}
