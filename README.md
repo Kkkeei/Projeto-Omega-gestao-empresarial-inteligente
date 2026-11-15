@@ -209,7 +209,7 @@ Os testes de automação que dependem de navegador, sistema operacional, certifi
 - O Bridge A3 deve permanecer local, não deve ser exposto publicamente e deve aceitar somente origens confiáveis.
 - Antes de publicar ou manter o repositório público, revisar arquivos de `dados/`, anexos e histórico do Git para identificar informações reais de clientes.
 
-Consulte [Política de segurança](SECURITY.md) caso exista; até sua criação, as orientações desta seção são as regras mínimas para contribuições.
+Consulte a [Política de segurança](SECURITY.md) para orientações de reporte e proteção de dados.
 
 ## Diretrizes de contribuição
 
