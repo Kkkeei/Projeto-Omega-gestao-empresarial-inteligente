@@ -46,10 +46,21 @@ def test_nfse_tables_exist():
     assert tables == {"nfse_sync", "nfse_documentos"}
 
 
-def test_adn_url_uses_official_contributor_route(monkeypatch):
+def test_adn_url_uses_official_contributor_route_with_company_cnpj(monkeypatch):
     monkeypatch.setenv("OMEGA_NFSE_ADN_URL", service.ADN_PROD)
-    assert service._adn_url(123) == (
-        "https://adn.nfse.gov.br/contribuintes/DFe/123?tipoNSU=DISTRIBUICAO&lote=true"
+    monkeypatch.setattr(
+        service, "_entity",
+        lambda origin, entity_id: {"documento": "12345678000199"},
+    )
+    assert service._adn_url(123, "PJ", 1) == (
+        "https://adn.nfse.gov.br/contribuintes/DFe/123?cnpjConsulta=12345678000199&lote=true"
+    )
+
+
+def test_adn_url_does_not_add_company_query_for_individual(monkeypatch):
+    monkeypatch.setenv("OMEGA_NFSE_ADN_URL", service.ADN_PROD)
+    assert service._adn_url(123, "PF", 1) == (
+        "https://adn.nfse.gov.br/contribuintes/DFe/123?lote=true"
     )
 
 
