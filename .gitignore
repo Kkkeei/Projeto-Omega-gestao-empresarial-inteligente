@@ -29,3 +29,21 @@ __pycache__/
 .coverage
 .pytest_cache/
 releases/
+
+# Ferramentas e artefatos gerados
+.coverage
+.coverage.*
+htmlcov/
+*.tsbuildinfo
+*.log
+*.tmp
+*.bak
+*.bak_*
+*.backup
+*.backup_*
+.DS_Store
+Thumbs.db
+
+# Arquivos locais de dados potencialmente sensíveis
+# Use fixtures sintéticas versionadas em testes/fixtures, nunca cadastros reais.
+dados/CADASTRO.xlsx
