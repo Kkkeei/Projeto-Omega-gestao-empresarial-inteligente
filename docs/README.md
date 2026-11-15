@@ -4,6 +4,8 @@ Este diretório reúne documentação técnica, funcional e operacional do proje
 
 ## Comece por aqui
 
+- [Auditoria do repositório — 2026-11-15](STATUS_AUDITORIA_2026-11-15.md) | Estado verificado das branches, CI, conflitos e pendências de segurança.
+
 | Documento | Para que serve |
 |---|---|
 | [Arquitetura](ARQUITETURA.md) | Organização geral, camadas e integrações. |
