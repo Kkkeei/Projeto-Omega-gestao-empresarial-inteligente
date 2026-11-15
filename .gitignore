@@ -1,49 +1,49 @@
-.env
-__pycache__/
-*.pyc
-node_modules/
-dist/
-.venv/
-.pytest_cache/
-
-*.db
-*.sqlite
-*.sqlite3
-storage/backups/database/
-
-# Dados locais do OMEGA
-backend/omega.db
-backend/omega.db-shm
-backend/omega.db-wal
-storage/
+# Environment files (keep examples versioned)
 .env
 .env.*
 !.env.example
-.venv/
-node_modules/
-__pycache__/
-*.pyc
-*.db
-*.db-shm
-*.db-wal
-.coverage
-.pytest_cache/
-releases/
+backend/.env
+frontend/.env
 
-# Ferramentas e artefatos gerados
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
+
+# Node / frontend build
+node_modules/
+dist/
 *.tsbuildinfo
+
+# Local databases and runtime storage
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+storage/
+backend/omega.db
+backend/omega.db-shm
+backend/omega.db-wal
+
+# Local releases and generated artifacts
+releases/
 *.log
 *.tmp
+.DS_Store
+Thumbs.db
+
+# Local backups (keep outside version control)
 *.bak
 *.bak_*
 *.backup
 *.backup_*
-.DS_Store
-Thumbs.db
 
-# Arquivos locais de dados potencialmente sensíveis
-# Use fixtures sintéticas versionadas em testes/fixtures, nunca cadastros reais.
+# Potentially sensitive local source data
+# Replace with synthetic fixtures before sharing examples.
 dados/CADASTRO.xlsx
