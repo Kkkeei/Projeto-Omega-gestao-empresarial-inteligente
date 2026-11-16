@@ -1133,6 +1133,22 @@ def criar_tabelas() -> None:
         if contabil_schema.exists():
             conexao.executescript(contabil_schema.read_text(encoding="utf-8"))
             conexao.commit()
+        # Corrige registros legados criados com DEFAULT aplicavel=0 em versões antigas.
+        # Uma marcação intencional de "Não aplicável" sempre exige justificativa.
+        conexao.execute("""UPDATE contabil_movimentacoes_competencias
+            SET aplicavel=1, atualizado_em=CURRENT_TIMESTAMP
+            WHERE aplicavel=0 AND justificativa_nao_aplicavel IS NULL
+              AND lancado=0 AND conferido=0""")
+        conexao.commit()
+        # Migração incremental: competência inicial das movimentações internas.
+        mov_cols = {row[1] for row in conexao.execute("PRAGMA table_info(contabil_movimentacoes)").fetchall()}
+        if mov_cols and "competencia_inicio" not in mov_cols:
+            _sqlite_add_column(cursor, "contabil_movimentacoes", "competencia_inicio", "INTEGER NOT NULL DEFAULT 190001")
+            cursor.execute("""UPDATE contabil_movimentacoes
+                SET competencia_inicio=COALESCE((SELECT MIN(mc.competencia)
+                    FROM contabil_movimentacoes_competencias mc
+                    WHERE mc.movimentacao_id=contabil_movimentacoes.id),190001)""")
+            conexao.commit()
         from app.services.auth_service import ensure_admin_user
         ensure_admin_user()
     finally:

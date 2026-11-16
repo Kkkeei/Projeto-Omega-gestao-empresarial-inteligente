@@ -175,6 +175,76 @@ CREATE INDEX IF NOT EXISTS idx_contabil_historico_empresa_data
 CREATE INDEX IF NOT EXISTS idx_contabil_historico_entidade
     ON contabil_historico(entidade, entidade_id, criado_em DESC);
 
+CREATE TABLE IF NOT EXISTS contabil_movimentacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empresa_id INTEGER NOT NULL,
+    nome TEXT NOT NULL,
+    categoria_id INTEGER,
+    origem TEXT NOT NULL CHECK (origem IN ('DOCUMENTACAO', 'LANCAMENTOS_CONFERENCIAS')),
+    documento_origem_id INTEGER,
+    competencia_inicio INTEGER NOT NULL DEFAULT 190001,
+    competencia_fim INTEGER,
+    ativa INTEGER NOT NULL DEFAULT 1 CHECK (ativa IN (0,1)),
+    criada_por INTEGER,
+    criada_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    inativada_em TEXT,
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (categoria_id) REFERENCES contabil_categorias(id) ON DELETE SET NULL,
+    FOREIGN KEY (documento_origem_id) REFERENCES contabil_documentos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (criada_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+    CHECK ((competencia_inicio / 100) BETWEEN 1900 AND 2999),
+    CHECK ((competencia_inicio % 100) BETWEEN 1 AND 12),
+    CHECK (competencia_fim IS NULL OR ((competencia_fim / 100) BETWEEN 1900 AND 2999)),
+    CHECK (competencia_fim IS NULL OR ((competencia_fim % 100) BETWEEN 1 AND 12))
+);
+
+-- Consolida movimentos duplicados importados da Documentação sem apagar histórico.
+-- Mantém o menor ID ativo e inativa cópias legadas, preservando competências e auditoria.
+UPDATE contabil_movimentacoes
+   SET ativa=0, inativada_em=COALESCE(inativada_em,CURRENT_TIMESTAMP)
+ WHERE documento_origem_id IS NOT NULL
+   AND id NOT IN (
+       SELECT MIN(id) FROM contabil_movimentacoes
+        WHERE documento_origem_id IS NOT NULL
+        GROUP BY documento_origem_id
+   );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contabil_movimentacao_documento_origem
+    ON contabil_movimentacoes(documento_origem_id)
+    WHERE documento_origem_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_contabil_movimentacoes_empresa
+    ON contabil_movimentacoes(empresa_id, ativa, nome COLLATE NOCASE);
+
+CREATE TABLE IF NOT EXISTS contabil_movimentacoes_competencias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    movimentacao_id INTEGER NOT NULL,
+    empresa_id INTEGER NOT NULL,
+    competencia INTEGER NOT NULL,
+    data_limite TEXT,
+    aplicavel INTEGER NOT NULL DEFAULT 1 CHECK (aplicavel IN (0,1)),
+    justificativa_nao_aplicavel TEXT,
+    lancado INTEGER NOT NULL DEFAULT 0 CHECK (lancado IN (0,1)),
+    conferido INTEGER NOT NULL DEFAULT 0 CHECK (conferido IN (0,1)),
+    lancado_por INTEGER,
+    lancado_em TEXT,
+    conferido_por INTEGER,
+    conferido_em TEXT,
+    criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(movimentacao_id, competencia),
+    CHECK ((competencia / 100) BETWEEN 1900 AND 2999),
+    CHECK ((competencia % 100) BETWEEN 1 AND 12),
+    CHECK (conferido = 0 OR lancado = 1),
+    FOREIGN KEY (movimentacao_id) REFERENCES contabil_movimentacoes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE RESTRICT,
+    FOREIGN KEY (lancado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
+    FOREIGN KEY (conferido_por) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_contabil_movimentacoes_competencia
+    ON contabil_movimentacoes_competencias(empresa_id, competencia, aplicavel);
+
 COMMIT;
 
 -- Categorias padrao devem ser criadas por empresa de forma idempotente:

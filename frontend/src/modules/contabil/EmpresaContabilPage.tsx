@@ -24,6 +24,7 @@ const ALLOWED = ['pdf', 'jpg', 'jpeg', 'png', 'xlsx'];
 
 function competencia(ano: number, mes: number) { return ano * 100 + mes; }
 function competenciaAtual() { const now = new Date(); return competencia(now.getFullYear(), now.getMonth()); }
+function competenciaMesAnterior() { const now = new Date(); const anterior = new Date(now.getFullYear(), now.getMonth() - 1, 1); return competencia(anterior.getFullYear(), anterior.getMonth() + 1); }
 function mesInput(value: number) { return String(Math.floor(value / 100)) + '-' + String(value % 100).padStart(2, '0'); }
 function inputCompetencia(value: string) { const [ano, mes] = value.split('-').map(Number); return competencia(ano, mes); }
 function deslocarMes(value: string, delta: number) {
@@ -74,7 +75,7 @@ export function EmpresaContabilPage() {
   const [arquivos, setArquivos] = useState<ArquivoContabil[]>([]);
   const [formNome, setFormNome] = useState('');
   const [formCategoria, setFormCategoria] = useState('');
-  const [formInicio, setFormInicio] = useState(mesInput(competenciaAtual()));
+  const [formInicio, setFormInicio] = useState(mesInput(competenciaMesAnterior()));
   const [formObs, setFormObs] = useState('');
   const [categoriaAlvoId, setCategoriaAlvoId] = useState<number | null>(null);
   const [categoriaNome, setCategoriaNome] = useState('');
@@ -123,7 +124,7 @@ export function EmpresaContabilPage() {
     setDocumentoAlvo(null);
     setFormNome('');
     setFormCategoria(data?.categorias[0] ? String(data.categorias[0].id) : '');
-    setFormInicio(mesInput(competencia(ano, mes)));
+    setFormInicio(mesInput(competenciaMesAnterior()));
     setFormObs('');
     setErroModal('');
     setModal('documento');

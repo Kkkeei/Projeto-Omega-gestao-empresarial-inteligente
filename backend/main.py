@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Carrega configuração antes dos módulos que leem variáveis de ambiente no import.
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
+from app.core.cors import development_origin_regex, parse_cors_origins
 from app.db.database import criar_tabelas
 from app.api.v1.routes import router as api_router
 from app.api.v1.auth.routes import router as auth_router
@@ -38,8 +39,8 @@ async def lifespan(app: FastAPI):
                 logger.exception("Falha no ciclo da agenda de NFS-e.")
             await asyncio.sleep(60)
 
-    # Não iniciar a agenda se a função ainda não existir no serviço NFS-e.
-    # A rotina automática permanece indisponível até existir implementação real.
+    # Só inicia o agendador quando o serviço tiver uma implementação real.
+    # Não cria uma rotina fictícia nem tenta consultar certificados/cartões A3 no servidor.
     processador_nfse = getattr(nfse_service, "processar_rotinas_automaticas", None)
     if callable(processador_nfse):
         tarefa_agenda_nfse = asyncio.create_task(executar_agenda_nfse())
@@ -47,9 +48,9 @@ async def lifespan(app: FastAPI):
     else:
         tarefa_agenda_nfse = None
         app.state.agenda_nfse = None
-        logger.warning(
-            "Agenda automática de NFS-e não iniciada: "
-            "processar_rotinas_automaticas não existe no serviço."
+        logger.info(
+            "Agenda automática de NFS-e indisponível nesta versão; "
+            "as consultas continuam sendo iniciadas sob demanda."
         )
 
     # Por padrão, NÃO sincroniza todas as empresas na inicialização.
@@ -89,9 +90,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_cors_origins = parse_cors_origins(
+    os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    )
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[x.strip() for x in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://192.168.100.3:5173").split(",") if x.strip()],
+    allow_origins=_cors_origins,
+    allow_origin_regex=development_origin_regex(os.getenv("OMEGA_ENV", "development")),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

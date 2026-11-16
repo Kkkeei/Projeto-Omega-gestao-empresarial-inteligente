@@ -1,235 +1,213 @@
 # Plataforma ÔMEGA
-### Gestão empresarial, contábil, fiscal e automação em um só ambiente
 
-<p align="center">
-  <strong>Gestão · Integração · Automação · Inteligência operacional</strong>
-</p>
+**Sistema de Gestão Empresarial**
 
-<p align="center">
-  Plataforma modular em desenvolvimento para centralizar rotinas empresariais, contábeis e fiscais, documentos, certidões e processos automatizados.
-</p>
+A Plataforma ÔMEGA é um sistema de gestão empresarial voltado à centralização de informações e à automação de rotinas contábeis, fiscais e administrativas. Sua arquitetura modular permite organizar funcionalidades independentes e integrar serviços necessários à operação empresarial.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/FastAPI-API-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/SQLite-database-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
-</p>
-
----
+O projeto reúne módulos de gestão de empresas, documentação, certidões, faturamento, impostos, pendências, certificados digitais e documentos fiscais eletrônicos.
 
 ## Visão geral
 
-A **Plataforma ÔMEGA** é um sistema de gestão empresarial com arquitetura modular. O objetivo é reunir, em uma aplicação integrada, informações e rotinas que normalmente ficam distribuídas entre planilhas, portais, documentos e sistemas diferentes.
+A plataforma tem como objetivo reduzir a fragmentação de processos operacionais, centralizar informações empresariais e oferecer uma base tecnológica para a evolução de rotinas de gestão e automação.
 
-O projeto separa a interface web, a API, os módulos de negócio, as automações e o serviço local necessário para operações com certificados digitais A3.
+## Funcionalidades
 
-> **Estado do projeto:** em desenvolvimento ativo. Os módulos possuem diferentes níveis de implementação; a presença de uma área na interface ou na estrutura do código não significa, por si só, que todas as funcionalidades estejam concluídas ou prontas para produção.
-
-## Áreas funcionais
-
-| Área | Responsabilidade |
+| Módulo | Descrição |
 |---|---|
-| **Empresas** | Cadastro e consulta de dados empresariais e integração cadastral. |
-| **Dashboard** | Visão consolidada de informações e atividades. |
-| **Certidões** | Consultas, documentos emitidos, situação e histórico. |
-| **Certificados digitais** | Gestão de certificados A1/A3 e integração com o serviço local. |
-| **Impostos** | Organização de informações e rotinas fiscais. |
-| **NFS-e** | Integração e gerenciamento de documentos fiscais de serviço. |
-| **Contábil** | Estrutura de apoio às rotinas e lançamentos contábeis. |
-| **Faturamento** | Recursos de faturamento e importação/organização de informações. |
-| **Dossiê Digital** | Organização documental por empresa, categoria e versão. |
-| **Pendências e automações** | Acompanhamento de tarefas e execução de processos automatizados. |
+| Dashboard | Apresentação consolidada de informações e atividades do sistema. |
+| Empresas | Cadastro e gerenciamento de dados empresariais. |
+| Certidões | Integração e acompanhamento de consultas de regularidade fiscal e trabalhista. |
+| Documentação | Organização e gerenciamento de documentos vinculados às empresas. |
+| Faturamento | Controle de informações e execução de rotinas de faturamento. |
+| Impostos | Organização e acompanhamento de informações tributárias. |
+| Pendências | Centralização de itens que necessitam de acompanhamento. |
+| Certificados digitais | Gerenciamento de informações de certificados digitais A1 e A3. |
+| NFS-e | Integração com documentos fiscais de serviços, consulta e processamento de XMLs e geração de documentos PDF, conforme as integrações implementadas. |
+| OMEGA A3 Bridge | Componente local para comunicação com certificados A3 em ambiente Windows compatível. |
 
-Consulte o [índice da documentação](docs/README.md) para encontrar especificações, guias operacionais, decisões técnicas e registros de evolução.
+A disponibilidade das funcionalidades depende da configuração do ambiente, das credenciais, dos certificados e dos serviços externos integrados.
 
-## Tecnologias e componentes
+## Arquitetura e tecnologias
 
-### Aplicação web
-- React 18
-- TypeScript
-- Vite
-- React Router
-- Lucide React
+| Camada | Tecnologia |
+|---|---|
+| Backend | Python |
+| Framework de API | FastAPI |
+| Frontend | React |
+| Linguagem do frontend | TypeScript |
+| Ferramenta de build | Vite |
+| Banco de dados | SQLite no ambiente atualmente documentado; PostgreSQL conforme configuração |
+| Automação de navegador | Playwright |
+| Controle de versão | Git |
+| Repositório | GitHub |
 
-### API e serviços
-- Python
-- FastAPI
-- Pydantic
-- HTTPX
-- SQLite (banco utilizado atualmente)
-
-### Automação e documentos
-- Playwright
-- PyAutoGUI
-- OpenPyXL
-- pypdf / PyMuPDF
-- ReportLab
-- Tesseract / pytesseract
-
-### Serviço local de certificado A3
-O diretório `bridge/` contém o OMEGA Bridge, serviço executado no computador do usuário para interagir com cartão/token A3. A chave privada permanece no dispositivo; o Bridge faz a comunicação local necessária para a operação.
-
-## Arquitetura do repositório
-
-O projeto está organizado como um monólito modular, separado em componentes:
+### Organização do repositório
 
 ```text
-Projeto-Omega/
-├── backend/          # API, regras de negócio, persistência e testes
-├── frontend/         # Aplicação React + TypeScript
-├── bridge/           # Serviço local para certificados A3
-├── docs/             # Arquitetura, requisitos, guias e histórico técnico
-├── dados/            # Dados auxiliares; revisar conteúdo antes de compartilhar
-├── scripts/          # Scripts de apoio na raiz
+OMEGA.V2/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── db/
+│   │   ├── models/
+│   │   ├── modules/
+│   │   ├── schemas/
+│   │   └── services/
+│   ├── assets/
+│   ├── scripts/
+│   ├── tests/
+│   ├── main.py
+│   └── requirements.txt
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   ├── package.json
+│   └── vite.config.ts
+├── bridge/
+├── docs/
+├── scripts/
 ├── docker-compose.yml
-├── .gitignore
 └── README.md
 ```
 
-### Fluxo simplificado
+## Requisitos
 
-```text
-Navegador
-   │
-   ▼
-Frontend React / TypeScript
-   │ HTTP (API versionada)
-   ▼
-Backend FastAPI
-   ├── Rotas /api/v1
-   ├── Módulos de negócio
-   ├── Serviços e integrações
-   ├── Banco SQLite
-   └── Armazenamento de documentos
-          ▲
-          │ comunicação local quando necessário
-     OMEGA Bridge (Windows / A3)
-```
+Para executar o projeto, o ambiente deve possuir:
 
-As rotas HTTP ficam em `backend/app/api/v1/`; as regras e funcionalidades de cada domínio ficam em `backend/app/modules/` e nos serviços compartilhados. No frontend, as páginas por domínio ficam em `frontend/src/modules/`.
+- Python compatível com as dependências do backend.
+- Node.js e npm compatíveis com o frontend.
+- Git para operações com o repositório.
+- Dependências de sistema exigidas pelas bibliotecas utilizadas.
+- Acesso à rede para instalação de dependências e utilização das integrações externas.
 
-Para a proposta detalhada de organização, consulte [Organização do repositório](docs/ORGANIZACAO_REPOSITORIO.md).
+As versões e dependências devem ser verificadas em `backend/requirements.txt`, `frontend/package.json` e `docker-compose.yml`.
 
-## Executar localmente
+## Instalação em ambiente Linux
 
-### Requisitos
+### Backend
 
-- Python compatível com as dependências do backend
-- Node.js e npm
-- Git
-- (Opcional) Docker e Docker Compose
-- (Opcional) Windows, driver do fabricante e leitor/cartão para testar o Bridge A3
-
-### 1. Clonar o projeto
-
-```bash
-git clone https://github.com/Kkkeei/Projeto-Omega-gestao-empresarial-inteligente.git
-cd Projeto-Omega-gestao-empresarial-inteligente
-```
-
-### 2. Configurar o backend
+A partir do diretório raiz do projeto:
 
 ```bash
 cd backend
+
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Revise o arquivo `.env` antes de iniciar. Defina chaves e credenciais próprias para o ambiente local; não compartilhe o arquivo e nunca coloque segredos no Git.
+Configure as variáveis de ambiente necessárias antes de iniciar a aplicação. Utilize os arquivos `.env.example` disponíveis como referência, quando aplicável.
 
-Inicie a API:
+Não substitua arquivos `.env` existentes sem realizar uma cópia de segurança.
+
+Para iniciar o backend em execução direta:
 
 ```bash
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-- API: http://127.0.0.1:8000
-- Swagger: http://127.0.0.1:8000/docs
-- OpenAPI: http://127.0.0.1:8000/openapi.json
+Em produção, utilize o mecanismo de execução e gerenciamento de serviços definido para o ambiente de implantação.
 
-### 3. Configurar o frontend
+### Frontend
 
 Em outro terminal:
 
 ```bash
 cd frontend
+
 npm install
-cp .env.example .env
-npm run dev
-```
-
-Acesse http://127.0.0.1:5173. Confira `VITE_API_URL` no arquivo `frontend/.env` para apontar para a API em execução.
-
-Para validar a compilação:
-
-```bash
 npm run build
 ```
 
-### 4. Executar com Docker Compose (opcional)
+O comando de build gera os arquivos de produção. A publicação e a disponibilização desses arquivos dependem da configuração do servidor.
 
-Na raiz do repositório:
+### Docker
 
-```bash
-docker compose up --build
-```
+O repositório contém arquivos de configuração Docker. Antes de iniciar os serviços, verifique as variáveis de ambiente, as portas, os volumes e os caminhos de persistência definidos na configuração.
 
-A configuração atual publica a API na porta 8000 e o frontend na porta 5173. Revise variáveis, volumes e credenciais antes de usar em qualquer ambiente compartilhado ou de produção.
+## Segurança e proteção de dados
 
-### 5. Executar testes do backend
+A aplicação pode lidar com informações empresariais, documentos fiscais e certificados digitais. Portanto, devem ser observadas as seguintes práticas:
+
+- Não versionar senhas, tokens, chaves privadas ou arquivos `.env`.
+- Não publicar certificados A1 nem suas senhas no repositório.
+- Restringir o acesso a documentos e dados empresariais.
+- Configurar autenticação, HTTPS, CORS e regras de rede adequadas à implantação.
+- Evitar a exposição de informações confidenciais em logs.
+- Realizar backups antes de atualizações ou alterações estruturais.
+- Utilizar dados de teste durante o desenvolvimento sempre que possível.
+
+### Banco de dados e armazenamento
+
+O banco `backend/omega.db` e a pasta `storage`, quando utilizados pelo ambiente, podem conter dados essenciais à operação.
+
+Esses recursos devem ser preservados durante atualizações. A substituição ou remoção deve ocorrer somente após a confirmação dos backups e do procedimento de migração aplicável.
+
+Pacotes de código que excluam a pasta `storage` não incluem os documentos armazenados nela.
+
+## Certificados digitais e NFS-e
+
+A plataforma contempla fluxos relacionados a certificados digitais A1 e A3.
+
+O certificado A1 é utilizado a partir de um arquivo protegido por senha. O certificado A3 pode exigir cartão ou token físico, leitor e drivers instalados na máquina em que ocorrerá a operação.
+
+O OMEGA A3 Bridge foi concebido para apoiar a comunicação local com certificados A3 em ambiente Windows compatível. Esse componente não substitui a necessidade de acesso físico ao dispositivo e aos respectivos drivers.
+
+As rotinas de NFS-e dependem do formato dos documentos XML, do provedor, das credenciais e da disponibilidade dos serviços externos. A geração de DANFSe e outros documentos PDF deve ser validada com arquivos de teste representativos antes da utilização operacional.
+
+## Testes
+
+O backend possui testes automatizados organizados em `backend/tests/`.
+
+Com o ambiente virtual ativado, execute:
 
 ```bash
 cd backend
-pytest
+source .venv/bin/activate
+python -m pytest
 ```
 
-Os testes de automação que dependem de navegador, sistema operacional, certificado, leitor ou serviços externos podem exigir configuração adicional.
+Antes de publicar uma atualização, recomenda-se validar:
+
+1. Inicialização do backend e do frontend.
+2. Autenticação e controle de acesso.
+3. Cadastro e consulta de empresas.
+4. Persistência dos dados.
+5. Upload, consulta e download de documentos.
+6. Operações dos módulos habilitados.
+7. Fluxos de certificados digitais e NFS-e.
+8. Logs e comportamento das integrações externas.
+
+A existência de testes automatizados não garante, por si só, que todos os cenários estejam cobertos ou que os serviços externos estejam disponíveis.
+
+## Atualização e implantação
+
+Antes de atualizar o ambiente:
+
+1. Realize backup do banco de dados.
+2. Preserve o arquivo `.env` e as configurações locais.
+3. Preserve certificados, XMLs e a pasta de armazenamento.
+4. Confirme a versão do código que será implantada.
+5. Instale as dependências necessárias.
+6. Recompile o frontend quando houver alterações na interface.
+7. Reinicie os serviços conforme a configuração do servidor.
+8. Execute testes básicos e verifique os logs.
+
+Comandos destrutivos de limpeza ou substituição não devem ser executados sem confirmar os caminhos envolvidos e a integridade dos backups.
 
 ## Documentação
 
-| Documento | Conteúdo |
-|---|---|
-| [Índice da documentação](docs/README.md) | Catálogo organizado dos documentos existentes. |
-| [Arquitetura](docs/ARQUITETURA.md) | Visão arquitetural e separação de camadas. |
-| [Organização do repositório](docs/ORGANIZACAO_REPOSITORIO.md) | Estrutura atual, estrutura-alvo e plano de limpeza. |
-| [Roadmap](docs/ROADMAP.md) | Etapas e evolução planejada. |
-| [Requisitos do MVP](docs/REQUISITOS_MVP.md) | Escopo funcional documentado. |
-| [Certificados A1/A3](docs/CERTIFICADOS_A1_A3.md) | Conceitos e integração de certificados. |
-| [Guia do Bridge A3](bridge/README.md) | Instalação, operação e segurança do serviço local. |
+A pasta `docs/` reúne materiais complementares sobre arquitetura, requisitos, módulos e procedimentos operacionais. Consulte também os arquivos README específicos do backend e do frontend.
 
-## Segurança e dados
+## Considerações finais
 
-- Não versionar arquivos `.env`, tokens, senhas, chaves privadas, certificados A1, PINs ou credenciais.
-- Não versionar banco de dados local, documentos de clientes, PDFs fiscais, backups ou arquivos de armazenamento.
-- Usar dados fictícios ou anonimizados em exemplos, testes e capturas de tela.
-- O Bridge A3 deve permanecer local, não deve ser exposto publicamente e deve aceitar somente origens confiáveis.
-- Antes de publicar ou manter o repositório público, revisar arquivos de `dados/`, anexos e histórico do Git para identificar informações reais de clientes.
+A Plataforma ÔMEGA está em evolução contínua. A disponibilidade e o comportamento de cada módulo devem ser confirmados na versão instalada e no ambiente de execução correspondente.
 
-Consulte a [Política de segurança](SECURITY.md) para orientações de reporte e proteção de dados.
-
-## Diretrizes de contribuição
-
-1. Criar uma branch específica para cada funcionalidade ou correção.
-2. Evitar desenvolver diretamente na `main`.
-3. Manter alterações de frontend, backend e contratos de API coerentes.
-4. Adicionar ou atualizar testes quando houver mudança de comportamento.
-5. Atualizar a documentação do módulo afetado.
-6. Abrir Pull Request com resumo, testes executados e riscos conhecidos.
-7. Não incluir arquivos temporários, backups locais ou dados reais de clientes.
-
-Sugestão de nomes de branch: `feat/nome-da-funcionalidade`, `fix/descricao-do-problema`, `docs/assunto`.
-
-## Status
-
-**Projeto em desenvolvimento.** Este repositório representa o código-fonte e a documentação de trabalho da Plataforma ÔMEGA. Não deve ser considerado uma distribuição pronta para produção sem homologação funcional, revisão de segurança, política de backup e configuração do ambiente de implantação.
+As operações contábeis, tributárias e fiscais devem ser verificadas pelo profissional responsável, considerando a legislação aplicável e as regras dos serviços integrados.
 
 ---
 
-<p align="center">
-  <strong>PLATAFORMA ÔMEGA</strong><br>
-  Gestão empresarial com integração e automação.
-</p>
+**Plataforma ÔMEGA — Gestão Empresarial**

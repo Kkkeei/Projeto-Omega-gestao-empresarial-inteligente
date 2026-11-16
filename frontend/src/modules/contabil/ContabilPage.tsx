@@ -5,6 +5,7 @@ import { listarDashboardContabil, listarResponsaveisContabeis } from './contabil
 import { AtribuicaoModal } from './AtribuicaoModal';
 import type { DashboardContabilResponse, EmpresaContabil, ResponsavelContabil } from './types';
 import './contabil.css';
+import { useAuth } from '../../auth/AuthContext';
 
 const REGIMES = [
   { key: 'TODOS', label: 'Todas', icon: Building2 },
@@ -47,6 +48,7 @@ function statusClass(status: EmpresaContabil['status_documentacao']) {
 }
 
 export function ContabilPage() {
+  const { usuario } = useAuth();
   const [data, setData] = useState<DashboardContabilResponse | null>(null);
   const [busca, setBusca] = useState('');
   const [regime, setRegime] = useState('TODOS');
@@ -109,11 +111,11 @@ export function ContabilPage() {
           {active && <span className="contabil-regime-selected"><CheckCircle2 size={15} /></span>}
         </button>;
       })}
-      <button className="contabil-regime-card assign" onClick={() => setModalAtribuicao(true)}>
+      {usuario?.perfil === 'ADMIN' && <button className="contabil-regime-card assign" onClick={() => setModalAtribuicao(true)}>
         <span className="contabil-regime-icon responsible"><Users size={19} /></span>
         <span className="contabil-regime-copy"><strong>Atribuir Responsável</strong><small>Distribua a carteira de empresas</small></span>
         <ChevronRight size={17} className="contabil-card-arrow" />
-      </button>
+      </button>}
     </div>
 
     <div className="contabil-toolbar">
@@ -130,7 +132,7 @@ export function ContabilPage() {
 
     <section className="panel contabil-table-panel">
       <div className="contabil-table-heading"><div><strong>Empresas</strong><small>{loading ? 'Atualizando dados...' : (data?.total ?? 0) + ' empresas encontradas'}</small></div><button className="button secondary" onClick={() => void carregar()} disabled={loading}>Atualizar</button></div>
-      {error ? <div className="contabil-error-state"><CircleAlert size={22} /><strong>Não foi possível carregar o Contábil</strong><span>{error}</span><small>A interface está preparada; implemente a rota /api/v1/contabil/dashboard no backend.</small><button className="button secondary" onClick={() => void carregar()}>Tentar novamente</button></div>
+      {error ? <div className="contabil-error-state"><CircleAlert size={22} /><strong>Não foi possível carregar o Contábil</strong><span>{error}</span><small>Verifique sua conexão com o servidor e tente novamente.</small><button className="button secondary" onClick={() => void carregar()}>Tentar novamente</button></div>
       : loading && !data ? <div className="contabil-loading"><span className="spinner" />Carregando empresas...</div>
       : companies.length === 0 ? <div className="contabil-empty"><Building2 size={30} /><strong>Nenhuma empresa encontrada</strong><span>Ajuste os filtros ou verifique se há empresas cadastradas.</span></div>
       : <div className="table-wrap"><table className="contabil-table">
@@ -147,6 +149,6 @@ export function ContabilPage() {
       </table></div>}
       <div className="contabil-table-footer"><span>Os indicadores consideram as obrigações da competência selecionada.</span><span>{companies.length} de {data?.total ?? 0}</span></div>
     </section>
-    {modalAtribuicao && <AtribuicaoModal onClose={() => setModalAtribuicao(false)} onSaved={() => { setModalAtribuicao(false); void carregar(); }} />}
+    {modalAtribuicao && usuario?.perfil === 'ADMIN' && <AtribuicaoModal onClose={() => setModalAtribuicao(false)} onSaved={() => { setModalAtribuicao(false); void carregar(); }} />}
   </div>;
 }

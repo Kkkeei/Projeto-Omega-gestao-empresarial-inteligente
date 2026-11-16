@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 import hashlib
 import mimetypes
 import os
@@ -31,6 +31,195 @@ def exigir_empresa(empresa_id: int) -> dict:
     if empresa is None:
         raise LookupError("Empresa não encontrada.")
     return empresa
+
+
+def validar_acesso_empresa(empresa_id: int, user: dict) -> None:
+    """Impede acesso a dados contábeis fora da carteira do usuário."""
+    empresa = repository.obter_empresa(empresa_id)
+    if not empresa or not empresa.get("ativo"):
+        raise LookupError("Empresa não encontrada ou inativa.")
+    if user.get("perfil") == "ADMIN":
+        return
+    conn = repository.conectar_banco()
+    try:
+        atribuicao = conn.execute(
+            """SELECT usuario_id FROM contabil_atribuicoes
+                WHERE empresa_id=? AND encerrado_em IS NULL""",
+            (empresa_id,),
+        ).fetchone()
+        # Sem responsável, a empresa fica disponível na carteira compartilhada.
+        if atribuicao and atribuicao["usuario_id"] != user.get("id"):
+            raise PermissionError("A empresa está atribuída a outro responsável.")
+    finally:
+        conn.close()
+
+
+def atualizar_movimentacao_competencia(
+    movimentacao_id: int,
+    competencia: int,
+    alteracoes: dict,
+    user: dict,
+) -> dict:
+    validar_competencia(competencia)
+    if not alteracoes:
+        raise ValueError("Informe ao menos uma alteração.")
+    if "justificativa" in alteracoes:
+        justificativa = alteracoes["justificativa"]
+        alteracoes["justificativa"] = justificativa.strip() if justificativa else None
+    if alteracoes.get("aplicavel") is False and not alteracoes.get("justificativa"):
+        raise ValueError("Informe uma justificativa para marcar como não aplicável.")
+
+    conn = repository.conectar_banco()
+    try:
+        conn.execute("BEGIN")
+        movimento = conn.execute(
+            """SELECT m.*, d.competencia_inicio doc_competencia_inicio,
+                      d.competencia_fim doc_competencia_fim
+                 FROM contabil_movimentacoes m
+                 LEFT JOIN contabil_documentos d ON d.id=m.documento_origem_id
+                WHERE m.id=?""",
+            (movimentacao_id,),
+        ).fetchone()
+        if not movimento:
+            raise LookupError("Movimentação não encontrada.")
+
+        if user["perfil"] != "ADMIN":
+            atribuicao = conn.execute(
+                """SELECT usuario_id FROM contabil_atribuicoes
+                    WHERE empresa_id=? AND encerrado_em IS NULL""",
+                (movimento["empresa_id"],),
+            ).fetchone()
+            if atribuicao and atribuicao["usuario_id"] != user["id"]:
+                raise PermissionError("A empresa está atribuída a outro responsável.")
+
+        dentro_periodo = (
+            movimento["origem"] == "DOCUMENTACAO"
+            and movimento["doc_competencia_inicio"] <= competencia
+            and (
+                movimento["doc_competencia_fim"] is None
+                or movimento["doc_competencia_fim"] >= competencia
+            )
+        ) or (
+            movimento["origem"] == "LANCAMENTOS_CONFERENCIAS"
+            and movimento["competencia_inicio"] <= competencia
+            and (
+                movimento["ativa"]
+                or conn.execute(
+                    """SELECT 1 FROM contabil_movimentacoes_competencias
+                        WHERE movimentacao_id=? AND competencia=?""",
+                    (movimentacao_id, competencia),
+                ).fetchone()
+            )
+            and (
+                movimento["competencia_fim"] is None
+                or movimento["competencia_fim"] >= competencia
+            )
+        )
+        if not dentro_periodo:
+            raise LookupError("A movimentação não existe para esta competência.")
+
+        if movimento["origem"] == "DOCUMENTACAO":
+            conn.execute(
+                """INSERT OR IGNORE INTO contabil_obrigacoes
+                    (documento_id, empresa_id, competencia)
+                    VALUES (?, ?, ?)""",
+                (movimento["documento_origem_id"], movimento["empresa_id"], competencia),
+            )
+        conn.execute(
+            """INSERT OR IGNORE INTO contabil_movimentacoes_competencias
+                (movimentacao_id, empresa_id, competencia, aplicavel)
+                VALUES (?, ?, ?, 1)""",
+            (movimentacao_id, movimento["empresa_id"], competencia),
+        )
+        atual = conn.execute(
+            """SELECT * FROM contabil_movimentacoes_competencias
+                WHERE movimentacao_id=? AND competencia=?""",
+            (movimentacao_id, competencia),
+        ).fetchone()
+        anteriores = dict(atual)
+        novos = dict(anteriores)
+        for campo in ("data_limite", "lancado", "conferido", "aplicavel"):
+            if campo in alteracoes:
+                valor = alteracoes[campo]
+                novos[campo] = valor.isoformat() if campo == "data_limite" and valor else valor
+
+        if "lancado" in alteracoes and not novos["lancado"] and novos["conferido"]:
+            novos["conferido"] = 0
+            novos["conferido_por"] = None
+            novos["conferido_em"] = None
+        if novos["conferido"] and not novos["lancado"]:
+            raise ValueError("A movimentação precisa estar lançada antes de ser conferida.")
+        if not bool(novos["aplicavel"]):
+            if novos["lancado"] or novos["conferido"]:
+                raise ValueError("Desmarque lançamento e conferência antes de tornar a movimentação não aplicável.")
+            novos["justificativa_nao_aplicavel"] = alteracoes["justificativa"]
+        elif novos["aplicavel"]:
+            novos["justificativa_nao_aplicavel"] = None
+
+        documento_disponivel = True
+        if movimento["origem"] == "DOCUMENTACAO":
+            documento_disponivel = conn.execute(
+                """SELECT EXISTS(
+                       SELECT 1 FROM contabil_obrigacoes o
+                       JOIN contabil_arquivos a
+                         ON a.obrigacao_id=o.id AND a.excluido_em IS NULL
+                      WHERE o.documento_id=? AND o.competencia=?
+                        AND o.cancelada_em IS NULL
+                   ) disponivel""",
+                (movimento["documento_origem_id"], competencia),
+            ).fetchone()["disponivel"]
+        if not documento_disponivel and (
+            ("lancado" in alteracoes and alteracoes["lancado"])
+            or ("conferido" in alteracoes and alteracoes["conferido"])
+        ):
+            raise ValueError("Receba o documento antes de lançar ou conferir a movimentação.")
+
+        agora = datetime.now().isoformat(timespec="seconds")
+        if "lancado" in alteracoes:
+            if bool(novos["lancado"]) != bool(anteriores["lancado"]):
+                novos["lancado_por"] = user["id"] if novos["lancado"] else None
+                novos["lancado_em"] = agora if novos["lancado"] else None
+        if "conferido" in alteracoes:
+            if bool(novos["conferido"]) != bool(anteriores["conferido"]):
+                novos["conferido_por"] = user["id"] if novos["conferido"] else None
+                novos["conferido_em"] = agora if novos["conferido"] else None
+        novos["aplicavel"] = int(bool(novos["aplicavel"]))
+        novos["lancado"] = int(bool(novos["lancado"]))
+        novos["conferido"] = int(bool(novos["conferido"]))
+        novos["atualizado_em"] = agora
+
+        conn.execute(
+            """UPDATE contabil_movimentacoes_competencias
+                  SET data_limite=?, aplicavel=?, justificativa_nao_aplicavel=?,
+                      lancado=?, conferido=?, lancado_por=?, lancado_em=?,
+                      conferido_por=?, conferido_em=?, atualizado_em=?
+                WHERE id=?""",
+            (
+                novos["data_limite"], int(bool(novos["aplicavel"])),
+                novos["justificativa_nao_aplicavel"], int(bool(novos["lancado"])),
+                int(bool(novos["conferido"])), novos["lancado_por"], novos["lancado_em"],
+                novos["conferido_por"], novos["conferido_em"], agora, atual["id"],
+            ),
+        )
+        novos["competencia"] = competencia
+        novos["movimentacao_id"] = movimentacao_id
+        repository.registrar_historico(
+            conn, movimento["empresa_id"], user["id"],
+            "MOVIMENTACAO_COMPETENCIA", atual["id"], "ATUALIZAR",
+            novos, {**anteriores, "competencia": competencia, "movimentacao_id": movimentacao_id},
+            alteracoes.get("justificativa"),
+        )
+        conn.commit()
+        result = dict(conn.execute(
+            "SELECT * FROM contabil_movimentacoes_competencias WHERE id=?",
+            (atual["id"],),
+        ).fetchone())
+        return result
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".xlsx"}
@@ -95,7 +284,8 @@ def criar_documento(empresa_id: int, data, user_id: int):
         conn.execute("INSERT INTO contabil_obrigacoes (documento_id,empresa_id,competencia,criada_por) VALUES (?,?,?,?)", (cur.lastrowid,empresa_id,data.competencia_inicio,user_id))
         repository.registrar_historico(conn, empresa_id, user_id, "DOCUMENTO", cur.lastrowid, "CRIAR", {"nome": data.nome})
         conn.commit()
-        return repository.documentacao(empresa_id, data.competencia_inicio, data.competencia_inicio // 100, user_id)["documentos"][-1]
+        painel = repository.documentacao(empresa_id, data.competencia_inicio, data.competencia_inicio // 100, user_id)
+        return next(item for item in painel["documentos"] if item["id"] == cur.lastrowid)
     except Exception: conn.rollback(); raise
     finally: conn.close()
 
@@ -107,11 +297,21 @@ def atualizar_documento(documento_id: int, data, user_id: int):
         if not row: raise LookupError("Documento não encontrado.")
         if not conn.execute("SELECT 1 FROM contabil_categorias WHERE id=? AND empresa_id=? AND ativo=1", (data.categoria_id,row["empresa_id"])).fetchone():
             raise LookupError("Categoria não encontrada.")
+        nome = data.nome.strip()
+        if not nome:
+            raise ValueError("O nome da documentação é obrigatório.")
         conn.execute("UPDATE contabil_documentos SET nome=?, categoria_id=?, observacao=?, atualizado_por=?, atualizado_em=CURRENT_TIMESTAMP WHERE id=?",
-                     (data.nome.strip(),data.categoria_id,data.observacao,user_id,documento_id))
-        repository.registrar_historico(conn,row["empresa_id"],user_id,"DOCUMENTO",documento_id,"EDITAR",{"nome":data.nome,"categoria_id":data.categoria_id},dict(row))
+                     (nome,data.categoria_id,data.observacao,user_id,documento_id))
+        # Mantém a movimentação derivada alinhada ao documento de origem.
+        conn.execute(
+            "UPDATE contabil_movimentacoes SET nome=?, categoria_id=? WHERE documento_origem_id=?",
+            (nome, data.categoria_id, documento_id),
+        )
+        repository.registrar_historico(conn,row["empresa_id"],user_id,"DOCUMENTO",documento_id,"EDITAR",
+            {"nome":nome,"categoria_id":data.categoria_id,"observacao":data.observacao},dict(row))
         conn.commit()
-        return repository.documentacao(row["empresa_id"], row["competencia_inicio"], row["competencia_inicio"] // 100, user_id)["documentos"][-1]
+        painel = repository.documentacao(row["empresa_id"], row["competencia_inicio"], row["competencia_inicio"] // 100, user_id)
+        return next(item for item in painel["documentos"] if item["id"] == documento_id)
     finally: conn.close()
 
 
@@ -210,3 +410,92 @@ def _conteudo_compativel(ext: str, data: bytes) -> bool:
     if ext == ".xlsx":
         return data.startswith(b"PK\x03\x04")
     return False
+
+
+def criar_movimentacao_interna(empresa_id: int, data, user: dict) -> dict:
+    validar_competencia(data.competencia_inicio)
+    nome = data.nome.strip()
+    if not nome:
+        raise ValueError("Informe o nome da movimentação.")
+    conn = repository.conectar_banco()
+    try:
+        conn.execute("BEGIN")
+        empresa = conn.execute("SELECT id FROM empresas WHERE id=? AND ativo=1", (empresa_id,)).fetchone()
+        if not empresa:
+            raise LookupError("Empresa não encontrada ou inativa.")
+        if user["perfil"] != "ADMIN":
+            atribuicao = conn.execute(
+                "SELECT usuario_id FROM contabil_atribuicoes WHERE empresa_id=? AND encerrado_em IS NULL",
+                (empresa_id,),
+            ).fetchone()
+            if atribuicao and atribuicao["usuario_id"] != user["id"]:
+                raise PermissionError("A empresa está atribuída a outro responsável.")
+        if data.categoria_id is not None and not conn.execute(
+            "SELECT 1 FROM contabil_categorias WHERE id=? AND empresa_id=? AND ativo=1",
+            (data.categoria_id, empresa_id),
+        ).fetchone():
+            raise LookupError("Categoria não encontrada para esta empresa.")
+        cursor = conn.execute(
+            """INSERT INTO contabil_movimentacoes
+                (empresa_id,nome,categoria_id,origem,documento_origem_id,competencia_inicio,ativa,criada_por)
+                VALUES (?,?,?,'LANCAMENTOS_CONFERENCIAS',NULL,?,1,?)""",
+            (empresa_id, nome, data.categoria_id, data.competencia_inicio, user["id"]),
+        )
+        movimento_id = cursor.lastrowid
+        conn.execute(
+            """INSERT INTO contabil_movimentacoes_competencias
+                (movimentacao_id,empresa_id,competencia,data_limite,aplicavel,justificativa_nao_aplicavel)
+                VALUES (?,?,?,?,1,NULL)""",
+            (movimento_id, empresa_id, data.competencia_inicio, data.data_limite.isoformat() if data.data_limite else None),
+        )
+        repository.registrar_historico(
+            conn, empresa_id, user["id"], "MOVIMENTACAO", movimento_id, "CRIAR",
+            {"nome": nome, "categoria_id": data.categoria_id, "competencia_inicio": data.competencia_inicio, "origem": "LANCAMENTOS_CONFERENCIAS"},
+        )
+        conn.commit()
+        return {"id": movimento_id, "empresa_id": empresa_id, "nome": nome, "categoria_id": data.categoria_id,
+                "competencia_inicio": data.competencia_inicio, "data_limite": data.data_limite.isoformat() if data.data_limite else None,
+                "origem": "LANCAMENTOS_CONFERENCIAS"}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def inativar_movimentacao_interna(movimentacao_id: int, competencia_fim: int, motivo: str | None, user: dict) -> dict:
+    validar_competencia(competencia_fim)
+    motivo = (motivo or "").strip() or None
+    conn = repository.conectar_banco()
+    try:
+        conn.execute("BEGIN")
+        row = conn.execute("SELECT * FROM contabil_movimentacoes WHERE id=?", (movimentacao_id,)).fetchone()
+        if not row:
+            raise LookupError("Movimentação não encontrada.")
+        if row["origem"] != "LANCAMENTOS_CONFERENCIAS":
+            raise ValueError("Movimentações originadas da Documentação devem ser inativadas na própria Documentação.")
+        if user["perfil"] != "ADMIN":
+            atribuicao = conn.execute(
+                "SELECT usuario_id FROM contabil_atribuicoes WHERE empresa_id=? AND encerrado_em IS NULL",
+                (row["empresa_id"],),
+            ).fetchone()
+            if atribuicao and atribuicao["usuario_id"] != user["id"]:
+                raise PermissionError("A empresa está atribuída a outro responsável.")
+        if competencia_fim < row["competencia_inicio"]:
+            raise ValueError("A competência final não pode ser anterior à competência inicial.")
+        anterior = dict(row)
+        conn.execute(
+            "UPDATE contabil_movimentacoes SET ativa=0,competencia_fim=?,inativada_em=CURRENT_TIMESTAMP WHERE id=?",
+            (competencia_fim, movimentacao_id),
+        )
+        repository.registrar_historico(
+            conn, row["empresa_id"], user["id"], "MOVIMENTACAO", movimentacao_id, "INATIVAR",
+            {"competencia_fim": competencia_fim}, anterior, motivo,
+        )
+        conn.commit()
+        return {"id": movimentacao_id, "ativa": False, "competencia_fim": competencia_fim}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

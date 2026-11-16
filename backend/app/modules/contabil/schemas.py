@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -73,3 +74,35 @@ class ArquivoRename(BaseModel):
 
 class ArquivoDelete(BaseModel):
     motivo: str | None = Field(default=None, max_length=500)
+
+
+class MovimentacaoCompetenciaUpdate(BaseModel):
+    data_limite: date | None = None
+    aplicavel: bool | None = None
+    justificativa: str | None = Field(default=None, max_length=1000)
+    lancado: bool | None = None
+    conferido: bool | None = None
+
+
+class MovimentacaoCreate(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    categoria_id: int | None = Field(default=None, gt=0)
+    competencia_inicio: int = Field(ge=190001, le=299912)
+    data_limite: date | None = None
+
+    @model_validator(mode="after")
+    def validar_periodo(self):
+        if self.competencia_inicio % 100 not in range(1, 13):
+            raise ValueError("A competência deve estar no formato YYYYMM.")
+        return self
+
+
+class MovimentacaoInativar(BaseModel):
+    competencia_fim: int = Field(ge=190001, le=299912)
+    motivo: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validar_competencia_fim(self):
+        if self.competencia_fim % 100 not in range(1, 13):
+            raise ValueError("A competência deve estar no formato YYYYMM.")
+        return self
