@@ -413,3 +413,53 @@
 .nfse-row .button.small{padding:7px 9px;font-size:9px}
 @media(max-width:950px){.nfse-office-top{flex-direction:column}.nfse-office-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.nfse-office-filters{align-items:stretch;flex-direction:column}.nfse-office-filters .search-box{max-width:none}.nfse-list-actions{justify-content:flex-start}}
 @media(max-width:650px){.nfse-office-kpis{grid-template-columns:1fr 1fr}.nfse-office-kpis strong{font-size:15px}.nfse-office-tools{width:100%;justify-content:space-between}.nfse-list-actions{align-items:flex-start;flex-direction:column}.nfse-row{grid-template-columns:45px 55px 80px 150px 80px 95px 100px 50px}}
+
+
+/* Identidade visual ÔMEGA — logomarca vetorial transparente */
+.sidebar .brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 2px 28px;
+  margin: 0;
+}
+.sidebar .brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 218px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.login-brand .login-logo {
+  display: block;
+  width: min(100%, 470px);
+  height: auto;
+  max-height: 190px;
+  object-fit: contain;
+  object-position: left center;
+  margin: 0 0 15px;
+}
+@media (max-width: 760px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    background: linear-gradient(180deg, #0f1726 0%, #16243a 38%, #f5f7fa 38%, #f5f7fa 100%);
+  }
+  .login-brand {
+    min-height: 0;
+    padding: 34px 28px 22px;
+  }
+  .login-brand .login-logo {
+    width: min(280px, 82vw);
+    max-height: 100px;
+    margin-bottom: 12px;
+  }
+  .login-points {
+    gap: 9px;
+    margin-top: 22px;
+  }
+  .login-card {
+    margin: 14px auto 34px;
+  }
+}

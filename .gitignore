@@ -1,49 +1,43 @@
-# Environment files (keep examples versioned)
+# Ambientes e dependências
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# Segredos e configurações locais
 .env
 .env.*
 !.env.example
-backend/.env
-frontend/.env
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-
-# Node / frontend build
-node_modules/
-dist/
-*.tsbuildinfo
-
-# Local databases and runtime storage
+# Bancos e dados locais
 *.db
 *.sqlite
 *.sqlite3
+
+# Cache e compilação
+.coverage
+*.tsbuildinfo
+dist/
+build/
+
+# Arquivos temporários
+*.log
+.DS_Store
+  
+# SQLite temporário
 *.db-shm
 *.db-wal
-storage/
-backend/omega.db
-backend/omega.db-shm
-backend/omega.db-wal
 
-# Local releases and generated artifacts
-releases/
-*.log
-*.tmp
-.DS_Store
-Thumbs.db
-
-# Local backups (keep outside version control)
+# Backups
 *.bak
+*.backup*
 *.bak_*
-*.backup
-*.backup_*
 
-# Potentially sensitive local source data
-# Replace with synthetic fixtures before sharing examples.
-dados/CADASTRO.xlsx
+# Cobertura e testes
+.coverage
+.pytest_cache/
+.test_runtime/
+
+# Diarios de bordo locais
+/docs/Di*rio_de_bordo*.md

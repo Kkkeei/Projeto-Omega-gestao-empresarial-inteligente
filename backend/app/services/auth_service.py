@@ -75,8 +75,17 @@ def ensure_admin_user() -> None:
     if not email or not password:
         return
     with conectar_banco() as conn:
-        row = conn.execute("SELECT id FROM usuarios WHERE email=?", (email,)).fetchone()
+        row = conn.execute("SELECT id, perfil, ativo FROM usuarios WHERE email=?", (email,)).fetchone()
         if row:
+            # O e-mail definido explicitamente em OMEGA_ADMIN_EMAIL é a conta
+            # administrativa de bootstrap. Corrige cadastros antigos que tenham
+            # sido criados como usuário comum, sem trocar a senha já cadastrada.
+            if row["perfil"] != "ADMIN" or not row["ativo"]:
+                conn.execute(
+                    "UPDATE usuarios SET perfil='ADMIN', ativo=1 WHERE id=?",
+                    (row["id"],),
+                )
+                conn.commit()
             return
         conn.execute(
             """

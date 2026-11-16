@@ -4,14 +4,34 @@ import type {
   AtribuicaoLoteResponse,
   CategoriaContabil,
   DashboardContabilResponse,
+  DashboardLancamentosResponse,
   EmpresaContabil,
   EmpresaDocumentacaoContabilResponse,
   ResponsavelContabil,
   DocumentoContabil,
   ArquivoContabil,
+  EmpresaLancamentosDetalhe,
+  MovimentacaoCompetencia,
 } from './types';
 
 const BASE = '/api/v1/contabil';
+
+export async function listarPainelLancamentos(params: {
+  competencia: number;
+  busca?: string;
+  regime?: string;
+  responsavel_id?: number | 'NAO_ATRIBUIDO' | null;
+}) {
+  const query = new URLSearchParams();
+  query.set('competencia', String(params.competencia));
+  query.set('pagina', '1');
+  query.set('por_pagina', '500');
+  if (params.busca) query.set('busca', params.busca);
+  if (params.regime && params.regime !== 'TODOS') query.set('regime', params.regime);
+  if (params.responsavel_id === 'NAO_ATRIBUIDO') query.set('sem_responsavel', 'true');
+  else if (typeof params.responsavel_id === 'number') query.set('responsavel_id', String(params.responsavel_id));
+  return apiFetch<DashboardLancamentosResponse>(BASE + '/lancamentos-conferencias?' + query.toString());
+}
 
 export async function listarDashboardContabil(params: {
   competencia: number;
@@ -167,4 +187,32 @@ export async function baixarArquivoContabil(arquivoId: number, fallback: string)
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+
+export async function obterPainelEmpresaLancamentos(empresaId: number, competencia: number) {
+  return apiFetch<EmpresaLancamentosDetalhe>(BASE + '/empresas/' + empresaId + '/lancamentos-conferencias?competencia=' + competencia, { cache: 'no-store' });
+}
+
+export async function atualizarMovimentacaoCompetencia(
+  movimentacaoId: number, competencia: number, data: Partial<Pick<MovimentacaoCompetencia, 'data_limite' | 'aplicavel' | 'lancado' | 'conferido'>> & { justificativa?: string },
+) {
+  return apiFetch<MovimentacaoCompetencia>(BASE + '/movimentacoes/' + movimentacaoId + '/competencias/' + competencia, {
+    method: 'PATCH', body: JSON.stringify(data),
+  });
+}
+
+export async function criarMovimentacaoInterna(
+  empresaId: number, data: { nome: string; categoria_id?: number | null; competencia_inicio: number; data_limite?: string | null },
+) {
+  return apiFetch<{ id: number }>(BASE + '/empresas/' + empresaId + '/movimentacoes', {
+    method: 'POST', body: JSON.stringify(data),
+  });
+}
+
+
+export async function inativarMovimentacaoInterna(movimentacaoId: number, competenciaFim: number) {
+  return apiFetch<{ id: number; ativa: boolean; competencia_fim: number }>(BASE + '/movimentacoes/' + movimentacaoId + '/inativar', {
+    method: 'POST', body: JSON.stringify({ competencia_fim: competenciaFim }),
+  });
 }

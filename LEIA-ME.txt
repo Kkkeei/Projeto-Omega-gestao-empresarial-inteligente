@@ -1,0 +1,13 @@
+AMBIENTE LOCAL DE TESTES - OMEGA
+
+1) Copie backend/.env para a pasta backend/ do seu projeto local (como .env).
+2) Copie frontend/.env.local para frontend/ do seu projeto local (como .env.local).
+3) Execute o backend a partir de backend/:
+   source .venv/bin/activate
+   uvicorn main:app --reload --host 127.0.0.1 --port 8000
+4) Em outro terminal, execute o frontend a partir de frontend/:
+   npm run dev -- --host 127.0.0.1
+
+Este ambiente usa omega_local_test.db e storage_local_test, separados dos dados do servidor.
+Não copie este .env para produção. Não reutilize as credenciais de teste no servidor.
+O administrador local pode ser criado pelo fluxo de bootstrap do backend, se habilitado.

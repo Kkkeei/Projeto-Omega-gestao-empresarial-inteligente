@@ -193,13 +193,15 @@ def test_pf_a3_does_not_store_pin_or_private_key():
     assert c.get("storage_ref") is None
 
 
-def test_a3_requires_real_sha256_thumbprint():
-    with pytest.raises(ValueError, match="thumbprint SHA-256"):
-        service.cadastrar_a3(
-            1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
-            "AC TESTE", "ABC123", "2026-01-01", "2027-01-01",
-            "SHA256withRSA", None, "Token Teste", "slot-1", 1
-        )
+def test_a3_without_bridge_thumbprint_is_saved_as_not_linked():
+    certificate = service.cadastrar_a3(
+        1, "TOKEN", "PJ", "50410847000112", "EMPRESA TESTE LTDA",
+        "AC TESTE", "ABC123", "2026-01-01", "2027-01-01",
+        "SHA256withRSA", None, "Token Teste", "slot-1", 1
+    )
+    assert certificate["status"] == "NAO_VINCULADO"
+    assert certificate["apto_para_uso"] is False
+    assert certificate["thumbprint_sha256"] is None
 
 
 def test_pf_a3_requires_validity_from_bridge():

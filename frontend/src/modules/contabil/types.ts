@@ -44,6 +44,41 @@ export interface DashboardContabilResponse {
   por_pagina: number;
 }
 
+export type SituacaoLancamentos =
+  | 'CONCLUIDO'
+  | 'EM_ANDAMENTO'
+  | 'PENDENTE'
+  | 'ATRASADO'
+  | 'SEM_MOVIMENTACOES';
+export type IndicadorLancamentos = 'VERDE' | 'AZUL' | 'LARANJA' | 'VERMELHO' | 'CINZA';
+
+export interface EmpresaLancamentos {
+  id: number;
+  razao_social: string;
+  nome_fantasia?: string | null;
+  cnpj: string;
+  regime_tributario?: RegimeContabil | null;
+  responsavel_id?: number | null;
+  responsavel_nome?: string | null;
+  movimentacoes_total: number;
+  movimentacoes_concluidas: number;
+  progresso_percentual: number;
+  movimentacoes_atrasadas: number;
+  aguardando_documento: number;
+  situacao: SituacaoLancamentos;
+  indicador: IndicadorLancamentos;
+  descricao_situacao: string;
+}
+
+export interface DashboardLancamentosResponse {
+  competencia: number;
+  resumo: Pick<ContabilResumo, 'total_empresas' | 'simples_nacional' | 'lucro_presumido' | 'lucro_real'>;
+  empresas: EmpresaLancamentos[];
+  total: number;
+  pagina: number;
+  por_pagina: number;
+}
+
 export interface AtribuicaoAlteracao {
   empresa_id: number;
   responsavel_id: number | null;
@@ -113,4 +148,39 @@ export interface EmpresaDocumentacaoContabilResponse {
     pendentes: number;
     nao_recebidos: number;
   };
+}
+
+
+export interface MovimentacaoCompetencia {
+  competencia_id: number;
+  movimentacao_id: number;
+  empresa_id: number;
+  competencia: number;
+  data_limite?: string | null;
+  aplicavel: boolean;
+  justificativa_nao_aplicavel?: string | null;
+  lancado: boolean;
+  conferido: boolean;
+  lancado_por?: number | null;
+  lancado_em?: string | null;
+  conferido_por?: number | null;
+  conferido_em?: string | null;
+  nome: string;
+  origem: 'DOCUMENTACAO' | 'LANCAMENTOS_CONFERENCIAS';
+  categoria_id?: number | null;
+  categoria_nome?: string | null;
+  documento_origem_id?: number | null;
+  obrigacao_id?: number | null;
+  documento_disponivel: boolean;
+  quantidade_arquivos: number;
+  status_documento: 'AGUARDANDO_DOCUMENTO' | 'RECEBIDO' | 'NAO_SE_APLICA';
+  concluida: boolean;
+}
+
+export interface EmpresaLancamentosDetalhe {
+  empresa: EmpresaLancamentos;
+  competencia: number;
+  movimentacoes: MovimentacaoCompetencia[];
+  categorias: Array<{ id: number; nome: string; ordem: number }>;
+  resumo: { total: number; concluidas: number; pendentes: number; aguardando_documento: number; progresso_percentual: number };
 }
