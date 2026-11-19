@@ -1,0 +1,10 @@
+import {FormEvent,useState} from 'react';
+import {KeyRound,Mail,ShieldCheck} from 'lucide-react';
+import {Link} from 'react-router-dom';
+import {apiFetch} from '../../services/api/client';
+
+export function ForgotPasswordPage(){
+ const [email,setEmail]=useState(''); const [erro,setErro]=useState(''); const [ok,setOk]=useState(''); const [resetUrl,setResetUrl]=useState(''); const [loading,setLoading]=useState(false);
+ async function submit(e:FormEvent){e.preventDefault();setErro('');setOk('');setResetUrl('');setLoading(true);try{const r=await apiFetch<{mensagem:string;reset_url?:string}>('/api/v1/auth/esqueci-senha',{method:'POST',body:JSON.stringify({email})});setOk(r.mensagem);if(r.reset_url)setResetUrl(r.reset_url)}catch(x){setErro(x instanceof Error?x.message:'Não foi possível solicitar a redefinição.')}finally{setLoading(false)}}
+ return <main className="login-page"><section className="login-brand"><div className="login-brand-mark">Ω</div><h1>ÔMEGA</h1><p>Recupere o acesso com segurança.</p><div className="login-points"><span><ShieldCheck size={16}/> Link de redefinição com prazo de validade</span><span><KeyRound size={16}/> O token é de uso único</span></div></section><section className="login-card"><div><span className="eyebrow">RECUPERAÇÃO</span><h2>Esqueci minha senha</h2><p>Informe o e-mail usado na conta.</p></div>{erro&&<div className="form-error">{erro}</div>}{ok&&<div className="form-success">{ok}</div>}{resetUrl&&<div className="reset-link-box"><strong>Link de redefinição</strong><code>{resetUrl}</code><Link className="button primary" to={resetUrl}>Abrir redefinição</Link></div>}<form onSubmit={submit} className="login-form"><label>E-mail<div className="login-input"><Mail size={17}/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required/></div></label><button className="button primary login-submit" disabled={loading}>{loading?'Gerando link...':'Solicitar redefinição'}</button></form><div className="auth-links"><Link to="/login">Voltar para login</Link><span>•</span><Link to="/registrar">Criar conta</Link></div></section></main>;
+}

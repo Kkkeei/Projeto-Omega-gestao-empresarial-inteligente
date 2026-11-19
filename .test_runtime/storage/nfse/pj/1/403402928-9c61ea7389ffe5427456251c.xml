@@ -1,0 +1,7 @@
+<NFSe xmlns="http://www.sped.fazenda.gov.br/nfse">
+      <infNFSe>
+        <nNFSe>321654</nNFSe>
+        <dhProc>2026-10-13T07:30:00-03:00</dhProc>
+        <DPS><infDPS><valores><vServPrest><vServ>987.65</vServ></vServPrest></valores></infDPS></DPS>
+      </infNFSe>
+    </NFSe>

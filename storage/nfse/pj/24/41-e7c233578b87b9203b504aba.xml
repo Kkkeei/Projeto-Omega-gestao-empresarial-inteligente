@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26019041226751327000199000000000043826030000016165">
+    <xLocEmi>Bezerros</xLocEmi>
+    <xLocPrestacao>Bezerros</xLocPrestacao>
+    <nNFSe>438</nNFSe>
+    <cLocIncid>2601904</cLocIncid>
+    <xLocIncid>Bezerros</xLocIncid>
+    <xTribNac>Lubrificacao, limpeza, lustracao, revisao, carga e recarga, conserto, restauracao, blindagem, manutencao e conservacao de maquinas, veiculos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto pecas e partes empregadas, que ficam sujeitas ao ICMS).</xTribNac>
+    <xTribMun>REPARACAO E MANUTENCAO DE EQUIPAMENTOS ELETROELETRONICOS DE USO PESSOA</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-03-02T16:59:18-03:00</dhProc>
+    <nDFSe>438</nDFSe>
+    <emit>
+      <CNPJ>26751327000199</CNPJ>
+      <IM>10990981</IM>
+      <xNome>M A DOS SANTOS FRIOS ME</xNome>
+      <enderNac>
+        <xLgr>IMACULADA CONCEICAO</xLgr>
+        <nro>208</nro>
+        <xBairro>CRUZEIRO</xBairro>
+        <cMun>2601904</cMun>
+        <UF>PE</UF>
+        <CEP>55660000</CEP>
+      </enderNac>
+      <fone>81999617913</fone>
+      <email>GFRIOSREFRIGERACAO@GMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>240.00</vBC>
+      <pAliqAplic>4.00</pAliqAplic>
+      <vISSQN>9.60</vISSQN>
+      <vLiq>240.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS260190422675132700019900001000000000000438">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-03-02T16:59:18-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>438</nDPS>
+        <dCompet>2026-03-02</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2601904</cLocEmi>
+        <prest>
+          <CNPJ>26751327000199</CNPJ>
+          <IM>10990981</IM>
+          <regTrib>
+            <opSimpNac>3</opSimpNac>
+            <regApTribSN>1</regApTribSN>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>JOSE EUDES DE NUNES SOUZA ME</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>RUA JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2601904</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>140101</cTribNac>
+            <xDescServ>1.SERVICO PRESTADO FORA DE GARANTIA  #QTD:1 - V.UND.:R$240,00 - TOTAL.:R$240,00||TROCA DA RESISTENCIA DO DRENO |VALOR: 240,00 |PIX: GFRIOSREFRIGERACAO@GMAIL.COM | M A DOS SANTOS FRIOS</xDescServ>
+            <cNBS>120024000</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>240.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26019041226751327000199000000000043826030000016165"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>WFz9f9Xf0Mgm5bL7EPZi/1k7+mQ=</DigestValue></Reference></SignedInfo><SignatureValue>i9+18sAGLyWV0HK/y4Mcos8MtaTNch/QwgPQSIFuzuo4ckY74zZ4M3zfFQmff7mVHs8yhIKq7u5S&#13;
+fwEYCNhBMXB1ok/btqO3V/4Bm/46vUqW+piutDXr4OQsVsTaR/7drKUdkfzm1xoAx9ldOaG42UxM&#13;
+RSnWbwStF1S+ibtGEEUwzrm0tVTxBhC6pzLL8+6/t+PiT2rSWGY6hDqqSKtG68m4dnmcTvGedZMp&#13;
+Bc8gKiCg/DlZ/9kI3e8W/PHNuc088r0ukyoWmoQaFogrFFy5mOjtxXbAeurQ5G6iffZAyNazewvc&#13;
+U3aljQVmIrdX8QOzIW8J7kYcrIYERoIKFqCIKA==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIH5TCCBc2gAwIBAgIKEcg89o2sHhXlLzANBgkqhkiG9w0BAQsFADBbMQswCQYDVQQGEwJCUjEW&#13;
+MBQGA1UECwwNQUMgU3luZ3VsYXJJRDETMBEGA1UECgwKSUNQLUJyYXNpbDEfMB0GA1UEAwwWQUMg&#13;
+U3luZ3VsYXJJRCBNdWx0aXBsYTAeFw0yNTA5MjkxNjE4NDhaFw0yNjA5MjkxNjE4NDhaMIHKMQsw&#13;
+CQYDVQQGEwJCUjETMBEGA1UECgwKSUNQLUJyYXNpbDEiMCAGA1UECwwZQ2VydGlmaWNhZG8gRGln&#13;
+aXRhbCBQSiBBMTEZMBcGA1UECwwQVmlkZW9jb25mZXJlbmNpYTEXMBUGA1UECwwONDc2MDUwNDAw&#13;
+MDAxMjAxHzAdBgNVBAsMFkFDIFN5bmd1bGFySUQgTXVsdGlwbGExLTArBgNVBAMMJE1VTklDSVBJ&#13;
+TyBERSBCRVpFUlJPUzoxMDA5MTUxMDAwMDE3NTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC&#13;
+ggEBAJ30ZnlBMTDvrRD47sMHIsSL5d037lEfAo6gg3fhrAjA54O7YxKf8P6xNIW6d9yRzYbG/x08&#13;
+izFDTQcLWzxrigVH2j6cjZrusJMyy6H49EIvVLTBcYBHYhsDyDSt3A5e9/JwCsiWR5CA1AXmRSzc&#13;
+SYwyOF5TyzZy4NqQ9A+Kje3m6v0LCKs7OXqiIr/HYkXYEEIZVMv8g/cmq89PQZFD45YJqMmrLG3K&#13;
+LrcvYnG9AaYiSn5oaPoOiknKOKDvKvMpyl/kIDF2prmRlOJC2aewcheiwR969HvIdKWwSt8tWK65&#13;
+ykTrm3gL3EI0Je8a6gxUH+350tAkFYTIKlzc3EhmJTMCAwEAAaOCAzkwggM1MA4GA1UdDwEB/wQE&#13;
+AwIF4DAdBgNVHSUEFjAUBggrBgEFBQcDBAYIKwYBBQUHAwIwCQYDVR0TBAIwADAfBgNVHSMEGDAW&#13;
+gBST4f9+HeX15E3hOWKLIWmV5q9yFjAdBgNVHQ4EFgQUqihsuB3fGVFR07h+1Q1HJLyQxm4wfwYI&#13;
+KwYBBQUHAQEEczBxMG8GCCsGAQUFBzAChmNodHRwOi8vc3luZ3VsYXJpZC5jb20uYnIvcmVwb3Np&#13;
+dG9yaW8vYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS9jZXJ0aWZpY2Fkb3MvYWMtc3luZ3VsYXJpZC1t&#13;
+dWx0aXBsYS5wN2IwgYIGA1UdIAR7MHkwdwYHYEwBAgGBBTBsMGoGCCsGAQUFBwIBFl5odHRwOi8v&#13;
+c3luZ3VsYXJpZC5jb20uYnIvcmVwb3NpdG9yaW8vYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS9kcGMv&#13;
+ZHBjLWFjLXN5bmd1bGFySUQtbXVsdGlwbGEucGRmMIHNBgNVHREEgcUwgcKgKgYFYEwBAwKgIQQf&#13;
+TWFyaWEgTHVjaWVsbGUgU2lsdmEgTGF1cmVudGlub6AZBgVgTAEDA6AQBA4xMDA5MTUxMDAwMDE3&#13;
+NaBCBgVgTAEDBKA5BDcxNzA1MTk4OTA3MjU3MDI2NDgzMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw&#13;
+MDAwMDAwMDAwMDAwoBcGBWBMAQMHoA4EDDAwMDAwMDAwMDAwMIEcbHVjaWVsbGVsYXVyZW50aW5v&#13;
+QGdtYWlsLmNvbTCB4gYDVR0fBIHaMIHXMGSgYqBghl5odHRwOi8vc3luZ3VsYXJpZC5jb20uYnIv&#13;
+cmVwb3NpdG9yaW8vYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS9sY3IvbGNyLWFjLXN5bmd1bGFyaWQt&#13;
+bXVsdGlwbGEuY3JsMG+gbaBrhmlodHRwOi8vaWNwLWJyYXNpbC5zeW5ndWxhcmlkLmNvbS5ici9y&#13;
+ZXBvc2l0b3Jpby9hYy1zeW5ndWxhcmlkLW11bHRpcGxhL2xjci9sY3ItYWMtc3luZ3VsYXJpZC1t&#13;
+dWx0aXBsYS5jcmwwDQYJKoZIhvcNAQELBQADggIBACu3H8t0OAUNgAQqKAYUowOILrvsx1SSwmnr&#13;
+WzoxAJb7DY5ED2/0g95mQEp6FQqTQ5W3eEADxKuvvx+Z2tDxZTZIe6aqnCWnVjdnmvCraZ5nCC1N&#13;
+UNHIiKtEgBR/Bp2Y0VLBQ8zMHbVJtlbnIb6cSx6Ft+qQo1MeQQNzM7csPST3xn60jYUB/NAtlzZL&#13;
+9UkO9Spe1KvJs1HJ4Sh//YenWJsOvUnD4wi+pDl/zGR1zpqlp4BC6IF4gyw3WVmTPv5j62UVhxnW&#13;
+5X5yspdGaJ58GBitCG8Q6KNcDDUXyi3ayKcpNBYRX93kUbdvvIvrD6PKa22QDZRhOAqwS8Ge9UEG&#13;
+dSCqWSgFID5OLO6FHrDRQV3XWSCyFQlKtpDz2KEmongZ0LIX4Ow+MWYDfoJGoThjJczFwtXj3C7Q&#13;
+nMEmHv59v6/GGUYikmo4ZTRGX6GW9XYl/d2SFKp6NLUZ6Uq7RdJ5JNgW1yzWKdm4D87GOoBamulj&#13;
++YR+DGhfuOCV1x6O2KSXvG8aGst1ixcB6ARN0fG1Jiilbid5hWSRqyt9F07ojbhj8UAYDN1MaUoz&#13;
+IVdcS6kbZE4IEHvhVZUxdmWskKfgL3jPl+v2wSg5Ig6LHkeqCpljfJ9IZZMTl44Uuj62QBA1h5TS&#13;
+QmcpuP4ZiFEsy1om8wdXbVwNnVjDKoQ9DID41ymG</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

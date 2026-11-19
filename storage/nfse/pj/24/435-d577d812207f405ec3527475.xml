@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26094021207692565000126000000000384826070000022259">
+    <xLocEmi>Moreno</xLocEmi>
+    <xLocPrestacao>Moreno</xLocPrestacao>
+    <nNFSe>3848</nNFSe>
+    <cLocIncid>2609402</cLocIncid>
+    <xLocIncid>Moreno</xLocIncid>
+    <xTribNac>Assessoria ou consultoria de qualquer natureza, nao contida em outros itens desta lista, analise, exame, pesquisa, coleta, compilacao e fornecimento de dados e informacoes de qualquer natureza, inclusive cadastro e similares.</xTribNac>
+    <xTribMun>6920602-ATIVIDADES DE CONSULTORIA E AUDITORIA CONTABIL E TRIBUTARIA</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-07-30T20:01:20-03:00</dhProc>
+    <nDFSe>3848</nDFSe>
+    <emit>
+      <CNPJ>07692565000126</CNPJ>
+      <IM>2010379</IM>
+      <xNome>HORA &amp; CARVALHO CONSULTORIA LTDA</xNome>
+      <enderNac>
+        <xLgr>R BEIRO UCHOA</xLgr>
+        <nro>420</nro>
+        <xBairro>ALTO DA MATERNIDADE</xBairro>
+        <cMun>2609402</cMun>
+        <UF>PE</UF>
+        <CEP>54811515</CEP>
+      </enderNac>
+      <email>ADMILSONDAHORA@GMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>10833.00</vBC>
+      <pAliqAplic>3.00</pAliqAplic>
+      <vISSQN>324.99</vISSQN>
+      <vTotalRet>666.23</vTotalRet>
+      <vLiq>10166.77</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS260940220769256500012600001000000000003848">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-07-30T20:01:20-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>3848</nDPS>
+        <dCompet>2026-07-30</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2609402</cLocEmi>
+        <prest>
+          <CNPJ>07692565000126</CNPJ>
+          <IM>2010379</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>INDUSTRIA DE SORVETES PINGMEL LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>RUA JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+          <email>ANDRE@ASMCONTABILIDADE.COM.BR</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2609402</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>170101</cTribNac>
+            <xDescServ>1.ASSESSORIA TRIBUTARIA - ORIENTACOES, ELABORACAO DO PROJETO, PROTOCOLO, ACOMPANHAMENTO - PROIND E SUDENE REDUCAO DO IRPJ E ADICIONAIS EM 75 % #QTD:1 - V.UND.:R$10.833,00 - TOTAL.:R$10.833,00||CONTRATO N A-012-INCSUDENE-PROIND MIGRACAO/2026.PROJETOS MIGRACAO PRODEPE PARA PROIND INDUSTRIA E SUDENE. | |PARCELA INICIAL = 1-6. | |RETER TRIBUTOS FEDERAIS 6,15 % = R$ 666,23 = VALOR LIQUIDO A SER CREDITADO = R$ 10.166,77. | |CREDITAR |BANCO DO BRASIL |AGENCIA 3250-6 |CONTA CORRENTE 10.001-3 |PIX - CNPJ NO. 07.692.565/0001-26.</xDescServ>
+            <cNBS>113031000</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>10833.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>01</CST>
+                <vBCPisCofins>10833.00</vBCPisCofins>
+                <pAliqPis>0.65</pAliqPis>
+                <pAliqCofins>3.00</pAliqCofins>
+                <vPis>70.41</vPis>
+                <vCofins>324.99</vCofins>
+                <tpRetPisCofins>3</tpRetPisCofins>
+              </piscofins>
+              <vRetIRRF>162.50</vRetIRRF>
+              <vRetCSLL>108.33</vRetCSLL>
+            </tribFed>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26094021207692565000126000000000384826070000022259"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>0X1vZwZ4wfxeVVgkbDO/w0xzz94=</DigestValue></Reference></SignedInfo><SignatureValue>DrAL3wmYDlVwqXWWAKVWhsEBiE5YcSZzimJCBarI5bg211ry/wCbql5l5oZ3o0QeujPTq7GjHXTk&#13;
+jcZgao8hA7y7uzH9DLEJq+U8R/IN8BaBNJQS3XLawk2+jTsynbw4ziztKK47AYA0TPIbi+jw16oD&#13;
+eCNiND9mye6JMnS9DCphmhqxGJ+fWEFXA095jY9dhlqjpdR5B/+8/uD8drPa/a+YmG8hKuGnSOYK&#13;
+30lE9oOzEbWcyPD5TsSeVR2vEnox0LcxQnDdw43CE8AwMY0WgJ/4rHKM1F3L6MrtoAOC7xkkHuXJ&#13;
+8LSjeVSWDeX3S88Ax91yExLbSzS0wtjkZm4hmQ==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIH4TCCBcmgAwIBAgIKObMuFo0a1U0uOzANBgkqhkiG9w0BAQsFADBbMQswCQYDVQQGEwJCUjEW&#13;
+MBQGA1UECwwNQUMgU3luZ3VsYXJJRDETMBEGA1UECgwKSUNQLUJyYXNpbDEfMB0GA1UEAwwWQUMg&#13;
+U3luZ3VsYXJJRCBNdWx0aXBsYTAeFw0yNTA5MjIyMDA5MzJaFw0yNjA5MjIyMDA5MzJaMIHLMQsw&#13;
+CQYDVQQGEwJCUjETMBEGA1UECgwKSUNQLUJyYXNpbDEcMBoGA1UECwwTQ0VSVElGSUNBRE8gRElH&#13;
+SVRBTDEiMCAGA1UECwwZQ2VydGlmaWNhZG8gRGlnaXRhbCBQSiBBMTEXMBUGA1UECwwOMzAxODUy&#13;
+NDcwMDAxOTAxHzAdBgNVBAsMFkFDIFN5bmd1bGFySUQgTXVsdGlwbGExKzApBgNVBAMMIk1VTklD&#13;
+SVBJTyBERSBNT1JFTk86MTEwNDk4MjIwMDAxODMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK&#13;
+AoIBAQDrCAXQ0BWVS/bxv3bHVIDfS03cUpqI1ZU3Xa+zaDWxj1RVwc7UNjjVI4YmUgGFZ7U6bcta&#13;
+sjTB3TzEBXPO64zsz7mNpA9VQGmFL6biy4+Pj82tsWDX4JEiHzvj9BQwoAX6ikNEsnkTa5y3Vxb3&#13;
+2L7J6BSPTPJjVQjKvdHNL1EZDmffoHeesTwihMTJI2VQXIHzXbUwUI0lhkT57+Fp2Jdv9NrkJGer&#13;
+Ico3dBZtiaay8qHfAZGAHnUF6ud66wm7dH8oip9/n8/IntddlGZ7KWPX/A0UNOgfjhXsFkaoTkjB&#13;
+sHvW4G6Oj6CKX9vwoqtKQYj2OfzSVAlsO/b4Fdjhq+1ZAgMBAAGjggM0MIIDMDAOBgNVHQ8BAf8E&#13;
+BAMCBeAwHQYDVR0lBBYwFAYIKwYBBQUHAwQGCCsGAQUFBwMCMAkGA1UdEwQCMAAwHwYDVR0jBBgw&#13;
+FoAUk+H/fh3l9eRN4TliiyFpleavchYwHQYDVR0OBBYEFMriOjBuKPz1XBatIiwW5+unuaQOMH8G&#13;
+CCsGAQUFBwEBBHMwcTBvBggrBgEFBQcwAoZjaHR0cDovL3N5bmd1bGFyaWQuY29tLmJyL3JlcG9z&#13;
+aXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvY2VydGlmaWNhZG9zL2FjLXN5bmd1bGFyaWQt&#13;
+bXVsdGlwbGEucDdiMIGCBgNVHSAEezB5MHcGB2BMAQIBgQUwbDBqBggrBgEFBQcCARZeaHR0cDov&#13;
+L3N5bmd1bGFyaWQuY29tLmJyL3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvZHBj&#13;
+L2RwYy1hYy1zeW5ndWxhcklELW11bHRpcGxhLnBkZjCByAYDVR0RBIHAMIG9oCgGBWBMAQMCoB8E&#13;
+HUVkbWlsc29uIEN1cGVydGlubyBkZSBBbG1laWRhoBkGBWBMAQMDoBAEDjExMDQ5ODIyMDAwMTgz&#13;
+oEIGBWBMAQMEoDkENzAxMDUxOTY1NDE2MjI2Njk0ODcwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw&#13;
+MDAwMDAwMDAwMDCgFwYFYEwBAwegDgQMMDAwMDAwMDAwMDAwgRlnYWJpbmV0ZUBtb3Jlbm8ucGUu&#13;
+Z292LmJyMIHiBgNVHR8EgdowgdcwZKBioGCGXmh0dHA6Ly9zeW5ndWxhcmlkLmNvbS5ici9yZXBv&#13;
+c2l0b3Jpby9hYy1zeW5ndWxhcmlkLW11bHRpcGxhL2xjci9sY3ItYWMtc3luZ3VsYXJpZC1tdWx0&#13;
+aXBsYS5jcmwwb6BtoGuGaWh0dHA6Ly9pY3AtYnJhc2lsLnN5bmd1bGFyaWQuY29tLmJyL3JlcG9z&#13;
+aXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvbGNyL2xjci1hYy1zeW5ndWxhcmlkLW11bHRp&#13;
+cGxhLmNybDANBgkqhkiG9w0BAQsFAAOCAgEAINkqc5jcUev7Ddg2hwtHLUZkmhtIQvV3Ba4TJzoJ&#13;
+rg+5Nr5eGGVXP77I5n3yoMcb0faTg7uxjAIz8DryMKELMvwJ3TRtIFuHw+vcYeAH6C6UiIAlnVXI&#13;
+NM6hKqueBKu2G8GLvjYD5SX72z7/cFTfHbyJcNA8UNFzj6f0W513KVIiaZ99JBKHNtVROxCl1/iI&#13;
+smJvSQ0cM1c750z78VOUiBCl/Y8gy0UiGBj6PBk1dBt3DPYh2TTHtHeXWkZMg8yXOx4+h+XBLBbq&#13;
+SzaPBLhKA/cMRRyZNi2nJ93MuGx1XzRjzBxQElbu4nKj0kyLMui4SqeVE+GApN0TMRlUYZNWrpuK&#13;
+YHWtc0ur6aLjxNwBtIOIrtQ+vQu2uNY+6rTYwQwVGQhAMrm7lctbt5gVl/KvuBihLdU5W5hx1Zhw&#13;
+hBMQOeAaxWxwQfrFc3IrcrWlGzerX61fxrQfZs4V+65v2hX/y4i4DAIYpUuOV1VhNrrRKdY6LSIu&#13;
+X/LTpcP8tZvJAY66H0kotZwOG8h+V7LpF5vLoSfjUY1sNyhTCbSvFZI9/HNI99xDcIK6ig/YFypJ&#13;
+nVuj8hJtC9jdXaCTsa8DAO79xBhoVxJA0MfymDP8Vg9PUtKXZ/ciARSFJlG5rlztcZc7VnKamhQl&#13;
+yETHriKAUX7h8AcP1hd8RTo+MsWHnGF30LQ=</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

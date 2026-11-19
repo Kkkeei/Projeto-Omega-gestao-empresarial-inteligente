@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NFSe xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" versao="1.00" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infNFSe Id="NFS28029081234152634000181250000000069325030023920682">
+    <xLocEmi>Itabaiana</xLocEmi>
+    <xLocPrestacao>Afogados da Ingazeira</xLocPrestacao>
+    <nNFSe>2500000000693</nNFSe>
+    <cLocIncid>2802908</cLocIncid>
+    <xLocIncid>Itabaiana</xLocIncid>
+    <xTribNac>Disponibilização, sem cessão definitiva, de conteúdos de áudio, vídeo, imagem e texto por meio da internet, respeitada a imunidade de livros, jornais e periódicos (exceto a distribuição de conteúdos pelas prestadoras de Serviço de Acesso Condicionado, de que trata a Lei no 12.485, de 12 de setembro de 2011, sujeita ao ICMS).</xTribNac>
+    <xTribMun>Disponibilização, sem cessão definitiva, de conteúdos de áudio, vídeo, imagem e texto por meio da internet, respeitada a imunidade de livros, jornais e periódicos (exceto a distribuição de conteúdos pelas prestadoras de Serviço de Acesso Condicionado, de que trata a Lei no 12.485, de 12 de setembro de 2011, sujeita ao ICMS).</xTribMun>
+    <verAplic>Abrasf_202</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2025-03-31T17:12:52-03:00</dhProc>
+    <nDFSe>2392068</nDFSe>
+    <emit>
+      <CNPJ>34152634000181</CNPJ>
+      <IM>5938911</IM>
+      <xNome>PLAY SERVIÇO DE VALOR AGREGADO LTDA</xNome>
+      <xFant>PLAY SERVIÇO DE VALOR AGREGADO</xFant>
+      <enderNac>
+        <xLgr>AVENIDA NIVALDA LIMA FIGUEIREDO</xLgr>
+        <nro>698</nro>
+        <xCpl>QUADRA D LOTE 06</xCpl>
+        <xBairro>ANISIO A.OLIVEIRA</xBairro>
+        <cMun>2802908</cMun>
+        <UF>SE</UF>
+        <CEP>49503396</CEP>
+      </enderNac>
+      <fone>79999825070</fone>
+      <email>financeiro@ittv.com.br</email>
+    </emit>
+    <valores>
+      <vCalcDR>0.00</vCalcDR>
+      <vBC>3000.00</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>150.00</vISSQN>
+      <vLiq>3000.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS280290823415263400018102025202500000000693">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2025-03-31T17:12:52-03:00</dhEmi>
+        <verAplic>Abrasf_202</verAplic>
+        <serie>2025</serie>
+        <nDPS>202500000000693</nDPS>
+        <dCompet>2025-03-31</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2802908</cLocEmi>
+        <prest>
+          <CNPJ>34152634000181</CNPJ>
+          <IM>5938911</IM>
+          <xNome>PLAY SERVIÇO DE VALOR AGREGADO LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2802908</cMun>
+              <CEP>49503396</CEP>
+            </endNac>
+            <xLgr>AVENIDA NIVALDA LIMA FIGUEIREDO</xLgr>
+            <nro>698</nro>
+            <xCpl>QUADRA D LOTE 06</xCpl>
+            <xBairro>ANISIO A.OLIVEIRA</xBairro>
+          </end>
+          <fone>79999825070</fone>
+          <email>financeiro@ittv.com.br</email>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>07364572000107</CNPJ>
+          <xNome>SPEEDING SERVICOS DE TELECOMUNICACOES LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2600104</cMun>
+              <CEP>56800000</CEP>
+            </endNac>
+            <xLgr>R ANTONIO VIDAL DE FREITAS</xLgr>
+            <nro>370</nro>
+            <xBairro>CENTRO</xBairro>
+          </end>
+          <email>helderhenrick@hotmail.com</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2600104</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>010900</cTribNac>
+            <xDescServ>MENSALIDADE PLAY SERVICO DE VALOR AGREGADO LTDA</xDescServ>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>3000.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <pAliq>5.00</pAliq>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI="#NFS28029081234152634000181250000000069325030023920682"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" /><DigestValue>doThi/38koiUp5cwRDdshapr/2I=</DigestValue></Reference></SignedInfo><SignatureValue>tjkgonUeDtBRK2DYetbMWwO0cEIb+38TrF59G4uLiKLEyynRs4iZ3/rAzVilCUtBhPl9/r5KMBsbTpuQLbt2VnUGPeip8ENR7MZKq8aiMoQY1rgXUVmyD2fBLIu6VwVfBxjiauDkmsHRWm16OeIEO3u9i3Y7xa5uQR2fjQkwAfUV9Li+9o0y+YcmrHPWRctmzuJ/Xhtyg535nMTe2ZE/H1gUd7fBNCIVgAfHSGq58zcr3KIbyla1amX5sbSyXvxWk0VDQ483fBplEUMPYHQLONeXWQcr87H13v1NNtgzn7BjGe7PorcfLobZ2+VYj8e1/IQP4hyN41hXosj1ipuufQ==</SignatureValue><KeyInfo><X509Data><X509Certificate>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</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

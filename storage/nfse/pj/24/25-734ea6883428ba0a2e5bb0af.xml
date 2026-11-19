@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26131071231724745000399000000000114326020000006212">
+    <xLocEmi>Sao Caitano</xLocEmi>
+    <xLocPrestacao>Sao Caitano</xLocPrestacao>
+    <nNFSe>1143</nNFSe>
+    <cLocIncid>2613107</cLocIncid>
+    <xLocIncid>Sao Caitano</xLocIncid>
+    <xTribNac>Lubrificacao, limpeza, lustracao, revisao, carga e recarga, conserto, restauracao, blindagem, manutencao e conservacao de maquinas, veiculos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto pecas e partes empregadas, que ficam sujeitas ao ICMS).</xTribNac>
+    <xTribMun>SERVICOS DE MANUTENCAO E REPARACAO MECANICA DE VEICULOS AUTOMOTORES</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-02-23T08:59:52-03:00</dhProc>
+    <nDFSe>1143</nDFSe>
+    <emit>
+      <CNPJ>31724745000399</CNPJ>
+      <IM>6767</IM>
+      <xNome>GALLOTTI TRUCKS PE COMERCIO DE AUTOMOTORES LTDA</xNome>
+      <enderNac>
+        <xLgr>RODOVIA BR 232 KM 140</xLgr>
+        <nro>S/N</nro>
+        <xBairro>ZONA RURAL</xBairro>
+        <cMun>2613107</cMun>
+        <UF>PE</UF>
+        <CEP>55130000</CEP>
+      </enderNac>
+      <email>GALLOTTI@HOTMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>2800.00</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>140.00</vISSQN>
+      <vLiq>2800.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS261310723172474500039900001000000000001143">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-02-23T08:59:52-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>1143</nDPS>
+        <dCompet>2026-02-23</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2613107</cLocEmi>
+        <prest>
+          <CNPJ>31724745000399</CNPJ>
+          <IM>6767</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>INDUSTRIA DE SORVETES PINGMEL LTDA (26295)</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+          <email>sorvetespingmel@hotmail.com</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2613107</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>140101</cTribNac>
+            <xDescServ>NS:1092 OS:981 Placa:QYR5B98  KM: 212005 Chassi:93XC065CZM8493746  Prop.: INDUSTRIA DE SORVETES PINGMEL LTDA 541260104 - SUBST. TENSOR DE CORRENTE DISTRIBUICAO - 2.00 Hrs541258116 - SUBSTITUICAO DAS CORRENTES PRIMARIAS E SECUNDARIAS - 5.00 Hrs Trib aprox R$: 376.60 Fed, R$ 0.00 Est e R$ 0.00 Mun. Fonte: IBPT/PE</xDescServ>
+            <cNBS>999999999</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>2800.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26131071231724745000399000000000114326020000006212"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>8Dcb4B/MrIj5BbYn9oq7pJI0JCY=</DigestValue></Reference></SignedInfo><SignatureValue>Nk6N5B15yN3SEIpGD8TWY7WQ5n3cOUEHFQCe4EHdTMbrnz3h4+JKMfY5jg+ibEBK0ngA7nkZlcER&#13;
+T0CpdNNLxBFNfv0edEcXdZY2rScMlaqcBcf0ZOm5Iv7BYcAc3EHoha88ATkkt+0CQU6SBdCO7wzK&#13;
+8Pb4jR+79UwWNRuGoNC7kk9M1RcN1a0h5HpJhOc3Sbz5Mfhd2rfIC2/9i7Uq2bAvlzyI1YiVk/0e&#13;
+DWSVECxl3A9uVVu5KK0OTC6vD6W3G4p/4YGokTom03M13FslKrPVI8mT6RKFS0dEE6Pfb9UvWbBY&#13;
+I+KOhb4uKhBzn9vH48h+/kH9XDsVlJnjMC4yow==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIHPjCCBSagAwIBAgIIJBwlEhVt8zIwDQYJKoZIhvcNAQELBQAwWTELMAkGA1UEBhMCQlIxEzAR&#13;
+BgNVBAoTCklDUC1CcmFzaWwxFTATBgNVBAsTDEFDIFNPTFVUSSB2NTEeMBwGA1UEAxMVQUMgU09M&#13;
+VVRJIE11bHRpcGxhIHY1MB4XDTI2MDEwNTEzNTgwMFoXDTI3MDEwNTEzNTgwMFowgeExCzAJBgNV&#13;
+BAYTAkJSMRMwEQYDVQQKEwpJQ1AtQnJhc2lsMQswCQYDVQQIEwJQRTEUMBIGA1UEBxMLU2FvIENh&#13;
+aXRhbm8xHjAcBgNVBAsTFUFDIFNPTFVUSSBNdWx0aXBsYSB2NTEXMBUGA1UECxMOMzY2NTI1MjUw&#13;
+MDAxNTkxEzARBgNVBAsTClByZXNlbmNpYWwxGjAYBgNVBAsTEUNlcnRpZmljYWRvIFBKIEExMTAw&#13;
+LgYDVQQDEydNVU5JQ0lQSU8gREUgU0FPIENBSVRBTk86MTAwOTE1ODUwMDAxNTYwggEiMA0GCSqG&#13;
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC5JMCw+8kuSydmIn4zuVzbhivxUw2KXyPVb8Jk4NdQcc/D&#13;
+tJDufL7zLF4IGDSU49MPh8dXtoEioSKDaI1InSaPr79y4YQknaW+lib9dcPxrtxPB96o5a5VO0Aa&#13;
+4AdEetLLS6AJ7e11JUxWxmy79rdYHaOxxpPRWCMF0myV1lXkC5GOXu3Tf9rLenjqLtpYlD9iJq4E&#13;
+/rmcTDfqOqI3LDJuE9rOG7E9/OtSICCQn1ZSWNH+CYy5KiGJ14RsvVXHA/sgoeimmnhltU3A10tQ&#13;
+h0EvquHnf8jH8iULjm/crjLC0VM+15BhwBuUqNObon56MBGFq5wi+xE6D7Kma7sI3XI5AgMBAAGj&#13;
+ggJ/MIICezAJBgNVHRMEAjAAMB8GA1UdIwQYMBaAFMVS7SWACd+cgsifR8bdtF8x3bmxMFQGCCsG&#13;
+AQUFBwEBBEgwRjBEBggrBgEFBQcwAoY4aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvbGNyL2Fj&#13;
+LXNvbHV0aS1tdWx0aXBsYS12NS5wN2IwgboGA1UdEQSBsjCBr4EfcHJlZmVpdHVyYUBzYW9jYWV0&#13;
+YW5vLnBlLmdvdi5icqAeBgVgTAEDAqAVExNKT1NBRkEgQUxNRUlEQSBMSU1BoBkGBWBMAQMDoBAT&#13;
+DjEwMDkxNTg1MDAwMTU2oDgGBWBMAQMEoC8TLTA0MDExOTc0ODExMTE2NTc0OTEwMDAwMDAwMDAw&#13;
+MDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOEwwwMDAwMDAwMDAwMDAwXQYDVR0gBFYwVDBSBgZg&#13;
+TAECASYwSDBGBggrBgEFBQcCARY6aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvZG9jcy9kcGMt&#13;
+YWMtc29sdXRpLW11bHRpcGxhLnBkZjAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwQwgYwG&#13;
+A1UdHwSBhDCBgTA+oDygOoY4aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvbGNyL2FjLXNvbHV0&#13;
+aS1tdWx0aXBsYS12NS5jcmwwP6A9oDuGOWh0dHA6Ly9jY2QyLmFjc29sdXRpLmNvbS5ici9sY3Iv&#13;
+YWMtc29sdXRpLW11bHRpcGxhLXY1LmNybDAdBgNVHQ4EFgQUbJQ5BcAAadgL91NFD0UqlKoM+agw&#13;
+DgYDVR0PAQH/BAQDAgXgMA0GCSqGSIb3DQEBCwUAA4ICAQB5C2VjRA2YuUQSDfFZhaoO+xSKBQr7&#13;
+w9CTyxghbHpySUkQpsPLP13oKXCSQjKsq2HNTOlnYgkc8v/Hx0wzfGD6To0jfyC+8VqqL1fTAhVU&#13;
+Cxv7dfa8Ux32zeU8CK/7Bm5VjNWtXpaEtSgQ3daFm+F2oD3nnsBdOEZVRmF/+cl6Oqt2k1TMwQM4&#13;
+8a3ldP3wzGwG44WaaFivNyBMivfbGuKdfRNEvXLq33lLCC6olNRK5BmllYHCbn5jdw/whDC63sFd&#13;
+1bjGmu+qVkv6MxVDrDtYGge+GWIXrLNnTpgV+UIN31D0em3I9fdsUSRMc0gR5oDg79ji76/WKW8R&#13;
+oH/VTe3WepZ0FgeFPbVV/KgI407Xq69MFFvcOgLVkHc1vIQMSiKMUT4/7We0nVYO6B6eEd08Z64O&#13;
+NxcQn5Gzz6jCCM5V/0lwSPuTRE2wsNqqJ9BNZh5cHg463N1+1BbpXMvRyH3I+IxZZsn27XkDOpjD&#13;
+Y7cYPVQ+Aav5cq3i+HESlYyX1wQ6gjhu4SGkELJfF5ubWCjlcPOxy0Djz3INDXbXK0fAXdkqpLws&#13;
+1iCOWnALNzMEZugLTvF5sT3bTx0nas5zDqT6skdGab/x5lN3zogiZTutz6DdqrXfoReKNWo/W8nG&#13;
+FAz3fClTXTRJObbj5ni9sESQVEVUKz5haizDcLac90CSEg==</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

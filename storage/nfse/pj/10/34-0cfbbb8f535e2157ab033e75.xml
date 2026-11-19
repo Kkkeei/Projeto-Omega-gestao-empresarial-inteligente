@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NFSe xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" versao="1.00" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infNFSe Id="NFS25108081221109126000179250000000011525060015768461">
+    <xLocEmi>Patos</xLocEmi>
+    <xLocPrestacao>Patos</xLocPrestacao>
+    <nNFSe>2500000000115</nNFSe>
+    <cLocIncid>2510808</cLocIncid>
+    <xLocIncid>Patos</xLocIncid>
+    <xTribNac>Execução, por administração, empreitada ou subempreitada, de obras de construção civil, hidráulica ou elétrica e de outras obras semelhantes, inclusive sondagem, perfuração de poços, escavação, drenagem e irrigação, terraplanagem, pavimentação, concretagem e a instalação e montagem de produtos, peças e equipamentos (exceto o fornecimento de mercadorias produzidas pelo prestador de serviços fora do local da prestação dos serviços, que fica sujeito ao ICMS).</xTribNac>
+    <xTribMun>Execução, por administração, empreitada ou subempreitada, de obras de construção civil, hidráulica ou elétrica e de outras obras semelhantes, inclusive sondagem, perfuração de poços, escavação, drenagem e irrigação, terraplanagem, pavimentação, concretagem e a instalação e montagem de produtos, peças e equipamentos (exceto o fornecimento de mercadorias produzidas pelo prestador de serviços fora do local da prestação dos serviços, que fica sujeito ao ICMS).</xTribMun>
+    <verAplic>Abrasf_202</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2025-06-18T10:15:44-03:00</dhProc>
+    <nDFSe>1576846</nDFSe>
+    <emit>
+      <CNPJ>21109126000179</CNPJ>
+      <IM>4196202</IM>
+      <xNome>SOL LOCAÇÕES ETERCEIRIZAÇÕES LTDA</xNome>
+      <xFant>SOL LOCAÇÕES E TERCEIRIZAÇÕES LTDA</xFant>
+      <enderNac>
+        <xLgr>Rua Horácio Nóbrega</xLgr>
+        <nro>48</nro>
+        <xCpl>ANDAR 1 SALA 2</xCpl>
+        <xBairro>Belo Horizonte</xBairro>
+        <cMun>2510808</cMun>
+        <UF>PB</UF>
+        <CEP>58704000</CEP>
+      </enderNac>
+      <fone>83996031367</fone>
+      <email>CONTATO@FABIANASOUSACONTABIL.COM.BR</email>
+    </emit>
+    <valores>
+      <vCalcDR>0.00</vCalcDR>
+      <vBC>156897.20</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>7844.86</vISSQN>
+      <vLiq>156897.20</vLiq>
+      <xOutInf>Trib. aprox. R$ 21.102,67 Federal e R$ 7.844,86 Municipal. Fonte: IBPT [6A0A76]</xOutInf>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS251080822110912600017902025202500000000115">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2025-06-18T10:15:44-03:00</dhEmi>
+        <verAplic>Abrasf_202</verAplic>
+        <serie>2025</serie>
+        <nDPS>202500000000115</nDPS>
+        <dCompet>2025-06-18</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2510808</cLocEmi>
+        <prest>
+          <CNPJ>21109126000179</CNPJ>
+          <IM>4196202</IM>
+          <xNome>SOL LOCAÇÕES ETERCEIRIZAÇÕES LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2510808</cMun>
+              <CEP>58704000</CEP>
+            </endNac>
+            <xLgr>Rua Horácio Nóbrega</xLgr>
+            <nro>48</nro>
+            <xCpl>ANDAR 1 SALA 2</xCpl>
+            <xBairro>Belo Horizonte</xBairro>
+          </end>
+          <fone>83996031367</fone>
+          <email>CONTATO@FABIANASOUSACONTABIL.COM.BR</email>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>34331990000162</CNPJ>
+          <xNome>DAFEIRA SUPERMERCADO LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2613602</cMun>
+              <CEP>56700000</CEP>
+            </endNac>
+            <xLgr>RUA JOAO MARIANO VALADARES</xLgr>
+            <nro>150</nro>
+            <xBairro>Centro</xBairro>
+          </end>
+          <fone>87999094404</fone>
+          <email>dafeirasupermercado@gmail.com</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2510808</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>070200</cTribNac>
+            <xDescServ>REFERENTE AOS SERVIÇOS DE LOCAÇÃO DE MAO DE OBRA TERCEIRIZADA, PARA ATENDER ESTE ESTABELECIMENTO.</xDescServ>
+          </cServ>
+          <obra>
+            <cObra>00 - Não se aplica</cObra>
+          </obra>
+          <infoCompl>
+            <xInfComp>** Código da obra informado como '00 - Não se aplica' pois o município emissor da NFS-e emitida não exige o campo.</xInfComp>
+          </infoCompl>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>156897.20</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <pAliq>5.00</pAliq>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI="#NFS25108081221109126000179250000000011525060015768461"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" /><DigestValue>cINQpjbZIIrxMV3eNQMv+RSvgq0=</DigestValue></Reference></SignedInfo><SignatureValue>dnhIbPWKMLuC7bnMf6L3E1mtjmUvV1vtZWSvh66HRu9gzt8mKJNJIkfxKSbg6oM66ykV4x++SMLwogVRTF9TD67E1SKwHiVkvMNQ02d9ZO0K/y3vtefIt3T75L3OBUjAvenLqiVO9CyOAFjJflTmyUgqBBmnXX+m4bbqDGoFJnBF4BVpN2z4gMkL44ZyVWXhhMrIFXqz8LRm9XFKUtU5tjg4XiZpxgwLokfA8UOqpkQpHnUeSIaE90oUagkysJ1U6fcKguuHuwXJBre2d4DuGQji7kLqrzzhV8sAVpDxG8kbo7C5r0Y9AU315WEAK+aHsa3X7qDD6slHPtMs+9GaGw==</SignatureValue><KeyInfo><X509Data><X509Certificate>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</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

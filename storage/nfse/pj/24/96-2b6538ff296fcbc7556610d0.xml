@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26099071224532543000118000000002654026040000043904">
+    <xLocEmi>Ouricuri</xLocEmi>
+    <xLocPrestacao>Ouricuri</xLocPrestacao>
+    <nNFSe>26540</nNFSe>
+    <cLocIncid>2609907</cLocIncid>
+    <xLocIncid>Ouricuri</xLocIncid>
+    <xTribNac>Hospedagem de qualquer natureza em hoteis, apart-service condominiais, flat, apart-hoteis, hoteis residencia, residence-service, suite service, hotelaria maritima, moteis, pensoes e congeneres, ocupacao por temporada com fornecimento de servico (o valor da alimentacao e gorjeta, quando incluido no preco da diaria, fica sujeito ao Imposto Sobre Servicos).</xTribNac>
+    <xTribMun>HOTEIS</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-04-14T08:46:46-03:00</dhProc>
+    <nDFSe>26540</nDFSe>
+    <emit>
+      <CNPJ>24532543000118</CNPJ>
+      <IM>30235</IM>
+      <xNome>PEIXOTO E MEDEIROS LTDA-ME</xNome>
+      <enderNac>
+        <xLgr>DR LOURIVAL DE SBORGES</xLgr>
+        <nro>00320</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2609907</cMun>
+        <UF>PE</UF>
+        <CEP>56200000</CEP>
+      </enderNac>
+      <email>POUSADAMORORO@GMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>116.00</vBC>
+      <pAliqAplic>2.00</pAliqAplic>
+      <vISSQN>2.32</vISSQN>
+      <vLiq>116.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS260990722453254300011800001000000000026540">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-04-14T08:46:46-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>26540</nDPS>
+        <dCompet>2026-04-14</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2609907</cLocEmi>
+        <prest>
+          <CNPJ>24532543000118</CNPJ>
+          <IM>30235</IM>
+          <regTrib>
+            <opSimpNac>3</opSimpNac>
+            <regApTribSN>1</regApTribSN>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>INDUSTRIA DE SORVETES PINGMEL LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>RUA JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2609907</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>090101</cTribNac>
+            <xDescServ>1.DESPESA DE HOSPEDAGEM #QTD:1 - V.UND.:R$116,00 - TOTAL.:R$116,00||QUARTO INDIVIDUAL  |HOSPEDE:ANDERSON PABLO NOVAES DE ALMEIDA MASCARENHAS  |CHECK IN 13/04/2026 |CHECK OUT 14/04/2026</xDescServ>
+            <cNBS>103031100</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>116.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>00</CST>
+              </piscofins>
+            </tribFed>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26099071224532543000118000000002654026040000043904"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>tcgMpJyFwVftIW95oZ3mEkKQ4iU=</DigestValue></Reference></SignedInfo><SignatureValue>BKa5ImIlDE7rFEqyVdREArPhrFuPEevxX84Jlufpr1AjyLhM+QK5s5PxFNRe7CfEdLVcWReeXURb&#13;
+9THOEpT6XJrMDEF5VhdOJsQggvS649vZOrLzKkJRh//XtKdPn/76IN1LGveCYwMSNiaAkHOkJNYy&#13;
+v41kjpfJPqy/KJOZeaPTplug89jjvOQpXxPTQamhbcVInPAGNuutS3xT9Jd28x0TXT3oFSHpYr/1&#13;
+IpLx3uvKbbjIN3djkTrLqfrr/Dh5urc7RSMcI4OW1Di01Qc7xP5e8+SMCq+CT1+NJITLsMxdMtdD&#13;
+q4JCaFGajVbnyPsUyBk5xdPXGeRei9OGwKvEZg==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIIBjCCBe6gAwIBAgILAPhARwaWqZXDz6AwDQYJKoZIhvcNAQELBQAwWzELMAkGA1UEBhMCQlIx&#13;
+FjAUBgNVBAsMDUFDIFN5bmd1bGFySUQxEzARBgNVBAoMCklDUC1CcmFzaWwxHzAdBgNVBAMMFkFD&#13;
+IFN5bmd1bGFySUQgTXVsdGlwbGEwHhcNMjYwMTE2MTkxNDQxWhcNMjcwMTE2MTkxNDQxWjCB6jEL&#13;
+MAkGA1UEBhMCQlIxCzAJBgNVBAgMAlBFMREwDwYDVQQHDAhPdXJpY3VyaTETMBEGA1UECgwKSUNQ&#13;
+LUJyYXNpbDEiMCAGA1UECwwZQ2VydGlmaWNhZG8gRGlnaXRhbCBQSiBBMTEZMBcGA1UECwwQVmlk&#13;
+ZW9jb25mZXJlbmNpYTEXMBUGA1UECwwOMjcxMzQwNDAwMDAxODIxHzAdBgNVBAsMFkFDIFN5bmd1&#13;
+bGFySUQgTXVsdGlwbGExLTArBgNVBAMMJE1VTklDSVBJTyBERSBPVVJJQ1VSSToxMTA0MDkwNDAw&#13;
+MDE2NzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM/WwZjWNNBHB0V3EPXj0sCpXCQK&#13;
+ePXO6rc3zFarybM0gp9OQKs/MjzXdODeGFR34cUkxrablr413Rx/MhksGns0HRC97ptghCtVHMox&#13;
+QAJgYvt2JZlOzgrHfQPhLbkebxWe83Jdn+i5o5/HH5Bm2/NLaqEOAMN2vioAA7DShDtydydA6qQu&#13;
+3nPJOh1ToGsBBHepteUp4eQWQYloNc6g7IACRC3tmvqvRgrQzpBjPeKi+7h39Trw2X7/+ggVbn2q&#13;
+05gwUpw+0poKKpChVJN+UND1bA5gQFIgsh6Ho/q98RzjAShgYf/e3l/ARGd4TupgVLQQIfxq+Ac7&#13;
+LHLn6xx5oPkCAwEAAaOCAzkwggM1MA4GA1UdDwEB/wQEAwIF4DAdBgNVHSUEFjAUBggrBgEFBQcD&#13;
+BAYIKwYBBQUHAwIwCQYDVR0TBAIwADAfBgNVHSMEGDAWgBST4f9+HeX15E3hOWKLIWmV5q9yFjAd&#13;
+BgNVHQ4EFgQU3kryrqjvhI7MjjtH8RpfiY93FWkwfwYIKwYBBQUHAQEEczBxMG8GCCsGAQUFBzAC&#13;
+hmNodHRwOi8vc3luZ3VsYXJpZC5jb20uYnIvcmVwb3NpdG9yaW8vYWMtc3luZ3VsYXJpZC1tdWx0&#13;
+aXBsYS9jZXJ0aWZpY2Fkb3MvYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS5wN2IwgYIGA1UdIAR7MHkw&#13;
+dwYHYEwBAgGBBTBsMGoGCCsGAQUFBwIBFl5odHRwOi8vc3luZ3VsYXJpZC5jb20uYnIvcmVwb3Np&#13;
+dG9yaW8vYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS9kcGMvZHBjLWFjLXN5bmd1bGFySUQtbXVsdGlw&#13;
+bGEucGRmMIHNBgNVHREEgcUwgcKgKAYFYEwBAwKgHwQdRlJBTkNJU0NPIFZJQ1RPUiBSQU1PUyBD&#13;
+T0VMSE+gGQYFYEwBAwOgEAQOMTEwNDA5MDQwMDAxNjegQgYFYEwBAwSgOQQ3MTQwNzE5OTcxMDg1&#13;
+MDc1MjQ5MzAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOBAww&#13;
+MDAwMDAwMDAwMDCBHmZyYW5jaXNjb3ZpY3Rvci5yY0BvdXRsb29rLmNvbTCB4gYDVR0fBIHaMIHX&#13;
+MGSgYqBghl5odHRwOi8vc3luZ3VsYXJpZC5jb20uYnIvcmVwb3NpdG9yaW8vYWMtc3luZ3VsYXJp&#13;
+ZC1tdWx0aXBsYS9sY3IvbGNyLWFjLXN5bmd1bGFyaWQtbXVsdGlwbGEuY3JsMG+gbaBrhmlodHRw&#13;
+Oi8vaWNwLWJyYXNpbC5zeW5ndWxhcmlkLmNvbS5ici9yZXBvc2l0b3Jpby9hYy1zeW5ndWxhcmlk&#13;
+LW11bHRpcGxhL2xjci9sY3ItYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS5jcmwwDQYJKoZIhvcNAQEL&#13;
+BQADggIBACFp4h5mdynWJ/j+gf5Z4WCuwU4rcWzDgOvNmrMIAJFKmeEU1HiVXi6Z0kD2EBzvEIE0&#13;
+Kk6SVHDEo6FgLtuoosEIamkgKPN6KQOx021L2f3sRtZYhgL973hCDJSGYDT109pSBeqJDzvA7uSE&#13;
+vIPUaljTQGu+gWVamc81eZsY3/SFD2rUrNxZpmzxhRChLHNCCnxt4OnxboH6tNOeaOHFkrkX2DQf&#13;
+aWCkPXy6e62wZ2rdaDQl48lvWUceMxXObhf8i6uUXqHnvKLX2jx0TpMKRJXqY2V9+Ffhg3AgEoUE&#13;
++IE3o1ofSEjm3QqK7CYnSdGqe2/HAJiKn7M7+IRhqYfEQ+xTkl8pJKciKezSlapXhcvskLPkGDXI&#13;
+ZlTQsLkd4QSdL1Q/FP9URWcEB1JPjdQ7m20/36XGRxQtnlnZ6P9jl2XSLnzv/ZiZTm/9duYYUP0F&#13;
+hBPGt++c1eOT1g597OtsuP9llKdx4ddB6DA749jzJXfb/BzLpqJ9KFfbT/oO76uM2mGbRlyKztHh&#13;
+/iaD0JOH+97CIuHoRahehh8in0yVrpEuF1i6mhCIfy+7Y3noI9UxOBOHrjyAOOAPatjZWq/x7uRm&#13;
+nHkt+2hoxDGwfGcpTqu1BBIBqGkyFIRWKzJ2yz3cSqIO5Eb93rG61HpsGgH2QfnnV19KS7M8VQAS&#13;
+Fu4nmE+L</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

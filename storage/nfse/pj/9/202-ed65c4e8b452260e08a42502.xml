@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26012011211405446000112000000007572526040000049176">
+    <xLocEmi>Arcoverde</xLocEmi>
+    <xLocPrestacao>Arcoverde</xLocPrestacao>
+    <nNFSe>75725</nNFSe>
+    <cLocIncid>2601201</cLocIncid>
+    <xLocIncid>Arcoverde</xLocIncid>
+    <xTribNac>Lubrificacao, limpeza, lustracao, revisao, carga e recarga, conserto, restauracao, blindagem, manutencao e conservacao de maquinas, veiculos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto pecas e partes empregadas, que ficam sujeitas ao ICMS).</xTribNac>
+    <xTribMun>SERVICOS DE MANUTENCAO E REPARACAO  MECANICA DE VEICULOS AUTOMOTORES</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-04-10T08:46:55-03:00</dhProc>
+    <nDFSe>75725</nDFSe>
+    <emit>
+      <CNPJ>11405446000112</CNPJ>
+      <IM>4464</IM>
+      <xNome>IVEL IPANEMA VEICULOS LTDA</xNome>
+      <enderNac>
+        <xLgr>JOSE BONIFACIO</xLgr>
+        <nro>2198</nro>
+        <xBairro>SAO CRISTOVAO</xBairro>
+        <cMun>2601201</cMun>
+        <UF>PE</UF>
+        <CEP>56512970</CEP>
+      </enderNac>
+      <email>IVELIPANEMA@HOTMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>700.00</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>35.00</vISSQN>
+      <vLiq>700.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS260120121140544600011200001000000000075725">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-04-10T08:46:55-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>75725</nDPS>
+        <dCompet>2026-04-10</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2601201</cLocEmi>
+        <prest>
+          <CNPJ>11405446000112</CNPJ>
+          <IM>4464</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>11695174000132</CNPJ>
+          <IM>0</IM>
+          <xNome>RECICLANET SERVICOS E TELECOMUNICACOES LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>JOAO GABRIEL DE VASCONCELOS</xLgr>
+            <nro>1237</nro>
+            <xBairro>CENTRO</xBairro>
+          </end>
+          <email>KIKORECICLA@HOTMAIL.COM</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2601201</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>140101</cTribNac>
+            <xDescServ>CLASS. FISCAL 1401 - PREPARACAO E PINTURA - PREPARACAO E PINTURA; TMO SR21;   1.00 HORASPOLIMENTO - POLIMENTO; TMO SR03;   2.00 HORASSERVICO FUNILARIA - SERVICO FUNILARIA; TMO SR02;   3.00 HORASSERVICO PINTURA - SERVICO PINTURA; TMO SR04;   4.00 HORASSERVICO TAPECARIA/VIDRACARIA - SERVICO TAPECARIA/VIDRACARIA; TMO SR04;   1.00 HORAS OS: 149979 CHASSI: 9882262WWTKG61834 KM: 3729</xDescServ>
+            <cNBS>120024000</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>700.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>00</CST>
+              </piscofins>
+            </tribFed>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26012011211405446000112000000007572526040000049176"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>Ihrpxap1B0K3SCi8fSJWiwf+Sjs=</DigestValue></Reference></SignedInfo><SignatureValue>SBkpfF3VZLCK3+GJPG2qXCeaWM4ZWmepNVG9QLN8j36ju9IFE6K3FVtD/T3tOWa7wO6/Y6arSPfE&#13;
+6Gc9/Qs6QD4GU/Q9vGXBcRc58HS+J0uQxbIJezJ0iyIafmg36ZNWBUUkSaZD0iwUftTENSGtIXV+&#13;
+nnYDFclP2vCeBBySXZTgSzeNYB43EQtzLJp3H9PNlZcepFkbOZsD849oTBYIMkqgJ78rXVxVVURf&#13;
+90ugIlO2jkV60AWM/jvIsNvqXn3lqM0VHWWBUeGdiwlOtVnNIPMcFWY1X5q2/tYS9RRhhLx3b1G3&#13;
+fA+CLX682iuFl+8PRxqioL+4Q9twJxwkvlDkkw==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIHRDCCBSygAwIBAgIIUgEmARVeXrAwDQYJKoZIhvcNAQELBQAwWTELMAkGA1UEBhMCQlIxEzAR&#13;
+BgNVBAoTCklDUC1CcmFzaWwxFTATBgNVBAsTDEFDIFNPTFVUSSB2NTEeMBwGA1UEAxMVQUMgU09M&#13;
+VVRJIE11bHRpcGxhIHY1MB4XDTI2MDExNTIwMTAwMFoXDTI3MDExNTIwMTAwMFowgeYxCzAJBgNV&#13;
+BAYTAkJSMRMwEQYDVQQKEwpJQ1AtQnJhc2lsMQswCQYDVQQIEwJQRTESMBAGA1UEBxMJQXJjb3Zl&#13;
+cmRlMR4wHAYDVQQLExVBQyBTT0xVVEkgTXVsdGlwbGEgdjUxFzAVBgNVBAsTDjI0MTAwOTA5MDAw&#13;
+MTgwMRwwGgYDVQQLExNDZXJ0aWZpY2FkbyBEaWdpdGFsMRowGAYDVQQLExFDZXJ0aWZpY2FkbyBQ&#13;
+SiBBMTEuMCwGA1UEAxMlTVVOSUNJUElPIERFIEFSQ09WRVJERToxMDEwNTk1NTAwMDE2NzCCASIw&#13;
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAIl9ft/2/h7a5zb/bDWsX5Rd/OP11S8Izb++0IGE&#13;
+AMT8vy0s1p6F/w7Wfm8NSREBXDTMXmX6YJQxd6Y2Xufuy0sfKlr1DLE6XgcfrB/nw5cay8YxARpT&#13;
+ZaZr9KN4dmQNcghj7QYbwQDAN/LLbUIOQZxk1mJd6hm1XRwOGqXtxq8f1hhuAEIVtIzfKDpDAsnk&#13;
+jdQFVoNKFJ1kSDBBZl1pUQxOEuFY8Ik0U1MJBqQVDkJfR9tXAuC58eL6Jkr/9UvwfN8cYt07Vf6J&#13;
+VMSU/SxusUA30lnOXT8qPv7YsgdYBAfYhJ2pIAY96cmVDUWs29roIB3jIm+nbQN8kPCkMX36Ms0C&#13;
+AwEAAaOCAoAwggJ8MAkGA1UdEwQCMAAwHwYDVR0jBBgwFoAUxVLtJYAJ35yCyJ9Hxt20XzHdubEw&#13;
+VAYIKwYBBQUHAQEESDBGMEQGCCsGAQUFBzAChjhodHRwOi8vY2NkLmFjc29sdXRpLmNvbS5ici9s&#13;
+Y3IvYWMtc29sdXRpLW11bHRpcGxhLXY1LnA3YjCBuwYDVR0RBIGzMIGwgRdwYXVsb19saWRlckBv&#13;
+dXRsb29rLmNvbaAnBgVgTAEDAqAeExxKT1NFIENBVkFMQ0FOVEkgQUxWRVMgSlVOSU9SoBkGBWBM&#13;
+AQMDoBATDjEwMTA1OTU1MDAwMTY3oDgGBWBMAQMEoC8TLTIxMDcxOTY2NDk2ODczNDQ0MTUwMDAw&#13;
+MDAwMDAwMDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOEwwwMDAwMDAwMDAwMDAwXQYDVR0gBFYw&#13;
+VDBSBgZgTAECASYwSDBGBggrBgEFBQcCARY6aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvZG9j&#13;
+cy9kcGMtYWMtc29sdXRpLW11bHRpcGxhLnBkZjAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUH&#13;
+AwQwgYwGA1UdHwSBhDCBgTA+oDygOoY4aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvbGNyL2Fj&#13;
+LXNvbHV0aS1tdWx0aXBsYS12NS5jcmwwP6A9oDuGOWh0dHA6Ly9jY2QyLmFjc29sdXRpLmNvbS5i&#13;
+ci9sY3IvYWMtc29sdXRpLW11bHRpcGxhLXY1LmNybDAdBgNVHQ4EFgQUOOqnWt61RND0oO+wnF1s&#13;
+nUklTzEwDgYDVR0PAQH/BAQDAgXgMA0GCSqGSIb3DQEBCwUAA4ICAQB1iZIUrV3WzJX3EeAjgopO&#13;
+qiaqvGM2f7Fc5hvAXAkwwmVrCOu6fGusxaL5r0idYiOIIRcLx8EglCuLRZ2TLfexe/Ikkjmbbn5Z&#13;
+jVtnkHH2qpltILtckriVc4DoRmtsWQn0gK3jZ87EbmkE1OztfiBeQGTEpeARNhZ4wlajn353zNui&#13;
+hCBt6QGbBnhuRprYHAHDga930M9nK7Wk5z2+DypGtYd4njsQdVFp+PclQ5wcaKX759VXuk82eR44&#13;
+XLZ772N+DfHZagO5nrzikH9NHOF+pe8iyr3nE8vwKbzZj5r6erbH+4qJqcg3ZxqP1ZKwiIOGa7q0&#13;
+sRVTX6mtq3WXiI7N7yJgcf6pbNBNotDS1tuUBfZk1PHQN0Dzi0LFmMMG3xJUJusGCcA8hW7pibQH&#13;
+cCE6OWGojGYnj/CgtSwsa/VOwL/b4CRktTHVk1KA/ZL1Jpcs76gu+iMyXvh6NgBBEja4bysSa1tA&#13;
+v97vzAJ5rkPdEvQ0Oxf4HH+uSw0/GojgW/KYazNkl3Ib0uA04dbRw2AjAEJS+yV+2EykEZu6fCnv&#13;
+lZUzwNztk4LyRGjqrJ+qvkXjDxsYomCWeTt2nNSY+2SMMKYxVasWonEp46EURrCotDoLWoy38cK5&#13;
+i3Kyh0BCzq0FSuvSdGyjQPJF6GGjq0zGRAKNbTk7AvTLiW+/CKckeA==</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

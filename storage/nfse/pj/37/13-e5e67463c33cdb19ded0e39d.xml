@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NFSe xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" versao="1.00" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infNFSe Id="NFS25040091225100634000147250000000008425080133033491">
+    <xLocEmi>Campina Grande</xLocEmi>
+    <xLocPrestacao>Campina Grande</xLocPrestacao>
+    <nNFSe>2500000000084</nNFSe>
+    <cLocIncid>2504009</cLocIncid>
+    <xLocIncid>Campina Grande</xLocIncid>
+    <xTribNac>Lubrificação, limpeza, lustração, revisão, carga e recarga, conserto, restauração, blindagem, manutenção e conservação de máquinas, veículos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto peças e partes empregadas, que ficam sujeitas ao ICMS).</xTribNac>
+    <xTribMun>Lubrificação, limpeza, lustração, revisão, carga e recarga, conserto, restauração, blindagem, manutenção e conservação de máquinas, veículos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto peças e partes empregadas, que ficam sujeitas ao ICMS).</xTribMun>
+    <verAplic>Abrasf_202</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2025-08-18T11:26:20-03:00</dhProc>
+    <nDFSe>13303349</nDFSe>
+    <emit>
+      <CNPJ>25100634000147</CNPJ>
+      <IM>605253</IM>
+      <xNome>J H ALVES BEZERRA ME</xNome>
+      <xFant>RETÍFICA VIRAGO</xFant>
+      <enderNac>
+        <xLgr>Rua Vinte e Quatro de Maio</xLgr>
+        <nro>1400</nro>
+        <xCpl>B</xCpl>
+        <xBairro>Tambor</xBairro>
+        <cMun>2504009</cMun>
+        <UF>PB</UF>
+        <CEP>58414520</CEP>
+      </enderNac>
+      <fone>8333311078</fone>
+      <email>atendimento@viragovirabrequins.com.br</email>
+    </emit>
+    <valores>
+      <vCalcDR>0.00</vCalcDR>
+      <vBC>4200.00</vBC>
+      <pAliqAplic>2.00</pAliqAplic>
+      <vISSQN>84.00</vISSQN>
+      <vLiq>4200.00</vLiq>
+      <xOutInf>Optante do Simples Nacional. Trib. aprox. R$ 564,90 Federal e R$ 210,00 Municipal. Fonte: IBPT [81AAFF]</xOutInf>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS250400922510063400014702025202500000000084">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2025-08-18T11:26:20-03:00</dhEmi>
+        <verAplic>Abrasf_202</verAplic>
+        <serie>2025</serie>
+        <nDPS>202500000000084</nDPS>
+        <dCompet>2025-08-18</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2504009</cLocEmi>
+        <prest>
+          <CNPJ>25100634000147</CNPJ>
+          <IM>605253</IM>
+          <xNome>J H ALVES BEZERRA ME</xNome>
+          <end>
+            <endNac>
+              <cMun>2504009</cMun>
+              <CEP>58414520</CEP>
+            </endNac>
+            <xLgr>Rua Vinte e Quatro de Maio</xLgr>
+            <nro>1400</nro>
+            <xCpl>B</xCpl>
+            <xBairro>Tambor</xBairro>
+          </end>
+          <fone>8333311078</fone>
+          <email>atendimento@viragovirabrequins.com.br</email>
+          <regTrib>
+            <opSimpNac>3</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>18798945000166</CNPJ>
+          <xNome>JULIO CESAR FERREIRA PAES LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>RUA ANANIAS GOMES</xLgr>
+            <nro>825</nro>
+            <xBairro>Não informado</xBairro>
+          </end>
+          <fone>87999475450</fone>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2504009</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>140100</cTribNac>
+            <xDescServ>1 - VIRABREQUIM - 2201</xDescServ>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>4200.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <pAliq>2.00</pAliq>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI="#NFS25040091225100634000147250000000008425080133033491"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" /><DigestValue>85bChxGTZsN2HHnXeviBQ9LGqeE=</DigestValue></Reference></SignedInfo><SignatureValue>SmY0jBUbtRWpM+2OXB/EpFApfiQ8s/75xCOgxnaastFIqA0UnxYmYoBJenuJ8pxwy6YWBJKLu5VcgPyumQDKFm5nynrrMzFaxMW2shGk1bAW6VmgPB1Jv8yPTkCHNoFqgwmKft6aJXjskRw4YAlSpClgbrIMI6AgJ9PIOky5gjyXwqjn0mJspD3BpX0qFBdoD7phNXvabFD837fPeYDc5AuzyBeLGPpVofrhkNK6mL6QkuGGXm7hLW60zi3pSLF6Xfs9giEUcuO2jKy4HDBUoRUfMxNHRk2W1FuvOW9dHYGyO0DVnt6cZqOpXiSGQ0A/9zjM9oZuv6XICYL1JR4nRQ==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIHbjCCBVagAwIBAgIIe2kwJOuI2PAwDQYJKoZIhvcNAQELBQAwXTELMAkGA1UEBhMCQlIxEzARBgNVBAoMCklDUC1CcmFzaWwxGDAWBgNVBAsMD0FDIERJR0lUQUwgTUFJUzEfMB0GA1UEAwwWQUMgRElHSVRBTCBNVUxUSVBMQSBHMTAeFw0yNTAyMjYxOTI4MzFaFw0yNjAyMjYxOTI4MzFaMIHuMQswCQYDVQQGEwJCUjETMBEGA1UECgwKSUNQLUJyYXNpbDELMAkGA1UECAwCUEIxFzAVBgNVBAcMDkNBTVBJTkEgR1JBTkRFMR8wHQYDVQQLDBZBQyBESUdJVEFMIE1VTFRJUExBIEcxMRcwFQYDVQQLDA4yOTA1Njc0MTAwMDE3NjEZMBcGA1UECwwQdmlkZW9jb25mZXJlbmNpYTEaMBgGA1UECwwRQ2VydGlmaWNhZG8gUEogQTExMzAxBgNVBAMMKk1VTklDSVBJTyBERSBDQU1QSU5BIEdSQU5ERTowODk5MzkxNzAwMDE0NjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJpFuNuos37f/DdyJyBW4QAygGY1FYJj1dloIeIc6pLpYnDYN1jKlx7BQ8tIP9cwER3l9hCkdTGyaHADiAqnwQexHazXND/VmrRXFgHLvpKXufDwMvNIJuSVplkarWZIH+wvgA+yfMF0CW1BkjMwreOTqNu1NVoQuS7ppM/ETxX2RReslv1tSd/O6m71OTV7mujY306/+27oRdolctqyJauk5rYiCxFpmUEdyVoHN79eqpUWi7ZuGEw1V6lMF7/BMvvtMUvwk/MzMWPNj+UeWeNxu04m/Tho6PRA4rjzVRHnOs8qSmDdb6wNYBEqq13UtJwLhAt9WyZN8+6O1qkjpdECAwEAAaOCAp4wggKaMIG0BgNVHREEgawwgamgOAYFYEwBAwSgLwQtMTcxMTE5OTAwODk1NDEwMTQxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwoCIGBWBMAQMCoBkEF0JSVU5PIENVTkhBIExJTUEgQlJBTkNPoBkGBWBMAQMDoBAEDjA4OTkzOTE3MDAwMTQ2oBcGBWBMAQMHoA4EDDAwMDAwMDAwMDAwMIEVQlJVTk9DTElNQUJAR01BSUwuQ09NMAkGA1UdEwQCMAAwHwYDVR0jBBgwFoAUbImlth5CgYXvHRrr16cnUzTg0AgwYwYDVR0gBFwwWjBYBgZgTAECAWwwTjBMBggrBgEFBQcCARZAaHR0cDovL3JlcG9zaXRvcmlvLmFjZGlnaXRhbC5jb20uYnIvZG9jcy9hYy1kaWdpdGFsLW11bHRpcGxhLnBkZjCBoAYDVR0fBIGYMIGVMEigRqBEhkJodHRwOi8vcmVwb3NpdG9yaW8uYWNkaWdpdGFsLmNvbS5ici9sY3IvYWMtZGlnaXRhbC1tdWx0aXBsYS1nMS5jcmwwSaBHoEWGQ2h0dHA6Ly9yZXBvc2l0b3JpbzIuYWNkaWdpdGFsLmNvbS5ici9sY3IvYWMtZGlnaXRhbC1tdWx0aXBsYS1nMS5jcmwwDgYDVR0PAQH/BAQDAgXgMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDBDAdBgNVHQ4EFgQU6WxJ8GU4s+2h6xAyKl5cRoNBF3IwXwYIKwYBBQUHAQEEUzBRME8GCCsGAQUFBzAChkNodHRwOi8vcmVwb3NpdG9yaW8uYWNkaWdpdGFsLmNvbS5ici9jZXJ0L2FjLWRpZ2l0YWwtbXVsdGlwbGEtZzEucDdiMA0GCSqGSIb3DQEBCwUAA4ICAQAoJwovMO6UqWeYb82uFOkXhsgEOo890hUJdo63WK6fGtGZvrPjocs6o7SB94dR+k4Jwk54uhRYGEyVgMl/KByvi3qm3A0Jgwu9I1JQw4ruz46gROW5ZxOJXEFL1fw/grDhXyyjENTJMDyTaC6Z4EthpDgmsVoCVb103zbF9M5BCnHCg2P167yV9uO90fm+RoefLIqazvI2bVWZWflhqXEa8WUolbEEPn+rFYchf97lBoRyMMHpKG5DpdQxp+X1pXGfXOEAnQNQ7h/thOREQEx52YOXKcPoU7+uLBmCvB8klNtD0I6EoGAmH9tLWiN/i46LaNB/Yt0JBYH78F9br7rNlEwdCbCMslP4MC69kvDt3dPnKgV8bQgWVdF6QLXzxnIgQDp210HjQtyLSlxmzYzw6Lifn7nxEryGFToMSK9Jy+vUiY+h23+nMP9dv390H4MloU+DLbDKZsbJxaXWKo6boWcZ+zi6QBl9jxIG3yk2OzRsdbw1HZLR72cQoTKbJGjOPu4jihSp+Y3Sp0unXKIO2tCAq1WAz6QW8YndcDDNkUqJ+wqcTNJl0XgI1QagqptdnfL5MV6/Ln+CH2oazfCjqYFf1yDRIANx2Ya7DuwhSKtO1y9oMbZK2SEzzsUuvu3imtoFdg8WOUvdfMeZixZ7jMi39bBKH59E9ILWSvg5Gg==</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

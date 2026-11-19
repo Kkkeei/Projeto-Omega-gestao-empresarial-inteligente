@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS28045081232819112000165000000002273826050000002148">
+    <xLocEmi>Nossa Senhora da Gloria</xLocEmi>
+    <xLocPrestacao>Nossa Senhora da Gloria</xLocPrestacao>
+    <nNFSe>22738</nNFSe>
+    <cLocIncid>2804508</cLocIncid>
+    <xLocIncid>Nossa Senhora da Gloria</xLocIncid>
+    <xTribNac>Hospedagem de qualquer natureza em hoteis, apart-service condominiais, flat, apart-hoteis, hoteis residencia, residence-service, suite service, hotelaria maritima, moteis, pensoes e congeneres, ocupacao por temporada com fornecimento de servico (o valor da alimentacao e gorjeta, quando incluido no preco da diaria, fica sujeito ao Imposto Sobre Servicos).</xTribNac>
+    <xTribMun>HOTEIS</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-05-08T06:57:18-03:00</dhProc>
+    <nDFSe>22738</nDFSe>
+    <emit>
+      <CNPJ>32819112000165</CNPJ>
+      <IM>198</IM>
+      <xNome>A J CRUZ LTDA</xNome>
+      <enderNac>
+        <xLgr>LOURIVAL BATISTA</xLgr>
+        <nro>375</nro>
+        <xBairro>CENTRO</xBairro>
+        <cMun>2804508</cMun>
+        <UF>SE</UF>
+        <CEP>49680000</CEP>
+      </enderNac>
+      <email>GERENCIA@AVELANPLAZAHOTEL.COM.BR</email>
+    </emit>
+    <valores>
+      <vBC>140.00</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>7.00</vISSQN>
+      <vLiq>140.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS280450823281911200016500001000000000022738">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-05-08T06:57:18-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>22738</nDPS>
+        <dCompet>2026-05-08</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2804508</cLocEmi>
+        <prest>
+          <CNPJ>32819112000165</CNPJ>
+          <IM>198</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>INDUSTRIA DE SORVETES PINGMEL LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>RUA JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2804508</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>090101</cTribNac>
+            <xDescServ>1.DESPESA COM HOSPEDAGEM  #QTD:1 - V.UND.:R$140,00 - TOTAL.:R$140,00</xDescServ>
+            <cNBS>103032000</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>140.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>00</CST>
+              </piscofins>
+            </tribFed>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS28045081232819112000165000000002273826050000002148"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>mxZe7iZY8TRoxFjfQkwdPl4Kqr8=</DigestValue></Reference></SignedInfo><SignatureValue>q9Vk/TdqBclJxMM9fIsbd+AocLVSYaiOuXavKsBeREy3tsYIc5Gp7VHeSQMivhR1Bry4+P6GLtAe&#13;
+OkDNlXJGxOLZSTPvYEowDDgulRs2pPROHRlcDMu29qTmPaIQaO3cMajrzrTGmxBoBVb7F7eJEff5&#13;
+w1qXNECbKfv2AFMIbAuFaeIVRAZSYQWCC0mNoMgBhCa4anNS4Y0R5KCCQgiCgcEuAhd5jP6tPSJ1&#13;
+1kOtE1ZZ3hYDinqXMkLCeI+v/4LqW5yEclD3bB6Vlcs8ifUlnFjQDna7kEFSOvugzIZF8rPN6mQ6&#13;
+3G1OdG9ZB8y9J0JUnWJGf3qUVTnwvQPKn9VRMw==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIH9DCCBdygAwIBAgILAPW294aLmGE7XPUwDQYJKoZIhvcNAQELBQAwWzELMAkGA1UEBhMCQlIx&#13;
+FjAUBgNVBAsMDUFDIFN5bmd1bGFySUQxEzARBgNVBAoMCklDUC1CcmFzaWwxHzAdBgNVBAMMFkFD&#13;
+IFN5bmd1bGFySUQgTXVsdGlwbGEwHhcNMjUwOTAzMTgyNjU1WhcNMjYwOTAzMTgyNjU1WjCB3DEL&#13;
+MAkGA1UEBhMCQlIxEzARBgNVBAoMCklDUC1CcmFzaWwxHDAaBgNVBAsME0NFUlRJRklDQURPIERJ&#13;
+R0lUQUwxIjAgBgNVBAsMGUNlcnRpZmljYWRvIERpZ2l0YWwgUEogQTExFzAVBgNVBAsMDjMwMTg1&#13;
+MjQ3MDAwMTkwMR8wHQYDVQQLDBZBQyBTeW5ndWxhcklEIE11bHRpcGxhMTwwOgYDVQQDDDNNVU5J&#13;
+Q0lQSU8gREUgTk9TU0EgU0VOSE9SQSBEQSBHTE9SSUE6MTMxMTM2MjYwMDAxNTYwggEiMA0GCSqG&#13;
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCslCU7Aeonhnli5FAx3KDCj3t3a5jdmKI6Qdw1Qq0fOehf&#13;
+chPVpGx1je0qHaT6tYe+jF8wcTyn/UBqr5rN59VWFk3/FGhVR0+b5AHn5LyHzPVwmkiy9RsUJYRF&#13;
+g9G+EcUfAr0IYg0RQQT+wEmoFsTmXpdWIIpnKSqU0B8lUtiBd/3UsG/OmccCWN7iDO/10V2FZOG/&#13;
+A21Xg8Zf6RB+Ou4n0CRrSYkVWMj8OaJSDq78xUYpcvM7EEsH1CJf5TIe8cZR2YpRDvOJXm1pPGug&#13;
++8P630HOvENFI8M2KNguvze1C5XG9B78UDXe2vOlZxYrnkPKs/B0K1osZZNnkCdml8uXAgMBAAGj&#13;
+ggM1MIIDMTAOBgNVHQ8BAf8EBAMCBeAwHQYDVR0lBBYwFAYIKwYBBQUHAwQGCCsGAQUFBwMCMAkG&#13;
+A1UdEwQCMAAwHwYDVR0jBBgwFoAUk+H/fh3l9eRN4TliiyFpleavchYwHQYDVR0OBBYEFLrEEZk1&#13;
+l7hRvv4IlPl+CaKY0M52MH8GCCsGAQUFBwEBBHMwcTBvBggrBgEFBQcwAoZjaHR0cDovL3N5bmd1&#13;
+bGFyaWQuY29tLmJyL3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvY2VydGlmaWNh&#13;
+ZG9zL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEucDdiMIGCBgNVHSAEezB5MHcGB2BMAQIBgQUwbDBq&#13;
+BggrBgEFBQcCARZeaHR0cDovL3N5bmd1bGFyaWQuY29tLmJyL3JlcG9zaXRvcmlvL2FjLXN5bmd1&#13;
+bGFyaWQtbXVsdGlwbGEvZHBjL2RwYy1hYy1zeW5ndWxhcklELW11bHRpcGxhLnBkZjCByQYDVR0R&#13;
+BIHBMIG+oDAGBWBMAQMCoCcEJUx1YW5hIE1pY2hlbGUgZGUgT2xpdmVpcmEgU2lsdmEgQ2FjaG+g&#13;
+GQYFYEwBAwOgEAQOMTMxMTM2MjYwMDAxNTagQgYFYEwBAwSgOQQ3MDUxMDE5Nzk5OTkwMzU5ODU3&#13;
+MjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOBAwwMDAwMDAw&#13;
+MDAwMDCBEkxVQU1JQ0BIT1RNQUlMLkNPTTCB4gYDVR0fBIHaMIHXMG+gbaBrhmlodHRwOi8vaWNw&#13;
+LWJyYXNpbC5zeW5ndWxhcmlkLmNvbS5ici9yZXBvc2l0b3Jpby9hYy1zeW5ndWxhcmlkLW11bHRp&#13;
+cGxhL2xjci9sY3ItYWMtc3luZ3VsYXJpZC1tdWx0aXBsYS5jcmwwZKBioGCGXmh0dHA6Ly9zeW5n&#13;
+dWxhcmlkLmNvbS5ici9yZXBvc2l0b3Jpby9hYy1zeW5ndWxhcmlkLW11bHRpcGxhL2xjci9sY3It&#13;
+YWMtc3luZ3VsYXJpZC1tdWx0aXBsYS5jcmwwDQYJKoZIhvcNAQELBQADggIBAEHHofCJbVazNWCY&#13;
+LmVgxepXJADxbsntkGivmNO5HFD4gzT/W8zggMXOiO0PJvnJW7cr/4xFH6MvmjZ6+2rIchIGtsq+&#13;
+iBCnFG0Z6157QxUwp0GwSsQJFg5wraEntkaxjJsUyQJBla1tA9ZRgxyyq4ys6uXyl1oqQg5IbgmZ&#13;
+KMJk6zZbSbNZb0gnZXr80QiN2Tx3lJzhvmJcVLZLDdVQxui8Hyp0lsbafS66A4oAqGbRv4TN23x3&#13;
+xUDQTyU4fr9JugvluDN7Twn3g21VeKEFT9aM6dAyXhSzba/y3FefyE/H4gNZrV2i6XhjysOzbf3g&#13;
+fGLbH9nHznSGc4cwBkwjsL/NogbloYc7y+6+HNdaSQmOyFqQslr+Eew9F4mfk7T+bEXKZN0zZLB7&#13;
+YlakP1ucFzXPT0aiODsZ/qXY+K9r8rIjMx06nGZbloNw0ycpN5VJkQUowsbe63+rDLRT2YNHn9W6&#13;
+LCbI9uIIGIFtJQD6DAEQMPg5kFawFS+Wp+ezT3cbqlqfXxjiiLE+oWvf9tUxBZfbtdmHoENiNQVB&#13;
+fQ7uIkM7jzI3v0OINXu+xjLe7SwF8qySNgkhRnUmJh6cIbKSvpXPiwKlkFipHS5LpdzsVHkywpob&#13;
+yp8gAIWSUVZSfTrWN9oi9iRJ3xk3EgM/C7ST1xI6+fNow7TotmNZS8GNRi0K</X509Certificate></X509Data></KeyInfo></Signature></NFSe>

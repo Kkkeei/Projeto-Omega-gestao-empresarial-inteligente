@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infNFSe Id="NFS26012011249223588000131000000000044226090000008850">
+    <xLocEmi>Arcoverde</xLocEmi>
+    <xLocPrestacao>Arcoverde</xLocPrestacao>
+    <nNFSe>442</nNFSe>
+    <cLocIncid>2601201</cLocIncid>
+    <xLocIncid>Arcoverde</xLocIncid>
+    <xTribNac>Lubrificacao, limpeza, lustracao, revisao, carga e recarga, conserto, restauracao, blindagem, manutencao e conservacao de maquinas, veiculos, aparelhos, equipamentos, motores, elevadores ou de qualquer objeto (exceto pecas e partes empregadas, que ficam sujeitas ao ICMS).</xTribNac>
+    <xTribMun>4520007-SERVICOS DE INSTALACAO, MANUTENCAO EREPARACAO DE ACESSORIOS PARA</xTribMun>
+    <verAplic>1.00</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2026-09-22T14:11:15-03:00</dhProc>
+    <nDFSe>442</nDFSe>
+    <emit>
+      <CNPJ>49223588000131</CNPJ>
+      <IM>1266288</IM>
+      <xNome>CENTRO AUTOMOTIVO RENOVA CAR LTDA</xNome>
+      <enderNac>
+        <xLgr>OSVALDO CRUZ</xLgr>
+        <nro>3035</nro>
+        <xBairro>COLISEU</xBairro>
+        <cMun>2601201</cMun>
+        <UF>PE</UF>
+        <CEP>56511000</CEP>
+      </enderNac>
+      <fone>87992535703</fone>
+      <email>FATURAMENTOGPTS@GMAIL.COM</email>
+    </emit>
+    <valores>
+      <vBC>495.00</vBC>
+      <pAliqAplic>5.00</pAliqAplic>
+      <vISSQN>24.75</vISSQN>
+      <vLiq>495.00</vLiq>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS260120124922358800013100001000000000000442">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2026-09-22T14:11:15-03:00</dhEmi>
+        <verAplic>ISSQN_TRIBUTUS</verAplic>
+        <serie>001</serie>
+        <nDPS>442</nDPS>
+        <dCompet>2026-09-22</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>2601201</cLocEmi>
+        <prest>
+          <CNPJ>49223588000131</CNPJ>
+          <IM>1266288</IM>
+          <regTrib>
+            <opSimpNac>1</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>03416171000194</CNPJ>
+          <xNome>INDUSTRIA DE SORVETES PINGMEL LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2614600</cMun>
+              <CEP>56780000</CEP>
+            </endNac>
+            <xLgr>R JURANDIR CORDEIRO PESSOA</xLgr>
+            <nro>416</nro>
+            <xBairro>JOAO CORDEIRO</xBairro>
+          </end>
+          <email>SORVETESPINGMEL@HOTMAIL.COM</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>2601201</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>140101</cTribNac>
+            <xDescServ>1.SERVICOS MECANICOS: MAO DE OBRA; TESTE; SINCRONIZAR CORREIA DENTADA  #QTD:1 - V.UND.:R$495,00 - TOTAL.:R$495,00||INDUSTRIA DE SORVETES PINGMEL LTDA SORVETES PINGMEL |DESTINADO AO VEICULO: STRADA DE PLACA: OYQ3899 |FORMA DE PAGAMENTO: PIX</xDescServ>
+            <cNBS>120024000</cNBS>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>495.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <tribFed>
+              <piscofins>
+                <CST>00</CST>
+              </piscofins>
+            </tribFed>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS26012011249223588000131000000000044226090000008850"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>zoAlDhNvUaUrA+LVbI236nSpGZg=</DigestValue></Reference></SignedInfo><SignatureValue>Hx0gVuqdUMrHmWFznnaRBIX4zcihnbw3XN4rgEHtqPTbtH4E96/Fi54jdiAnNQmToUBG/gi0va2S&#13;
+dmXDIX4Xi4y4W2DJzn4d/K9mRnPyfPy6v7jA6alHVFQhfG5+PaXJ0OXN8BVB7y8nQUUByEWMpHeg&#13;
+a59Ul7JlNKr35LUuFllZB2muPfVv8J7BmKbPlwdn87XCrtHEz3IYghfjpiMByUZG//rMRNrJGhyn&#13;
+WgWnoo5kgzYckXFeZjJA9tzQilRq/dNQhZfypbDaEadloOhclvyAXirYGL0MBTiXBoYnzMaE3VPD&#13;
+5gwhRwsFql5VDSk9Mnshn2SFRNDP18itYPcVWg==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIHRDCCBSygAwIBAgIIUgEmARVeXrAwDQYJKoZIhvcNAQELBQAwWTELMAkGA1UEBhMCQlIxEzAR&#13;
+BgNVBAoTCklDUC1CcmFzaWwxFTATBgNVBAsTDEFDIFNPTFVUSSB2NTEeMBwGA1UEAxMVQUMgU09M&#13;
+VVRJIE11bHRpcGxhIHY1MB4XDTI2MDExNTIwMTAwMFoXDTI3MDExNTIwMTAwMFowgeYxCzAJBgNV&#13;
+BAYTAkJSMRMwEQYDVQQKEwpJQ1AtQnJhc2lsMQswCQYDVQQIEwJQRTESMBAGA1UEBxMJQXJjb3Zl&#13;
+cmRlMR4wHAYDVQQLExVBQyBTT0xVVEkgTXVsdGlwbGEgdjUxFzAVBgNVBAsTDjI0MTAwOTA5MDAw&#13;
+MTgwMRwwGgYDVQQLExNDZXJ0aWZpY2FkbyBEaWdpdGFsMRowGAYDVQQLExFDZXJ0aWZpY2FkbyBQ&#13;
+SiBBMTEuMCwGA1UEAxMlTVVOSUNJUElPIERFIEFSQ09WRVJERToxMDEwNTk1NTAwMDE2NzCCASIw&#13;
+DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAIl9ft/2/h7a5zb/bDWsX5Rd/OP11S8Izb++0IGE&#13;
+AMT8vy0s1p6F/w7Wfm8NSREBXDTMXmX6YJQxd6Y2Xufuy0sfKlr1DLE6XgcfrB/nw5cay8YxARpT&#13;
+ZaZr9KN4dmQNcghj7QYbwQDAN/LLbUIOQZxk1mJd6hm1XRwOGqXtxq8f1hhuAEIVtIzfKDpDAsnk&#13;
+jdQFVoNKFJ1kSDBBZl1pUQxOEuFY8Ik0U1MJBqQVDkJfR9tXAuC58eL6Jkr/9UvwfN8cYt07Vf6J&#13;
+VMSU/SxusUA30lnOXT8qPv7YsgdYBAfYhJ2pIAY96cmVDUWs29roIB3jIm+nbQN8kPCkMX36Ms0C&#13;
+AwEAAaOCAoAwggJ8MAkGA1UdEwQCMAAwHwYDVR0jBBgwFoAUxVLtJYAJ35yCyJ9Hxt20XzHdubEw&#13;
+VAYIKwYBBQUHAQEESDBGMEQGCCsGAQUFBzAChjhodHRwOi8vY2NkLmFjc29sdXRpLmNvbS5ici9s&#13;
+Y3IvYWMtc29sdXRpLW11bHRpcGxhLXY1LnA3YjCBuwYDVR0RBIGzMIGwgRdwYXVsb19saWRlckBv&#13;
+dXRsb29rLmNvbaAnBgVgTAEDAqAeExxKT1NFIENBVkFMQ0FOVEkgQUxWRVMgSlVOSU9SoBkGBWBM&#13;
+AQMDoBATDjEwMTA1OTU1MDAwMTY3oDgGBWBMAQMEoC8TLTIxMDcxOTY2NDk2ODczNDQ0MTUwMDAw&#13;
+MDAwMDAwMDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOEwwwMDAwMDAwMDAwMDAwXQYDVR0gBFYw&#13;
+VDBSBgZgTAECASYwSDBGBggrBgEFBQcCARY6aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvZG9j&#13;
+cy9kcGMtYWMtc29sdXRpLW11bHRpcGxhLnBkZjAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUH&#13;
+AwQwgYwGA1UdHwSBhDCBgTA+oDygOoY4aHR0cDovL2NjZC5hY3NvbHV0aS5jb20uYnIvbGNyL2Fj&#13;
+LXNvbHV0aS1tdWx0aXBsYS12NS5jcmwwP6A9oDuGOWh0dHA6Ly9jY2QyLmFjc29sdXRpLmNvbS5i&#13;
+ci9sY3IvYWMtc29sdXRpLW11bHRpcGxhLXY1LmNybDAdBgNVHQ4EFgQUOOqnWt61RND0oO+wnF1s&#13;
+nUklTzEwDgYDVR0PAQH/BAQDAgXgMA0GCSqGSIb3DQEBCwUAA4ICAQB1iZIUrV3WzJX3EeAjgopO&#13;
+qiaqvGM2f7Fc5hvAXAkwwmVrCOu6fGusxaL5r0idYiOIIRcLx8EglCuLRZ2TLfexe/Ikkjmbbn5Z&#13;
+jVtnkHH2qpltILtckriVc4DoRmtsWQn0gK3jZ87EbmkE1OztfiBeQGTEpeARNhZ4wlajn353zNui&#13;
+hCBt6QGbBnhuRprYHAHDga930M9nK7Wk5z2+DypGtYd4njsQdVFp+PclQ5wcaKX759VXuk82eR44&#13;
+XLZ772N+DfHZagO5nrzikH9NHOF+pe8iyr3nE8vwKbzZj5r6erbH+4qJqcg3ZxqP1ZKwiIOGa7q0&#13;
+sRVTX6mtq3WXiI7N7yJgcf6pbNBNotDS1tuUBfZk1PHQN0Dzi0LFmMMG3xJUJusGCcA8hW7pibQH&#13;
+cCE6OWGojGYnj/CgtSwsa/VOwL/b4CRktTHVk1KA/ZL1Jpcs76gu+iMyXvh6NgBBEja4bysSa1tA&#13;
+v97vzAJ5rkPdEvQ0Oxf4HH+uSw0/GojgW/KYazNkl3Ib0uA04dbRw2AjAEJS+yV+2EykEZu6fCnv&#13;
+lZUzwNztk4LyRGjqrJ+qvkXjDxsYomCWeTt2nNSY+2SMMKYxVasWonEp46EURrCotDoLWoy38cK5&#13;
+i3Kyh0BCzq0FSuvSdGyjQPJF6GGjq0zGRAKNbTk7AvTLiW+/CKckeA==</X509Certificate></X509Data></KeyInfo></Signature></NFSe>
