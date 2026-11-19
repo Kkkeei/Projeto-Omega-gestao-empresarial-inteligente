@@ -1,0 +1,17 @@
+CORREÇÃO CONTÁBIL — 13/11/2026
+
+- Lançamentos e Conferências continuam separados da tela Documentação.
+- A origem das movimentações documentais continua sendo o cadastro de Documentação do módulo Contábil.
+- O painel e a tela individual agora filtram cópias legadas de movimentações ligadas ao mesmo documento de origem, exibindo apenas um vínculo por documento.
+- A listagem respeita a competência final: movimentações encerradas permanecem consultáveis na última competência e não devem ser removidas do histórico.
+- A migração SQL inativa cópias antigas sem apagar competências, arquivos ou histórico.
+
+Arquivos alterados:
+- backend/app/modules/contabil/repository.py
+- docs/sql/contabil_schema_sqlite.sql
+
+Testes executados:
+- backend/tests/test_contabil_lancamentos_conferencias.py: 15 passed.
+- Compilação Python do repository.py: OK.
+
+Ao atualizar no servidor, preserve .env, omega.db, storage e certificados. Faça backup antes de substituir arquivos.

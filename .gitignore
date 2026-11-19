@@ -1,0 +1,43 @@
+# Ambientes e dependências
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# Segredos e configurações locais
+.env
+.env.*
+!.env.example
+
+# Bancos e dados locais
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache e compilação
+.coverage
+*.tsbuildinfo
+dist/
+build/
+
+# Arquivos temporários
+*.log
+.DS_Store
+  
+# SQLite temporário
+*.db-shm
+*.db-wal
+
+# Backups
+*.bak
+*.backup*
+*.bak_*
+
+# Cobertura e testes
+.coverage
+.pytest_cache/
+.test_runtime/
+
+# Diarios de bordo locais
+/docs/Di*rio_de_bordo*.md

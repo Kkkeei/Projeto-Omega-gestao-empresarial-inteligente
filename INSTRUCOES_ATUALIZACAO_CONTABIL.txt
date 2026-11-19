@@ -1,0 +1,37 @@
+PLATAFORMA OMEGA - PACOTE COMPLETO COM ABA CONTABIL CONSOLIDADA
+Data: 13/11/2026
+
+CONTEUDO
+- Projeto completo: backend, frontend, bridge, scripts, assets e documentacao.
+- Contabil > Documentacao: painel de empresas, filtros, atribuicao de responsaveis e tela individual de documentos.
+- Contabil > Lancamentos e Conferencias: painel geral, filtros por regime/responsavel, progresso e situacao, tela individual, movimentacoes internas e integracao com Documentacao.
+
+ATUALIZACOES DESTA CONSOLIDACAO
+- Corrigido o preflight CORS do login: aspas, espaços e origens duplicadas são normalizados; no desenvolvimento, IPs privados da rede local podem acessar o Vite na porta 5173.
+- Corrigido o bootstrap da conta definida em OMEGA_ADMIN_EMAIL para garantir perfil ADMIN sem substituir a senha já cadastrada, evitando que o painel Contábil esconda empresas sem atribuição da conta administrativa.
+- Corrigido tratamento de JSON inválido na integração BrasilAPI.
+- O aviso da agenda NFS-e passou a ser informativo. A execução automática ainda não está implementada nesta versão; as consultas seguem sob demanda.
+- Corrigida a leitura do usuario autenticado na tela principal de Documentacao (useAuth).
+- Removida mensagem de erro desatualizada que instruia criar uma rota de dashboard que ja existe.
+- Aplicado o redesenho mais recente do painel geral de Lancamentos e Conferencias, com layout compacto, circulo de progresso, estados distintos e responsividade.
+- Corrigida a visibilidade das empresas sem responsável: entram na carteira compartilhada e podem ser abertas pelos usuários; empresas atribuídas a outro responsável continuam restritas. Aplicado tanto ao Dashboard de Documentação quanto a Lançamentos e Conferências.
+- Mantida a verificação de permissão para a funcionalidade Atribuir Responsável.
+
+VALIDACAO
+- Testes especificos do modulo Contabil (painel, filtros, carteira compartilhada e bloqueio de empresas atribuídas a outra pessoa): 14 aprovados.
+- Sintaxe Python dos modulos Contabil/Documentacao e inicializacao do banco: aprovada.
+- Transpilacao sintatica TypeScript/TSX: 52 arquivos analisados, 0 erros.
+- Testes focados do módulo Contábil: 14 aprovados. Suíte backend completa após a correção: 99 aprovados e 6 falhas preexistentes em funções NFS-e ausentes nesta versão (detalhes em docs/CORRECOES_LOGIN_E_EMPRESAS_2026-11-13.md). Build do frontend não validado: faltou pacote no cache npm offline e não houve acesso ao registry nesta sessão.
+- Build Vite completo nao confirmado: a instalacao npm ci excedeu o tempo disponivel neste ambiente.
+
+CUIDADOS NA INSTALACAO
+1. Faca backup do projeto atual.
+2. Preserve backend/.env, backend/omega.db (ou outro banco ativo), storage/ e certificados.
+3. Extraia o ZIP sobre uma copia do projeto, sem substituir os arquivos locais de configuracao ou dados.
+4. No backend, ative seu ambiente virtual e instale requirements.txt se necessario.
+5. No frontend, execute npm ci e npm run build em ambiente com acesso as dependencias.
+6. Reinicie os servicos e valide login, Documentacao, Atribuir Responsavel, Lançamentos e Conferencias.
+
+DADOS LOCAIS
+Por seguranca, o arquivo dados/CADASTRO.xlsx, que pode conter dados reais de empresas, nao foi incluido. Preserve o arquivo original e coloque-o novamente na pasta dados/ se sua rotina importar_cadastro.py depender dele.
+Nenhum banco de dados, storage, .env real, node_modules, ambiente virtual ou certificado foi incluido neste pacote.
