@@ -1,1 +1,0 @@
-Pasta destinada a arquivos locais de importacao. O arquivo CADASTRO.xlsx nao foi incluido neste pacote para evitar distribuir dados empresariais. Preserve e reutilize sua copia local quando necessario.
