@@ -1,43 +1,52 @@
-# Ambientes e dependências
+# Dependências e ambientes
 .venv/
 venv/
 node_modules/
-__pycache__/
-*.pyc
 
-# Segredos e configurações locais
+# Python e ferramentas
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Configurações locais e segredos
 .env
 .env.*
 !.env.example
+!.env.*.example
 
-# Bancos e dados locais
+# Banco de dados, WAL e backups
 *.db
 *.sqlite
 *.sqlite3
-
-# Cache e compilação
-.coverage
-*.tsbuildinfo
-dist/
-build/
-
-# Arquivos temporários
-*.log
-.DS_Store
-  
-# SQLite temporário
 *.db-shm
 *.db-wal
-
-# Backups
 *.bak
+*.backup
 *.backup*
 *.bak_*
 
-# Cobertura e testes
-.coverage
-.pytest_cache/
-.test_runtime/
+# Dados operacionais e armazenamento local
+/storage/
+/dados/
+/.test_runtime/
+backend/storage/
 
-# Diarios de bordo locais
-/docs/Di*rio_de_bordo*.md
+# Certificados e material criptográfico
+*.p12
+*.pfx
+*.p7b
+*.pem
+*.key
+*.enc
+
+# Build, cobertura e temporários
+dist/
+build/
+.coverage
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
